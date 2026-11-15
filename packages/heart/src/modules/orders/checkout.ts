@@ -37,8 +37,11 @@ export interface PlacedOrder {
 
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
-/** TUW-261112-K7Q4M: the store's date plus five unambiguous characters. */
-async function newOrderNumber(tx: Transaction): Promise<string> {
+/**
+ * TUW-261112-K7Q4M: the store's date plus five unambiguous characters.
+ * Exported because a returns approval creates its own follow-up order.
+ */
+export async function nextOrderNumber(tx: Transaction): Promise<string> {
   const day = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }).slice(2).replace(/-/g, '');
   for (let attempt = 0; attempt < 8; attempt++) {
     const tail = Array.from({ length: 5 }, () => CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)]).join('');
@@ -100,7 +103,7 @@ export async function placeOrder(buyer: Buyer, input: PlaceOrderInput): Promise<
       });
 
       const orderId = uuidv7();
-      const orderNumber = await newOrderNumber(tx);
+      const orderNumber = await nextOrderNumber(tx);
       const address = JSON.stringify(input.shippingAddress);
       let account: { profileId: string; householdId: string } | null = null;
       if (userId) {
