@@ -53,7 +53,7 @@ describe('seed integrity', () => {
     }
   });
 
-  test('RBAC seeds the four DB roles and the 19 permissions', () => {
+  test('RBAC seeds the four DB roles and the 21 permissions', () => {
     const roles = insertFor('roles');
     assert.equal(rowCount(roles), 4);
     for (const slug of ['admin', 'support', 'warehouse', 'customer']) {
@@ -62,7 +62,7 @@ describe('seed integrity', () => {
     // The invented "manager" persona is not a DB role.
     assert.equal(/'manager'/.test(roles), false);
 
-    assert.equal(rowCount(insertFor('permissions')), 19);
+    assert.equal(rowCount(insertFor('permissions')), 21);
   });
 
   test('attribute library seeds 9 definitions and 22 values', () => {

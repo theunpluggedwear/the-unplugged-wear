@@ -1,0 +1,4 @@
+# db/scripts/db.mjs hashes each migration file byte-for-byte. A CRLF checkout
+# (Windows) would change every checksum and the runner would refuse to apply
+# anything, so migrations are always stored and checked out with LF.
+*.sql text eol=lf
