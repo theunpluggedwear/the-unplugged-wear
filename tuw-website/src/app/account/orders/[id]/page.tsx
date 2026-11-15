@@ -9,11 +9,13 @@ import Badge from '@storefront/components/ui/Badge';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
 import { useStore } from '@storefront/mocks/store';
 import { cancelOrderAction, getOrderAction } from '@/server/order-actions';
+import { returnEligibilityAction } from '@/server/return-actions';
+import type { ReturnEligibility } from '@tuw/heart/modules/returns';
 import { toStoreOrder } from '@storefront/lib/orders';
 import type { FulfillmentStatus, Order, PaymentStatus } from '@storefront/lib/types';
 import { formatPaise, formatShortDate } from '@storefront/lib/format';
 import { RETURN_WINDOW_DAYS, deliveryEstimate } from '@storefront/lib/product';
-import { AlertCircle, ArrowLeft, ArrowRight, Download } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ArrowRight, Download, Undo2 } from 'lucide-react';
 import { downloadInvoicePdf } from '@storefront/lib/invoice';
 import { useSiteSettings } from '@storefront/lib/site-settings';
 import { useSession } from '@storefront/lib/session';
@@ -55,8 +57,17 @@ export default function OrderDetailPage({ params }: PageProps) {
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelNote, setCancelNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const [returnInfo, setReturnInfo] = useState<ReturnEligibility | null>(null);
   const { session } = useSession();
   const { supportEmail } = useSiteSettings();
+  // Exchanges only open after delivery; the server decides and says why not.
+  const delivered = order?.fulfillmentStatus === 'delivered' && order.sqlStatus !== 'cancelled';
+  useEffect(() => {
+    if (!order || !delivered) { setReturnInfo(null); return; }
+    let live = true;
+    void returnEligibilityAction({ orderNumber: order.orderNumber }).then((result) => { if (live) setReturnInfo(result.ok ? result.data : null); });
+    return () => { live = false; };
+  }, [order?.orderNumber, delivered]);
 
   useEffect(() => {
     let live = true;
@@ -292,6 +303,48 @@ export default function OrderDetailPage({ params }: PageProps) {
                 })}
               </ul>
             </section>
+
+            {/* Returns — exchanges and defect replacements (TL-WEB-BE-27) */}
+            {returnInfo && (
+              <section aria-labelledby="returns-heading" className={CARD}>
+                <div className="flex items-center gap-2">
+                  <Undo2 size={18} aria-hidden="true" className="text-store-text-secondary" />
+                  <h2 id="returns-heading" className={CARD_TITLE}>Return or exchange</h2>
+                </div>
+                {returnInfo.canRequest ? (
+                  <>
+                    <p className="mt-3 text-sm text-store-text-secondary leading-relaxed">
+                      Ask for another size or variant, or report a defect.{' '}
+                      {returnInfo.deadline && <>Requests for this order close on {formatShortDate(returnInfo.deadline)}.</>}
+                    </p>
+                    <div className="mt-4">
+                      <Link
+                        href={`/account/returns/new?order=${encodeURIComponent(order.orderNumber)}`}
+                        className="inline-flex items-center h-11 px-6 rounded-full border border-store-border text-sm font-medium text-store-charcoal hover:border-store-charcoal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
+                      >
+                        Start a request
+                      </Link>
+                    </div>
+                  </>
+                ) : (
+                  <p className="mt-3 text-sm text-store-text-secondary leading-relaxed">{returnInfo.blockedReason}</p>
+                )}
+                {returnInfo.existing.length > 0 && (
+                  <ul className="mt-4 pt-4 border-t border-store-card-border space-y-2 text-sm">
+                    {returnInfo.existing.map((existing) => (
+                      <li key={existing.id} className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-store-text-secondary">
+                          {existing.type === 'exchange' ? 'Exchange' : 'Replacement'} {existing.rmaNumber}
+                        </span>
+                        <Link href={`/account/returns/${existing.id}`} className="text-store-charcoal underline underline-offset-4 decoration-store-gold">
+                          View
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )}
           </div>
 
           <aside className="space-y-6">
