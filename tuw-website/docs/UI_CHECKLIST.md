@@ -56,3 +56,14 @@
 - [x] Verify primary customer and staff flows in a browser.
 - [x] No unexplained console errors, broken routes or missing assets.
 - [x] Record the checks actually run and any remaining limitations.
+
+### Returns / exchanges (TL-WEB-BE-27, 2026-11-15)
+
+- [x] `/account/returns` lists my requests and links to the request flow; an empty state explains the 7-day exchange window instead of showing a blank table.
+- [x] `/account/returns/new?order=…` offers only server-returnable orders, one request per line, reason per line, variant picker for exchanges, demo photo input, unboxing-video confirmation for `wrong_item`, and a live price-difference preview.
+- [x] Submitting is idempotent (`requestKey`) and preserves every field when the action returns an error.
+- [x] `/account/returns/[id]` shows status, rejection reason, lines, history and carrier; a positive difference is paid on the page with card/UPI and a simulated decline that keeps the form filled, under the notice "Demo checkout sandbox — no payment will be collected".
+- [x] The order detail page shows the exchange deadline, any existing requests and the entry point to start one.
+- [x] All buy-flow copy now matches `exchange.window_days` (7) and the exchange-only policy; `RETURN_WINDOW_DAYS` was corrected from 14 to 7 everywhere it is quoted.
+- [x] `npx tsc --noEmit` and `npx next build` pass.
+- [ ] Browser pass at 360/768/1024/1440 of the request flow, the difference payment and its decline path, plus Reset Demo. User verification pending.

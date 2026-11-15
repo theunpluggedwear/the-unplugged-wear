@@ -401,7 +401,7 @@ export default function OrderDetailPage({ params }: PageProps) {
             <section aria-labelledby="help-heading" className="p-6 bg-store-cream border border-store-card-border text-sm text-store-text-secondary leading-relaxed">
               <h2 id="help-heading" className="font-medium text-store-charcoal">Need help?</h2>
               <p className="mt-2">
-                Unworn clothing can be returned within {RETURN_WINDOW_DAYS} days of delivery.
+                Unworn clothing can be exchanged within {RETURN_WINDOW_DAYS} days of delivery.
               </p>
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
                 <Link href="/policies/returns" className="text-store-charcoal underline underline-offset-4 decoration-store-gold">

@@ -46,7 +46,7 @@ function catalogFacts(products: Product[]) {
 const HELP_LINKS = [
   { href: '/faq', label: 'FAQ', body: 'Sizing, printing and orders' },
   { href: '/policies/shipping', label: 'Shipping', body: 'Printing and delivery times' },
-  { href: '/policies/returns', label: 'Returns', body: `${RETURN_WINDOW_DAYS}-day returns on unworn clothing` },
+  { href: '/policies/returns', label: 'Returns', body: `${RETURN_WINDOW_DAYS}-day exchanges on unworn clothing` },
   { href: '/contact', label: 'Contact', body: 'Write to us, we reply ourselves' },
 ];
 

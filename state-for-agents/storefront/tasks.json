@@ -11,16 +11,23 @@
   "_demo": "Figma source of truth established. First track TL-WEB-001 closed.",
   "summary": {
     "total": 114,
-    "done": 99,
+    "done": 100,
     "in_progress": 1,
-    "backlog": 14,
+    "backlog": 13,
     "total_tasks": 114,
     "pending": 14
   },
   "session": {
     "branch": "urvil-ui",
-    "tip": "43625ec",
-    "unpushed": [],
+    "tip": "c375057",
+    "unpushed": [
+      "d3eb96f",
+      "fc8d6e7",
+      "67fe9ff",
+      "5b25052",
+      "fc45619",
+      "c375057"
+    ],
     "next_up": "TL-WEB-BE-25 — checkout gift cards, blocked on the admin gift-card module TL-BE-12.",
     "pending_verifications": [],
     "last_updated": "2026-11-15",
@@ -2761,12 +2768,12 @@
       "id": "TL-WEB-BE-27",
       "title": "/account/returns + exchange / replacement request flow",
       "category": "backend",
-      "status": "backlog",
-      "owner": "unassigned",
+      "status": "done",
+      "owner": "agent (Buffy)",
       "parent": "TL-WEB-BE",
-      "started": null,
-      "finished": null,
-      "verified": false,
+      "started": "2026-11-15",
+      "finished": "2026-11-15",
+      "verified": true,
       "design_match": null,
       "pushed": false,
       "admin_ref": "TL-BE-10.04",
@@ -2774,11 +2781,23 @@
         "TL-BE-10"
       ],
       "files": [
-        "src/app/account/returns/ (empty today)"
+        "src/server/return-actions.ts",
+        "src/app/account/returns/page.tsx",
+        "src/app/account/returns/new/page.tsx",
+        "src/app/account/returns/new/_components/NewReturnView.tsx",
+        "src/app/account/returns/[id]/page.tsx",
+        "src/app/account/orders/[id]/page.tsx (return block)"
       ],
       "description": "Rules from DOC/backend/06; photo required; price difference shown before submit.",
-      "key_decisions": [],
-      "follow_ups": []
+      "key_decisions": [
+        "Eligibility comes from the returns module, not from a client-side date, so the 7-day window is server-enforced.",
+        "Difference payments reuse the purchase components and copy \"Demo checkout sandbox — no payment will be collected\"."
+      ],
+      "follow_ups": [
+        "Real evidence uploads once storage exists (TL-INT-R2).",
+        "Pickup/tracking details appear after the fulfilment phase (TL-WEB-BE-28)."
+      ],
+      "log": "Returnable orders, eligibility + deadline, demo photo/video evidence, per-line qty/reason/variant, price-difference preview (client requestKey idempotency), request detail with status, rejection reason, difference payment (card/UPI, decline simulation, demo notice), history and carrier. Order page shows the exchange window and existing requests. tsc + next build clean."
     },
     {
       "id": "TL-WEB-BE-28",

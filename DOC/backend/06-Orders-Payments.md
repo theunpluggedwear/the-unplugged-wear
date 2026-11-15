@@ -1,6 +1,6 @@
 # Orders & Money — Columns, Scopes, Guards
 
-> Status: Filling | Last Updated: 2026-10-30
+> Status: Implemented (orders, payments, refunds, returns — TL-BE-10 closed 2026-11-15) | Last Updated: 2026-11-15
 > 11 tables. Money is DECIMAL(12,2); totals are **stored, not derived** —
 > a financial record must be immutable, not recomputed. Conventions:
 > `01-Conventions.md`. Currency default: `INR` (IN localization applied;

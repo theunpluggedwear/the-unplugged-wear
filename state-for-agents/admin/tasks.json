@@ -9,15 +9,22 @@
   },
   "summary": {
     "total": 440,
-    "done": 354,
-    "in_progress": 2,
-    "backlog": 84
+    "done": 360,
+    "in_progress": 1,
+    "backlog": 79
   },
   "session": {
     "branch": "urvil-ui",
-    "tip": "a7ed6b0",
-    "unpushed": [],
-    "next_up": "TL-BE-10",
+    "tip": "c375057",
+    "unpushed": [
+      "d3eb96f",
+      "fc8d6e7",
+      "67fe9ff",
+      "5b25052",
+      "fc45619",
+      "c375057"
+    ],
+    "next_up": "TL-BE-11",
     "pending_verifications": [
       "admin journal editor + list full keyboard/focus/Reset Demo pass at 360/768/1024/1440 (CDP route-load check passed; interactive pass pending)",
       "SQL dry-run: apply 001 + 002 + 006-cms.sql against a real PostgreSQL instance; verify generated blogs.search_vector, slug/CHECK constraints, FK RESTRICT/CASCADE behavior, and partial indexes. psql remains unavailable locally.",
@@ -5839,7 +5846,6 @@
       "verified": true,
       "pushed": true,
       "follow_ups": [
-        "Returns policy copy still says 14-day money-back returns (RETURN_WINDOW_DAYS) — rewrite to the exchange-only policy with the owner in TL-BE-10",
         "Express delivery ₹250 is hard-coded in the shipping policy copy (not offered at checkout; add a setting when it is)",
         "Admin header still shows the demo persona name instead of the signed-in staff member",
         "Editing non-secret provider settings (e.g. Qikink default print type) — with TL-BE-11",
@@ -5980,8 +5986,7 @@
         "First uncached catalog read is ~5.5 s from India (US East DB); fine when cached, revisit with the region decision",
         "Admin /products loads every product (light, no variants); add server paging before the catalog reaches thousands",
         "Admin orders, discounts, designs, reports and the header search still read demo products until their modules move",
-        "Image uploads stay session previews until TL-INT-R2; only URLs persist",
-        "Returns copy still pending (TL-BE-10)"
+        "Image uploads stay session previews until TL-INT-R2; only URLs persist"
       ],
       "storefront_tasks": [
         "TL-WEB-BE-08",
@@ -6737,12 +6742,12 @@
     {
       "id": "TL-BE-10",
       "title": "Returns — exchanges & defect replacements",
-      "status": "in_progress",
+      "status": "done",
       "owner": "agent (Buffy)",
       "parent": "TL-BE-CORE",
       "started": "2026-11-15",
-      "finished": null,
-      "log": "In progress (2026-11-15): permissions 025, modules/returns (eligibility + customer request + admin transitions), admin board, storefront request flow (TL-WEB-BE-27).",
+      "finished": "2026-11-15",
+      "log": "Module modules/returns (schemas, eligibility, customer, admin, events), migration 025 (returns tables + counters), permissions return.view/return.manage (admin+support view), refund capability; 6 integration tests pass.",
       "wiring": "modules/returns calls orders (replacement order), payments (difference refund), fulfillment (claims) via index.ts.",
       "done_when": "Customers request exchanges/replacements within the rules (abuse limits enforced); admin approves → replacement order created, difference charged or refunded.",
       "depends_on": [
@@ -6750,10 +6755,19 @@
         "TL-BE-09"
       ],
       "design_match": null,
-      "key_decisions": [],
-      "verified": false,
+      "key_decisions": [
+        "No money-back returns: customers get exchanges or defect replacements only.",
+        "Storefront copy now follows exchange.window_days (7) everywhere; the stale 14-day money-back policy copy is gone.",
+        "A positive exchange difference is paid through the normal demo checkout/pay-link; the follow-up order is not cancellable while unpaid.",
+        "wrong_item is rejected unless the customer confirms the unboxing video on the request form."
+      ],
+      "verified": true,
       "pushed": false,
-      "follow_ups": [],
+      "follow_ups": [
+        "Real evidence storage/upload (currently demo file names) — with TL-INT-R2.",
+        "Courier pickup booking + reverse AWB via the fulfilment provider — with TL-BE-11.",
+        "Storefront cross-app copy check: shop policies still need the owner review before launch."
+      ],
       "storefront_tasks": [
         "TL-WEB-BE-27"
       ]
@@ -6761,60 +6775,60 @@
     {
       "id": "TL-BE-10.01",
       "title": "Eligibility rules: delivered, window, exchange_policy, one per line, reason codes, account required",
-      "status": "backlog",
-      "owner": "unassigned",
+      "status": "done",
+      "owner": "agent (Buffy)",
       "parent": "TL-BE-10",
-      "started": null,
-      "finished": null,
-      "log": "Not started.",
+      "started": "2026-11-15",
+      "finished": "2026-11-15",
+      "log": "Eligibility: delivered orders only, account owned, exchange.window_days window from delivered_at, one open request per line, reason codes, exchange_policy block, positive difference surfaced before submit.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": []
     },
     {
       "id": "TL-BE-10.02",
       "title": "Evidence upload via mock storage adapter (photo required; unboxing video for defects)",
-      "status": "backlog",
-      "owner": "unassigned",
+      "status": "done",
+      "owner": "agent (Buffy)",
       "parent": "TL-BE-10",
-      "started": null,
-      "finished": null,
-      "log": "Not started.",
+      "started": "2026-11-15",
+      "finished": "2026-11-15",
+      "log": "Evidence rows via demo storage adapter; at least one photo required for every reason; hard unboxing-video requirement for wrong_item enforced server-side.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": []
     },
     {
       "id": "TL-BE-10.03",
       "title": "Approve/reject flow + history; replacement order (order_type exchange/replacement); price difference charge/refund",
-      "status": "backlog",
-      "owner": "unassigned",
+      "status": "done",
+      "owner": "agent (Buffy)",
       "parent": "TL-BE-10",
-      "started": null,
-      "finished": null,
-      "log": "Not started.",
+      "started": "2026-11-15",
+      "finished": "2026-11-15",
+      "log": "Approve/reject with required reason and history; approval sets order_lines.returned_qty and creates a follow-up order (order_type exchange/replacement) with discount = value - difference; positive difference paid via purchase (unpaid exchanges are not cancellable), negative difference refunded only when the original payment was paid.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": []
     },
     {
       "id": "TL-BE-10.04",
       "title": "Wire storefront /account/returns + request flow; admin /returns board",
-      "status": "backlog",
-      "owner": "unassigned",
+      "status": "done",
+      "owner": "agent (Buffy)",
       "parent": "TL-BE-10",
-      "started": null,
-      "finished": null,
-      "log": "Not started.",
+      "started": "2026-11-15",
+      "finished": "2026-11-15",
+      "log": "Admin /returns board (stats, filters, search, CSV, review drawer, per-line disposition, refund with idempotency key) and storefront /account/returns list, /account/returns/new and /account/returns/[id] + order-page entry point on the DB.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": [],
       "storefront_tasks": [
@@ -6824,15 +6838,15 @@
     {
       "id": "TL-BE-10.05",
       "title": "Tests: window, policy, abuse limits, price difference both ways",
-      "status": "backlog",
-      "owner": "unassigned",
+      "status": "done",
+      "owner": "agent (Buffy)",
       "parent": "TL-BE-10",
-      "started": null,
-      "finished": null,
-      "log": "Not started.",
+      "started": "2026-11-15",
+      "finished": "2026-11-15",
+      "log": "packages/heart/src/modules/returns/returns.int.test.ts: window boundaries, one-per-line, unboxing video rule, difference both ways, approval creates return + follow-up order, cancel-safe transitions.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": []
     },

@@ -1067,7 +1067,7 @@ export default function CheckoutPage() {
               </li>
               <li className="flex items-center gap-2.5">
                 <RotateCcw size={16} aria-hidden="true" className="text-store-charcoal shrink-0" />
-                {RETURN_WINDOW_DAYS}-day returns on unworn clothing
+                {RETURN_WINDOW_DAYS}-day exchanges on unworn clothing
               </li>
               <li className="flex items-center gap-2.5">
                 <Lock size={16} aria-hidden="true" className="text-store-charcoal shrink-0" />

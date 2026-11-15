@@ -316,7 +316,7 @@ export default function VariantSelector({
           <li>Free delivery on orders over {rupeesLabel(freeThresholdPaise)}</li>
           <li>
             {wearable
-              ? `${RETURN_WINDOW_DAYS}-day returns on unworn pieces with tags`
+              ? `${RETURN_WINDOW_DAYS}-day exchanges on unworn pieces with tags`
               : 'Replacement if it arrives damaged or misprinted (draft policy)'}
           </li>
         </ul>

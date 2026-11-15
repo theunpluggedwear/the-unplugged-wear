@@ -9,6 +9,7 @@ import Badge from '@storefront/components/ui/Badge';
 import Button from '@storefront/components/ui/Button';
 import { myReturnsAction } from '@/server/return-actions';
 import { formatPaise, formatShortDate } from '@storefront/lib/format';
+import { RETURN_WINDOW_DAYS } from '@storefront/lib/product';
 import type { ReturnDetail } from '@tuw/heart/modules/returns';
 import { RotateCcw, ArrowRight, Undo2 } from 'lucide-react';
 
@@ -80,7 +81,7 @@ export default function AccountReturnsPage() {
             <Undo2 size={26} aria-hidden="true" className="mx-auto text-store-text-secondary" />
             <h2 className="mt-4 font-heading text-xl font-medium text-store-charcoal">Nothing to return right now</h2>
             <p className="mt-2 text-sm text-store-text-secondary max-w-md mx-auto">
-              Once a parcel is delivered, you can ask for an exchange or a defect replacement here for 14 days.
+              Once a parcel is delivered, you can ask for an exchange or a defect replacement here for {RETURN_WINDOW_DAYS} days.
             </p>
             <div className="mt-6 flex flex-wrap gap-3 justify-center">
               <Button variant="outline" size="md" href="/account/orders">View my orders</Button>
@@ -128,7 +129,7 @@ export default function AccountReturnsPage() {
         <p className="mt-10 flex items-start gap-2 text-sm text-store-text-secondary">
           <RotateCcw size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
           <span>
-            Unworn pieces can be exchanged within 14 days of delivery. Defects are always our responsibility —{' '}
+            Unworn pieces can be exchanged within {RETURN_WINDOW_DAYS} days of delivery. Defects are always our responsibility —{' '}
             <Link href="/policies/returns" className="text-store-charcoal underline underline-offset-4 decoration-store-gold">read the returns policy</Link>.
           </span>
         </p>

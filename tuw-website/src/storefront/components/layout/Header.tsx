@@ -285,7 +285,7 @@ const MOBILE_MENU_LINKS = [
 const announcements = (freeFrom: string) => [
   { text: `Free delivery across India on orders over ${freeFrom}`, href: '/policies/shipping' },
   { text: 'Every piece is printed for you after you order', href: '/about#how-it-works' },
-  { text: '14-day returns on unworn clothing', href: '/policies/returns' },
+  { text: '7-day exchanges on unworn clothing', href: '/policies/returns' },
 ];
 const ANNOUNCEMENT_INTERVAL_MS = 4500;
 

@@ -196,3 +196,18 @@
 - [x] `pnpm run typecheck` passes with no diagnostics; `pnpm run test` passes 99/99 admin + 11/11 website tests; `pnpm run build` prerenders all 41 admin routes and 31 website routes, with the four journal articles statically generated.
 - [ ] Full admin journal list/editor keyboard, focus, empty/loading/error and Reset Demo browser pass at 360/768/1024/1440 remains pending.
 - [ ] Runtime PostgreSQL validation remains blocked because `psql`/PostgreSQL is not installed locally; the static schema guard is the current substitute.
+
+## Returns / RMA evidence
+
+### Exchanges + defect replacements (TL-BE-10, 2026-11-15)
+
+- [x] Admin `/returns` reads the DB: stat cards, status/type filters, search, CSV export, and a review drawer with per-line variant/reason, evidence list, history and disposition selects.
+- [x] Approve requires a decision note; reject requires a reason (trimmed, max 255) and is refused without one. Both write `return_status_history`.
+- [x] Approving an exchange sets `order_lines.returned_qty` and creates the linked follow-up order (`order_type = exchange|replacement`); a negative price difference is refundable only when the original payment was `paid`; refund uses a client idempotency key so a double click cannot double-refund.
+- [x] `permission: return.view` (admin + support) / `return.manage` (admin) guard every action through `guards.action`, and the page redirects to `/login` or `/403` rather than rendering a dead screen.
+- [x] Storefront `/account/returns` reads the same tables: orders past the exchange window are excluded server-side (7 days from delivery from `store_settings.exchange.window_days`), one open request per line, photo required, unboxing video required for `wrong_item`.
+- [x] Copy no longer promises money-back returns: policies, product, checkout, success, invoice and footer all say 7-day exchanges on unworn clothing and free defect replacements.
+- [x] `packages/heart/src/modules/returns/returns.int.test.ts` passes 6/6 (window boundary, one-per-line, video rule, difference both ways, approval effect, status transitions).
+- [x] `npx tsc --noEmit` passes in both apps; `npx next build` succeeds in both with `/returns` as a Partial Prerender route.
+- [ ] Browser pass of the admin board and the storefront request/payment flow at 360/768/1024/1440 with MB-004/MB-005/MB-006 (latent fixture orders only cover two delivered lines), keyboard focus in the drawers, and Reset Demo. User verification pending.
+- [ ] Reverse pickup booking, real evidence uploads and reverse AWB stay with TL-BE-11 / TL-INT-R2; the sidebar count badge was removed because it was static demo data.

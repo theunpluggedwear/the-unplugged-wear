@@ -179,7 +179,7 @@ export async function downloadInvoicePdf(order: Order, customerEmail?: string, s
   const fy = pageH - 70;
   rule(fy);
   text('Thank you for choosing pieces that are made only when they are wanted.', M, fy + 18, { size: 9 });
-  text(`Questions? ${SUPPORT_EMAIL} · 14-day returns on unworn clothing · theunpluggedwear.com/policies/returns`, M, fy + 32, {
+  text(`Questions? ${SUPPORT_EMAIL} · 7-day exchanges on unworn clothing · theunpluggedwear.com/policies/returns`, M, fy + 32, {
     size: 8,
     color: MUTED,
   });

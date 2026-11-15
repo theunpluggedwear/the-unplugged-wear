@@ -111,7 +111,7 @@ const NAV_GROUPS: NavGroupDef[] = [
     items: [
       { href: '/fulfillment', label: 'Fulfillment', icon: PackageCheck, match: ['/fulfillment'], badge: { text: '4', dotClassName: 'bg-action-primary', className: 'inline-flex min-w-[18px] items-center justify-center rounded-full bg-nav-badge-purple-bg px-[7.5px] py-[2.5px] text-center text-[11.5px] font-bold leading-none text-action-primary' } },
       { href: '/shipments', label: 'Shipments', icon: Truck, match: ['/shipments'] },
-      { href: '/returns', label: 'Returns & RMA', icon: Undo2, match: ['/returns'], badge: { text: '2', dotClassName: 'bg-nav-badge-amber-text', className: 'inline-flex min-w-[18px] items-center justify-center rounded-full bg-nav-badge-amber-bg px-[7.5px] py-[2.5px] text-center text-[11.5px] font-bold leading-none text-nav-badge-amber-text' } },
+      { href: '/returns', label: 'Returns & RMA', icon: Undo2, match: ['/returns'] },
       { href: '/refunds', label: 'Refunds', icon: RotateCcw, match: ['/refunds'] },
       { href: '/payments', label: 'Payments', icon: CreditCard, match: ['/payments'] },
       { href: '/discounts', label: 'Discounts', icon: BadgePercent, match: ['/discounts'] },

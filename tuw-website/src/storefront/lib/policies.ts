@@ -1,8 +1,9 @@
 // Policy copy for /policies/*. Every policy is a DRAFT until reviewed before
 // launch. Shipping figures and the support email come from admin Settings
 // (store_settings) so the policy always matches what checkout charges.
-// RETURN_WINDOW_DAYS / the returns copy wait for the exchanges module
-// (TL-BE-10): the owner's exchange-only policy is not written here yet.
+// The returns copy follows the exchange-only policy implemented in TL-BE-10:
+// no money-back returns, exchanges inside the setting's window, and free
+// replacements for defects.
 import { RETURN_WINDOW_DAYS } from './product';
 
 export type PolicySlug = 'returns' | 'shipping' | 'privacy' | 'terms';
@@ -47,40 +48,49 @@ export function getPolicies(figures: PolicyFigures): Policy[] {
       slug: 'returns',
       title: 'Returns & Exchanges',
       shortTitle: 'Returns',
-      summary: `${RETURN_WINDOW_DAYS}-day returns on unworn clothing, and replacements for anything that arrives damaged or misprinted.`,
+      summary: `Exchanges on unworn clothing within ${RETURN_WINDOW_DAYS} days of delivery, and free replacements for anything that arrives damaged or misprinted.`,
       shortVersion: [
-        `Return or exchange unworn clothing within ${RETURN_WINDOW_DAYS} days of delivery.`,
-        'Printed objects (mugs, cases, posters…) are replaced if they arrive damaged or misprinted.',
-        'Start a return from your account; we arrange a pickup from your address.',
+        `Ask for another size or variant within ${RETURN_WINDOW_DAYS} days of delivery.`,
+        'Damaged, misprinted or wrong items are replaced free — photos help us see it.',
+        'Start a request from your account; we arrange a pickup from your address.',
       ],
-      lastUpdated: '1 Nov 2026',
+      lastUpdated: '15 Nov 2026',
       sections: [
         {
           id: 'window',
-          title: 'Return window',
+          title: 'Exchange window',
           paragraphs: [
-            `You can ask to return or exchange clothing within ${RETURN_WINDOW_DAYS} days of the delivery date shown in your order tracking.`,
+            `Once your parcel is delivered you have ${RETURN_WINDOW_DAYS} days to ask for a different size, colour or variant of the same piece. The delivery date in your order tracking starts the window.`,
+            'Each printed piece is made for one order, so we offer exchanges and defect replacements rather than money-back returns. If the variant you want costs more, you pay the difference before it is printed; if it costs less, we refund the difference once your request is approved.',
           ],
         },
         {
           id: 'condition',
-          title: 'Condition of returned clothing',
-          paragraphs: ['So the next person receives it as new, returned clothing must be:'],
+          title: 'Condition of exchanged clothing',
+          paragraphs: ['So the next person receives it as new, exchanged clothing must be:'],
           list: ['Unworn and unwashed', 'Free of marks, perfume and odours', 'Returned with its original tags and packaging where possible'],
+        },
+        {
+          id: 'defects',
+          title: 'Damaged, misprinted or wrong items',
+          paragraphs: [
+            'If a piece arrives damaged, misprinted, or is not the item you ordered, tell us within the same window with at least one photo. We reprint it free — no payment is collected.',
+            'For a wrong or missing item our print partner requires the unboxing video; we will ask for it when you raise the request.',
+          ],
         },
         {
           id: 'objects',
           title: 'Printed objects',
           paragraphs: [
-            'Mugs, bottles, phone cases, posters, stationery and other objects are printed for you and can’t be returned for a change of mind.',
-            'If one arrives damaged, misprinted or not as described, tell us within 7 days of delivery with a photo and we’ll send a replacement.',
+            'Mugs, bottles, phone cases, posters, stationery and other objects are printed for you and can’t be exchanged for a change of mind.',
+            'If one arrives damaged, misprinted or not as described, tell us within the window with a photo and we’ll send a free replacement.',
           ],
         },
         {
           id: 'how',
-          title: 'How to start a return',
+          title: 'How to start a request',
           paragraphs: [
-            'Open your account, find the order and choose “Request return”. We’ll confirm the request and arrange a courier pickup from your delivery address.',
+            'Open your account, find the delivered order and choose “Return or exchange”. We confirm every request by hand and arrange a courier pickup from your delivery address where the piece needs to come back.',
           ],
           link: { label: 'Go to my account', href: '/account' },
         },
@@ -88,8 +98,8 @@ export function getPolicies(figures: PolicyFigures): Policy[] {
           id: 'refunds',
           title: 'Refunds',
           paragraphs: [
-            'Once your return reaches us and is checked, we refund the original payment method. Banks usually take 5–7 business days to show it.',
-            'Shipping charges are refunded only if the item was damaged, misprinted or not as described.',
+            'There is no money-back return. A refund only arises when the variant you exchange for costs less than the one you bought, or when a defect cannot be fixed by a reprint.',
+            'Those refunds go to the original payment method; banks usually take 5–7 business days to show them.',
           ],
         },
       ],

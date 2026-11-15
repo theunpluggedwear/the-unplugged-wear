@@ -48,7 +48,7 @@ type AccountSection = 'orders' | 'addresses' | 'returns' | 'profile';
 type OrderFilter = 'all' | 'in_progress' | 'delivered' | 'issues';
 
 const ORDERS_PAGE_SIZE = 6;
-const RETURN_WINDOW_DAYS = 14;
+const RETURN_WINDOW_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const PAYMENT_LABELS: Record<PaymentStatus, string> = {
@@ -778,7 +778,7 @@ export default function AccountPage() {
                       Returns & exchanges
                     </h2>
                     <p className="text-sm text-store-text-secondary mt-1">
-                      Unworn pieces can be returned within {RETURN_WINDOW_DAYS} days of delivery, with free doorstep pickup.
+                      Unworn pieces can be exchanged within {RETURN_WINDOW_DAYS} days of delivery, with free doorstep pickup.
                     </p>
                   </div>
                   <Button variant="dark" size="sm" onClick={() => setIsReturnModalOpen(true)}>

@@ -223,7 +223,7 @@ export default function ProductShowcase({ product }: { product: Product }) {
               <p>Printed in 2–3 business days after you order, then shipped with tracking across India.</p>
               <p className="mt-1.5">
                 {wearable
-                  ? `Return or exchange unworn pieces with tags within ${RETURN_WINDOW_DAYS} days of delivery. `
+                  ? `Exchange unworn pieces with tags within ${RETURN_WINDOW_DAYS} days of delivery. `
                   : 'Printed objects are replaced if they arrive damaged or misprinted (draft policy). '}
                 <Link href="/policies/returns" className="underline underline-offset-4 decoration-store-gold hover:decoration-store-charcoal text-store-charcoal">
                   Returns policy
