@@ -20,17 +20,10 @@
   "session": {
     "branch": "urvil-ui",
     "tip": "43625ec",
-    "unpushed": [
-      "bd9de89",
-      "ff72136",
-      "cf43e33",
-      "44039bd",
-      "f713433",
-      "43625ec"
-    ],
+    "unpushed": [],
     "next_up": "TL-WEB-BE-25 — checkout gift cards, blocked on the admin gift-card module TL-BE-12.",
     "pending_verifications": [],
-    "last_updated": "2026-11-14",
+    "last_updated": "2026-11-15",
     "updated_by": "agent (Buffy)"
   },
   "workflow": {

@@ -10,12 +10,12 @@
   "summary": {
     "total": 440,
     "done": 354,
-    "in_progress": 1,
-    "backlog": 85
+    "in_progress": 2,
+    "backlog": 84
   },
   "session": {
     "branch": "urvil-ui",
-    "tip": "9519313",
+    "tip": "a7ed6b0",
     "unpushed": [],
     "next_up": "TL-BE-10",
     "pending_verifications": [
@@ -52,8 +52,8 @@
       "PEDIT Clothing Specs cards (c86e718): Compact one card per row; Expanded/Full pairs Display options+Clothing specs and Size chart+Monogram at 1024/1440; Display options switch hides/shows the monogram card; independent collapse survives tab switches; size-chart table scrolls inside a half-width card; monogram pair collapses to one column at 360; chart add/remove + in-use guard feedback; Reset Demo; 360/768/1024/1440 - browser pass pending",
       "SQL dry-run (f9de18b + 04f31ec): psql is not installed; validate 002 + 010 against a real Postgres instance before the first migration run. The static schema guard (28eccec + 04f31ec) checks inventory/FK order/retired names/semantic columns but does not replace a real parser."
     ],
-    "last_updated": "2026-11-10",
-    "updated_by": "agent (Claude)"
+    "last_updated": "2026-11-15",
+    "updated_by": "agent (Buffy)"
   },
   "tasks": [
     {
@@ -6737,12 +6737,12 @@
     {
       "id": "TL-BE-10",
       "title": "Returns — exchanges & defect replacements",
-      "status": "backlog",
-      "owner": "unassigned",
+      "status": "in_progress",
+      "owner": "agent (Buffy)",
       "parent": "TL-BE-CORE",
-      "started": null,
+      "started": "2026-11-15",
       "finished": null,
-      "log": "Not started. Scope: Exchange (size/variant, 7-day window, price difference) and replacement (defect, evidence) requests; admin board.",
+      "log": "In progress (2026-11-15): permissions 025, modules/returns (eligibility + customer request + admin transitions), admin board, storefront request flow (TL-WEB-BE-27).",
       "wiring": "modules/returns calls orders (replacement order), payments (difference refund), fulfillment (claims) via index.ts.",
       "done_when": "Customers request exchanges/replacements within the rules (abuse limits enforced); admin approves → replacement order created, difference charged or refunded.",
       "depends_on": [
