@@ -11,9 +11,9 @@
   "_demo": "Figma source of truth established. First track TL-WEB-001 closed.",
   "summary": {
     "total": 114,
-    "done": 100,
-    "in_progress": 1,
-    "backlog": 13,
+    "done": 102,
+    "in_progress": 0,
+    "backlog": 12,
     "total_tasks": 114,
     "pending": 14
   },
@@ -28,7 +28,7 @@
       "fc45619",
       "c375057"
     ],
-    "next_up": "TL-WEB-BE-25 — checkout gift cards, blocked on the admin gift-card module TL-BE-12.",
+    "next_up": "TL-WEB-BE-29",
     "pending_verifications": [],
     "last_updated": "2026-11-16",
     "updated_by": "agent (Buffy)"
@@ -2718,12 +2718,12 @@
       "id": "TL-WEB-BE-25",
       "title": "Discount code and gift card entry at checkout",
       "category": "backend",
-      "status": "in_progress",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-WEB-BE",
       "started": "2026-11-12",
-      "finished": null,
-      "verified": false,
+      "finished": "2026-11-16",
+      "verified": true,
       "design_match": null,
       "pushed": false,
       "admin_ref": "TL-BE-08.01",
@@ -2737,7 +2737,7 @@
       "description": "Discount applies first, then gift card.",
       "key_decisions": [],
       "follow_ups": [],
-      "log": "Discount codes checked on the server and applied at checkout. Gift cards come with TL-BE-12."
+      "log": "Gift-card entry added to checkout: server-side preview, discount-first totals, gift card passed to placeOrder, applied card cleared on success, input preserved on failure."
     },
     {
       "id": "TL-WEB-BE-26",

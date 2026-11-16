@@ -124,6 +124,19 @@ export async function adjust(tx: Transaction, input: { cardId: string; amountPai
   return { balancePaise: next };
 }
 
+export async function previewRedeem(code: string, maxPaise: number): Promise<{ last4: string; balancePaise: number; appliedPaise: number; status: string; expiresAt: string | null } | null> {
+  const codeHash = sha256Hex(code.trim().toUpperCase());
+  const { rows } = await getDb().execute<{ code_last4: string; balance: string; status: string; expires_at: string | null }>(sql`
+    SELECT code_last4, balance, status, expires_at FROM gift_cards WHERE code_hash = ${codeHash}`);
+  const r = rows[0];
+  if (!r) return null;
+  if (r.status !== 'active') throw new AppError('RULE_VIOLATION', `That gift card is ${r.status}.`);
+  if (r.expires_at && new Date(r.expires_at).getTime() <= Date.now()) throw new AppError('RULE_VIOLATION', 'That gift card has expired.');
+  const balancePaise = toPaise(r.balance);
+  if (balancePaise <= 0) throw new AppError('RULE_VIOLATION', 'That gift card has no balance left.');
+  return { last4: r.code_last4, balancePaise, appliedPaise: Math.min(balancePaise, maxPaise), status: r.status, expiresAt: r.expires_at };
+}
+
 export async function balance(code: string): Promise<{ last4: string; balancePaise: number; status: string; expiresAt: string | null } | null> {
   const codeHash = sha256Hex(code.trim().toUpperCase());
   const { rows } = await getDb().execute<{ code_last4: string; balance: string; status: string; expires_at: string | null }>(sql`
