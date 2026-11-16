@@ -9,9 +9,9 @@
   },
   "summary": {
     "total": 441,
-    "done": 372,
+    "done": 373,
     "in_progress": 2,
-    "backlog": 67
+    "backlog": 66
   },
   "session": {
     "branch": "urvil-ui",
@@ -24,7 +24,7 @@
       "fc45619",
       "c375057"
     ],
-    "next_up": "TL-BE-13.02",
+    "next_up": "TL-BE-13.03",
     "pending_verifications": [
       "admin journal editor + list full keyboard/focus/Reset Demo pass at 360/768/1024/1440 (CDP route-load check passed; interactive pass pending)",
       "SQL dry-run: apply 001 + 002 + 006-cms.sql against a real PostgreSQL instance; verify generated blogs.search_vector, slug/CHECK constraints, FK RESTRICT/CASCADE behavior, and partial indexes. psql remains unavailable locally.",
@@ -7059,7 +7059,7 @@
       "parent": "TL-BE-CORE",
       "started": "2026-11-17",
       "finished": null,
-      "log": "13.01 CMS pages/navigation done. Remaining: blog, FAQs, newsletter, media, design assets.",
+      "log": "13.01 CMS pages/navigation and 13.02 journal done. Remaining: FAQs, newsletter, media, design assets.",
       "wiring": "modules/content (cached, tags cms:<pageKey>, faqs, nav) and modules/marketing; admin editors revalidate the storefront.",
       "done_when": "Home, journal, FAQ, policies and footer newsletter run on the DB; admin content editors publish to the storefront.",
       "depends_on": [
@@ -7100,15 +7100,15 @@
     {
       "id": "TL-BE-13.02",
       "title": "Blog/journal: posts, categories, authors, tags, revisions, slug redirects",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-13",
       "started": null,
-      "finished": null,
-      "log": "Not started.",
+      "finished": "2026-11-17",
+      "log": "Blog/journal CRUD with revisions, slug history, tags and published reads wired to admin and storefront.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": [],
       "storefront_tasks": [

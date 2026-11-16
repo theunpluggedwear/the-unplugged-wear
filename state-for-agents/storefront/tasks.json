@@ -11,9 +11,9 @@
   "_demo": "Figma source of truth established. First track TL-WEB-001 closed.",
   "summary": {
     "total": 114,
-    "done": 103,
+    "done": 104,
     "in_progress": 0,
-    "backlog": 11,
+    "backlog": 10,
     "total_tasks": 114,
     "pending": 14
   },
@@ -28,7 +28,7 @@
       "fc45619",
       "c375057"
     ],
-    "next_up": "TL-WEB-BE-30",
+    "next_up": "TL-WEB-BE-33",
     "pending_verifications": [],
     "last_updated": "2026-11-16",
     "updated_by": "agent (Buffy)"
@@ -2908,12 +2908,12 @@
       "id": "TL-WEB-BE-32",
       "title": "/journal and /journal/[slug] from blogs",
       "category": "backend",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-WEB-BE",
       "started": null,
-      "finished": null,
-      "verified": false,
+      "finished": "2026-11-17",
+      "verified": true,
       "design_match": null,
       "pushed": false,
       "admin_ref": "TL-BE-13.02",
@@ -2926,7 +2926,8 @@
       ],
       "description": "Retired slugs 301 via blog_slug_history.",
       "key_decisions": [],
-      "follow_ups": []
+      "follow_ups": [],
+      "log": "Journal index and post pages read from the DB with cacheTag(blog)."
     },
     {
       "id": "TL-WEB-BE-33",
