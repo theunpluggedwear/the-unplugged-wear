@@ -2,6 +2,7 @@ import 'server-only';
 import { registerJob, listJobs, runJob } from './index.ts';
 import { sweepExpired } from '../idempotency/index.ts';
 import { notifyRestocked } from '../../modules/inventory/index.ts';
+import { submitDueOrders, syncOpenFulfillment } from '../../modules/fulfillment/index.ts';
 import { sweepRateLimits } from '../ratelimit/index.ts';
 
 // Every job the system runs, registered in one place so any trigger (Cron
@@ -26,6 +27,16 @@ export function loadJobs(): void {
     name: 'inventory.notifyRestocked',
     description: 'Email everyone waiting on an item that is buyable again (DOC/backend/22).',
     run: notifyRestocked,
+  });
+  registerJob({
+    name: 'fulfillment.submitDue',
+    description: 'Hand paid orders to their print partner once the free-cancel window closes (DOC/backend/16 §6).',
+    run: () => submitDueOrders(25),
+  });
+  registerJob({
+    name: 'fulfillment.syncOpen',
+    description: 'Poll the partner for parcel status and tracking on every open order (DOC/backend/16 §7).',
+    run: () => syncOpenFulfillment(50),
   });
 }
 

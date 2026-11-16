@@ -7,13 +7,24 @@ export type FulfillmentStatus =
   | 'delivery_exception' | 'delivered' | 'rto_initiated' | 'returned'
   | 'cancelled' | 'failed';
 
+export interface FulfillmentOrderLine {
+  sku: string;
+  quantity: number;
+  /** What the customer paid for one unit. Providers that print invoices need it. */
+  unitPricePaise?: number;
+  /** Strategy-B fields (print type, designs, placement) from the mapping. */
+  payload?: Record<string, unknown>;
+}
+
 export interface FulfillmentOrderInput {
   /** Our external_ref (sent as Qikink order_number). */
   reference: string;
   gateway: 'prepaid' | 'cod';
   codAmountPaise?: number;
-  lines: { sku: string; quantity: number }[];
-  shipTo: { name: string; line1: string; line2?: string | null; city: string; state: string; postalCode: string; phone: string };
+  /** Order value the provider records (COD amount or the paid total). */
+  totalPaise?: number;
+  lines: FulfillmentOrderLine[];
+  shipTo: { name: string; line1: string; line2?: string | null; city: string; state: string; postalCode: string; phone: string; country?: string };
 }
 
 export interface ProviderOrderState {
@@ -22,6 +33,10 @@ export interface ProviderOrderState {
   status: FulfillmentStatus;
   courier?: string | null;
   awb?: string | null;
+  /** Provider charge for this order, when the answer carries it. */
+  providerCostPaise?: number | null;
+  /** Raw provider answer, stored on fulfillment_orders.raw_payload. */
+  raw?: Record<string, unknown>;
 }
 
 export interface FulfillmentPartner {
@@ -59,7 +74,9 @@ function validate(input: FulfillmentOrderInput) {
   if (input.gateway === 'cod' && !(Number.isSafeInteger(input.codAmountPaise) && (input.codAmountPaise ?? 0) > 0)) throw new RangeError('COD orders need a positive codAmountPaise');
 }
 
-/** Qikink simulator: orders start "Live"; cancel only while Live (Qikink rule). */
+/** Qikink simulator: orders start "Live"; cancel only while Live (Qikink rule).
+ * Used whenever QIKINK_CLIENT_ID / QIKINK_CLIENT_SECRET are not configured;
+ * the real HTTP client lives in qikink.ts and shares this status map. */
 export function createQikinkSimulator(): FulfillmentPartner {
   const orders = new Map<string, string>(); // providerOrderRef → Qikink status word
   return {
@@ -105,4 +122,4 @@ export const customAtelier: FulfillmentPartner = {
   },
 };
 
-export const fulfillmentAdapters: readonly FulfillmentPartner[] = [createQikinkSimulator(), customAtelier];
+export const qikinkSimulator = createQikinkSimulator();

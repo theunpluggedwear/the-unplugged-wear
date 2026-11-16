@@ -4,7 +4,7 @@ import { getDb, withTransaction, type Transaction } from '../../platform/db/inde
 import { AppError } from '../../platform/errors/index.ts';
 import { recordAudit } from '../../platform/audit/index.ts';
 import { paymentAdapters } from '../payments/adapters.ts';
-import { fulfillmentAdapters } from '../fulfillment/adapters.ts';
+import { fulfillmentAdapters } from '../fulfillment/index.ts';
 import { emailAdapters } from '../email/index.ts';
 
 // Integration provider registry (DOC/backend/16 §1). Owns integration_providers:
