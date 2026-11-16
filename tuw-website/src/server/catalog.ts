@@ -5,6 +5,8 @@ import type { Collection, Product, ProductSize, SizeChartData } from '@storefron
 
 export interface Catalog {
   products: Product[];
+  /** Digital gift cards: purchasable on their own PDP, never in the shop grid. */
+  giftCards: Product[];
   collections: Collection[];
   sizeCharts: SizeChartData[];
 }
@@ -18,10 +20,11 @@ export async function getCatalog(): Promise<Catalog> {
   cacheTag(PRODUCTS_TAG);
   cacheLife('hours');
   const catalog = await getStorefrontCatalog();
+  const products = catalog.products as unknown as Product[];
   return {
-    // The module returns the storefront's Product shape; only the string
-    // unions (category, product type) are narrowed here.
-    products: catalog.products as unknown as Product[],
+    // Gift cards are resolvable on their own PDP but never listed as physical products.
+    products: products.filter((p) => p.productKind !== 'gift_card'),
+    giftCards: products.filter((p) => p.productKind === 'gift_card'),
     collections: catalog.collections,
     sizeCharts: catalog.sizeCharts,
   };
@@ -29,8 +32,9 @@ export async function getCatalog(): Promise<Catalog> {
 
 /** Product by slug or old slug (renamed products keep resolving). */
 export async function getProductBySlug(slug: string): Promise<Product | null> {
-  const { products } = await getCatalog();
-  return products.find((p) => p.slug === slug) ?? products.find((p) => p.aliases?.includes(slug)) ?? null;
+  const { products, giftCards } = await getCatalog();
+  const all = [...products, ...giftCards];
+  return all.find((p) => p.slug === slug) ?? all.find((p) => p.aliases?.includes(slug)) ?? null;
 }
 
 /**

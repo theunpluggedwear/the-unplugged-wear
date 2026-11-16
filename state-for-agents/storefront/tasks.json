@@ -11,9 +11,9 @@
   "_demo": "Figma source of truth established. First track TL-WEB-001 closed.",
   "summary": {
     "total": 114,
-    "done": 102,
+    "done": 103,
     "in_progress": 0,
-    "backlog": 12,
+    "backlog": 11,
     "total_tasks": 114,
     "pending": 14
   },
@@ -28,7 +28,7 @@
       "fc45619",
       "c375057"
     ],
-    "next_up": "TL-WEB-BE-29",
+    "next_up": "TL-WEB-BE-30",
     "pending_verifications": [],
     "last_updated": "2026-11-16",
     "updated_by": "agent (Buffy)"
@@ -2831,12 +2831,12 @@
       "id": "TL-WEB-BE-29",
       "title": "Gift card product purchase + balance check page",
       "category": "backend",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-WEB-BE",
       "started": null,
-      "finished": null,
-      "verified": false,
+      "finished": "2026-11-17",
+      "verified": true,
       "design_match": null,
       "pushed": false,
       "admin_ref": "TL-BE-12.02",
@@ -2849,7 +2849,8 @@
       ],
       "description": "Expiry date shown at purchase.",
       "key_decisions": [],
-      "follow_ups": []
+      "follow_ups": [],
+      "log": "Gift-card product seeded and exposed on its PDP; recipient details flow through cart to issuance; expiry shown at purchase and on balance page; COD blocked for gift cards."
     },
     {
       "id": "TL-WEB-BE-30",

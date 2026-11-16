@@ -39,6 +39,9 @@ export default function GiftCardBalancePage() {
           <div>Expires: {result.expiresAt ? new Date(result.expiresAt).toLocaleDateString() : '—'}</div>
         </div>
       )}
+      <p className="text-xs text-store-muted">
+        Gift cards are valid for six months from issue. Any remaining balance is not refundable after expiry.
+      </p>
     </main>
   );
 }

@@ -113,6 +113,8 @@ export type Product = {
   videoUrl?: string;
   /** Page layout family; defaults from category when missing (see productTypeOf). */
   productType?: ProductType;
+  /** Digital gift cards are purchasable but never printed or shipped. */
+  productKind?: 'physical' | 'gift_card';
   /** Label for the variant picker, e.g. "Size", "Phone model", "Age". */
   variantLabel?: string;
   /** Retail price not yet confirmed by the owner; shown with a draft notice. */
@@ -167,6 +169,9 @@ export type CartItem = {
   image: string;
   /** How many this line may hold right now (from the server; 0 = no longer available). */
   maxQty?: number;
+  giftRecipientName?: string;
+  giftRecipientEmail?: string;
+  giftMessage?: string;
   selectedRadioOptions?: {
     groupKey: string;
     groupLabel: string;

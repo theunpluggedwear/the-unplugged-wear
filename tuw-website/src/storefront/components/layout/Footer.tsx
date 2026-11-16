@@ -51,6 +51,7 @@ const FOOTER_COLUMNS: FooterColumn[] = [
       { label: 'Editorial Journal', href: '/journal' },
       { label: 'Fit & Sizing Architecture', href: '/size-guide' },
       { label: 'Track Shipment', href: '/track-order' },
+      { label: 'Check Gift Card Balance', href: '/gift-cards/balance' },
       { label: 'Contact Studio Concierge', href: '/contact' },
     ],
   },

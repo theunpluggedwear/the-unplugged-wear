@@ -47,6 +47,8 @@ export interface StorefrontProduct {
   isNew?: boolean;
   isBestseller?: boolean;
   productType?: ProductType;
+  /** Digital gift cards are purchasable but never sent to a print partner. */
+  productKind?: 'physical' | 'gift_card';
   variantLabel?: string;
   priceIsDraft?: boolean;
   printAreas?: string[];
@@ -161,7 +163,7 @@ type ProductRow = {
   description: string | null; category_slug: string | null; gender: string | null; style_code: string | null;
   compare_at_price: string | null; spec_table: unknown; details: string[]; care_instructions: string | null;
   composition: string | null; partner_provider: string | null; partner_availability: StorefrontProduct['partnerAvailability'] | null;
-  badge: string | null; tags: string[] | null; product_type: ProductType | null; variant_label: string | null;
+  badge: string | null; tags: string[] | null; product_type: ProductType | null; product_kind: 'physical' | 'gift_card'; variant_label: string | null;
   price_is_draft: boolean; weight_g: number | null; tax_rate: string | null; hsn_code: string | null; size_chart_id: string | null;
 };
 
@@ -171,10 +173,10 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
     db.execute<ProductRow>(sql`
       SELECT p.id, p.external_id, p.slug, p.slug_aliases, p.name, p.short_description, p.description, c.slug AS category_slug,
              p.gender, p.style_code, p.compare_at_price, p.spec_table, p.details, p.care_instructions, p.composition,
-             p.partner_provider, p.partner_availability, p.badge, p.tags, p.product_type, p.variant_label, p.price_is_draft,
+             p.partner_provider, p.partner_availability, p.badge, p.tags, p.product_type, p.product_kind, p.variant_label, p.price_is_draft,
              p.weight_g, p.tax_rate, p.hsn_code, p.size_chart_id
       FROM products p LEFT JOIN categories c ON c.id = p.category_id AND c.deleted_at IS NULL
-      WHERE p.status = 'active' AND p.deleted_at IS NULL AND p.product_kind = 'physical'
+      WHERE p.status = 'active' AND p.deleted_at IS NULL
       ORDER BY p.created_at, p.id`),
     db.execute<{ id: string; product_id: string; price: string; stock: number }>(sql`
       SELECT v.id, v.product_id, v.price, v.stock FROM product_variants v
@@ -260,6 +262,7 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
       subtitle: p.short_description ?? '',
       category: p.category_slug ?? 'accessories',
       ...(type && WEARABLE.has(type) && p.gender && AUDIENCE[p.gender] ? { audience: AUDIENCE[p.gender] } : {}),
+      ...(p.product_kind ? { productKind: p.product_kind } : {}),
       ...(p.style_code ? { partnerStyleCode: p.style_code } : {}),
       priceINR: rupees(minPaise),
       priceMinorINR: minPaise,
