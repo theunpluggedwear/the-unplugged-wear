@@ -67,3 +67,12 @@
 - [x] All buy-flow copy now matches `exchange.window_days` (7) and the exchange-only policy; `RETURN_WINDOW_DAYS` was corrected from 14 to 7 everywhere it is quoted.
 - [x] `npx tsc --noEmit` and `npx next build` pass.
 - [ ] Browser pass at 360/768/1024/1440 of the request flow, the difference payment and its decline path, plus Reset Demo. User verification pending.
+
+### Order tracking (TL-BE-11, 2026-11-16)
+
+- [x] The account order page and `/track-order` read real parcels (`OrderView.shipments`): carrier, AWB, promised date and the courier scans the fulfilment poll writes.
+- [x] Until a parcel exists the page shows the order's own history, so a paid order is never a blank timeline.
+- [x] Shipment statuses are shown as words ("Out for delivery"), never raw enum values, and unknown scans keep the courier's own text.
+- [x] The storefront no longer contains a Qikink client or a fulfilment API route: submission and status polling live in the admin app against the real provider (no cross-app imports).
+- [x] `npx tsc --noEmit` and `npx next build` pass (`DATABASE_URL` must be exported for the build).
+- [ ] Browser pass of the tracking page with a shipped parcel at 360/768/1024/1440. User verification pending — the demo database has no delivered parcel with scans yet.

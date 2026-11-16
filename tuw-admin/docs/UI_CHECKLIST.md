@@ -211,3 +211,17 @@
 - [x] `npx tsc --noEmit` passes in both apps; `npx next build` succeeds in both with `/returns` as a Partial Prerender route.
 - [ ] Browser pass of the admin board and the storefront request/payment flow at 360/768/1024/1440 with MB-004/MB-005/MB-006 (latent fixture orders only cover two delivered lines), keyboard focus in the drawers, and Reset Demo. User verification pending.
 - [ ] Reverse pickup booking, real evidence uploads and reverse AWB stay with TL-BE-11 / TL-INT-R2; the sidebar count badge was removed because it was static demo data.
+
+## Fulfilment board & shipments (TL-BE-11, 2026-11-16)
+
+- [x] `/fulfillment` reads the database: stat cards (waiting, queue, hold, in production, shipped, issues, delivered 30d, COD pending), seven tabs, search, and a row drawer with the provider timeline, lines, wallet debits, claims and the raw provider status.
+- [x] Every action round-trips through `guards.action` (`shipment.manage`) into `packages/heart/src/modules/fulfillment`: **Send now**, retry after a failure, **Sync now**, cancel with the partner (credited to the wallet ledger when a cost was charged), manual tracking, re-ship, and claim draft → submitted → approved → resolved.
+- [x] "Send now" still works when the auto-submit switch is off, and the board shows a banner naming the switch when it is.
+- [x] The provider footer names the API host and whether real keys are configured, so nobody assumes the simulator is Qikink.
+- [x] A simulator row (`sim_qk_…`) cannot be synced or cancelled as if Qikink accepted it; the drawer explains why and offers the manual move.
+- [x] `/shipments` lists real parcels with carrier, AWB, pieces, promised date, scan count and a status control; the spotlight `!ship` scope searches them instead of apologising.
+- [x] Wallet and COD panels read the ledger and remittances: balance, 30-day debits/credits, per-parcel settlement and unallocated amounts; recording a transfer twice is refused as a conflict.
+- [x] `packages/heart/src/modules/fulfillment/fulfillment.int.test.ts` passes 7/7 (unpaid skip + one send only, auto-submit gate, cancel credit, manual dispatch + timeline, claim evidence/video/wallet credit, COD remittance and duplicate refusal, board/stats read models). It caught two real bugs: a wrapped unique-violation error that hid duplicates, and a text parameter bound where a `uuid[]` was expected.
+- [x] `npx tsc --noEmit` passes in both apps; `npx next build` succeeds with `/fulfillment` and `/shipments` as Partial Prerender routes, and every fulfilment cron is declared in `vercel.json`.
+- [ ] Browser pass of the board, the drawer actions, the COD/wallet panels and the shipments table at 360/768/1024/1440, plus keyboard focus and Reset Demo. User verification pending.
+- [ ] Live Qikink: the store's current keys are sandbox keys, so no live order has been sent yet; the first live submission, cancellation and sync still need a real key. Reverse pickup and reverse AWB stay with TL-INT-R2.

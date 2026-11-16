@@ -66,7 +66,8 @@ async function lease(planned: { orderId: string; orderNumber: string; gateway: '
         return { id: created.id, ref: created.external_ref, attempts: created.submit_attempts, fallbackSkus };
       } catch (error) {
         await tx.execute(sql`ROLLBACK TO SAVEPOINT ref_try`);
-        if ((error as { code?: string }).code !== '23505') throw error;
+        const pg = error as { code?: string; cause?: { code?: string } };
+        if ((pg.code ?? pg.cause?.code) !== '23505') throw error;
       }
     }
     throw new AppError('CONFLICT', 'Could not allocate a provider reference for this order.');

@@ -128,10 +128,12 @@ export async function createClaim(input: {
   try {
     await getDb().execute(sql`INSERT INTO fulfillment_claims (id, fulfillment_order_id, return_id, type, status,
         claim_deadline, evidence_media_ids, has_unboxing_video, customer_note, created_by)
-      VALUES (${id}, ${input.fulfillmentId}, ${returnId}, ${input.type}, 'draft', ${deadline}, ${media}::uuid[], ${video},
+      VALUES (${id}, ${input.fulfillmentId}, ${returnId}, ${input.type}, 'draft', ${deadline},
+              ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(media)}::jsonb))::uuid[], ${video},
               ${input.customerNote?.slice(0, 1000) ?? null}, ${actorId})`);
   } catch (error) {
-    if ((error as { code?: string }).code === '23505') throw new AppError('CONFLICT', `An open “${input.type.replace(/_/g, ' ')}” claim already exists for this parcel.`);
+    const pg = error as { code?: string; cause?: { code?: string } };
+    if ((pg.code ?? pg.cause?.code) === '23505') throw new AppError('CONFLICT', `An open “${input.type.replace(/_/g, ' ')}” claim already exists for this parcel.`);
     throw error;
   }
   const { rows: [claim] } = await getDb().execute<ClaimSql>(sql`${SELECT_CLAIM} WHERE c.id = ${id}`);
@@ -232,7 +234,8 @@ export async function reshipFulfillment(input: { fulfillmentId: string }, actorI
         return candidate;
       } catch (error) {
         await tx.execute(sql`ROLLBACK TO SAVEPOINT reship_ref`);
-        if ((error as { code?: string }).code !== '23505') throw error;
+        const pg = error as { code?: string; cause?: { code?: string } };
+        if ((pg.code ?? pg.cause?.code) !== '23505') throw error;
       }
     }
     throw new AppError('CONFLICT', 'Could not allocate a re-ship reference.');

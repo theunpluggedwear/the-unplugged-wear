@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { adminSearchProducts } from '@tuw/heart/modules/catalog';
 import { listCustomers } from '@tuw/heart/modules/customers';
 import { adminListOrders } from '@tuw/heart/modules/orders';
+import { adminListShipments } from '@tuw/heart/modules/fulfillment';
 import { AppError } from '@tuw/heart/platform/errors';
 import { guards } from './session';
 
@@ -13,20 +14,22 @@ import { guards } from './session';
 
 const LIMIT = 5;
 
-export const globalSearchAction = guards.action({ access: 'customer', input: z.object({ q: z.string().trim().max(100), scope: z.enum(['orders', 'products', 'customers']).optional() }) }, async ({ input, ctx }) => {
+export const globalSearchAction = guards.action({ access: 'customer', input: z.object({ q: z.string().trim().max(100), scope: z.enum(['orders', 'products', 'customers', 'shipments']).optional() }) }, async ({ input, ctx }) => {
   const user = ctx.user!;
   if (!user.roles.some((r) => r !== 'customer')) throw new AppError('FORBIDDEN', 'Staff access required.');
   const q = input.q;
-  const wants = (area: 'orders' | 'products' | 'customers') => !input.scope || input.scope === area;
-  if (q.length < 2) return { orders: [], products: [], customers: [] };
-  const [orders, products, customers] = await Promise.all([
+  const wants = (area: 'orders' | 'products' | 'customers' | 'shipments') => !input.scope || input.scope === area;
+  if (q.length < 2) return { orders: [], products: [], customers: [], shipments: [] };
+  const [orders, products, customers, shipments] = await Promise.all([
     wants('orders') && user.permissions.includes('order.view') ? adminListOrders({ q, perPage: LIMIT }).then((r) => r.rows) : Promise.resolve([]),
     wants('products') ? adminSearchProducts(q, LIMIT) : Promise.resolve([]),
     wants('customers') && user.permissions.includes('customer.view') ? listCustomers({ q, perPage: LIMIT }).then((r) => r.data) : Promise.resolve([]),
+    wants('shipments') && user.permissions.includes('shipment.manage') ? adminListShipments({ q, perPage: LIMIT }).then((r) => r.rows) : Promise.resolve([]),
   ]);
   return {
     orders: orders.map((o) => ({ orderNumber: o.orderNumber, customerName: o.customerName, totalPaise: o.totalPaise, status: o.status, paymentStatus: o.paymentStatus })),
     products: products.map((p) => ({ id: p.id, name: p.name, category: p.category, status: p.status, pricePaise: p.pricePaise, stock: p.stock, madeToOrder: p.madeToOrder })),
     customers: customers.map((cu) => ({ profileId: cu.profileId, name: cu.name, email: cu.email ?? '', city: cu.city ?? '' })),
+    shipments: shipments.map((sh) => ({ id: sh.id, orderNumber: sh.orderNumber, customerName: sh.customerName, carrier: sh.carrier, trackingNumber: sh.trackingNumber, status: sh.status })),
   };
 });

@@ -30,7 +30,7 @@
     ],
     "next_up": "TL-WEB-BE-25 — checkout gift cards, blocked on the admin gift-card module TL-BE-12.",
     "pending_verifications": [],
-    "last_updated": "2026-11-15",
+    "last_updated": "2026-11-16",
     "updated_by": "agent (Buffy)"
   },
   "workflow": {
@@ -2803,11 +2803,11 @@
       "id": "TL-WEB-BE-28",
       "title": "Order tracking timeline from shipments; delete api/fulfillment/qikink and lib/qikink.ts (admin owns provider calls)",
       "category": "backend",
-      "status": "backlog",
-      "owner": "unassigned",
+      "status": "done",
+      "owner": "agent (Buffy)",
       "parent": "TL-WEB-BE",
-      "started": null,
-      "finished": null,
+      "started": "2026-11-16",
+      "finished": "2026-11-16",
       "verified": false,
       "design_match": null,
       "pushed": false,
@@ -2821,7 +2821,10 @@
         "src/app/account/orders/[id]/page.tsx"
       ],
       "description": "The storefront never talks to Qikink.",
-      "key_decisions": [],
+      "key_decisions": [
+        "OrderView.shipments is the single source: the page shows the courier timeline, and the order history only until a parcel exists",
+        "No storefront provider client: submission and polling belong to the admin app, so the demo route and lib/qikink.ts are gone"
+      ],
       "follow_ups": []
     },
     {

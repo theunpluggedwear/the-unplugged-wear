@@ -50,7 +50,8 @@ export async function recordCodRemittance(input: RemittanceInput, actor: string)
       await tx.execute(sql`INSERT INTO provider_cod_remittances (id, provider_id, transfer_ref, amount, fees, remitted_to, remitted_at)
         VALUES (${id}, ${providerId}, ${input.transferRef}, ${toRupees(input.amountPaise)}, ${toRupees(input.feesPaise)}, ${input.remittedTo}, ${input.remittedAt})`);
     } catch (error) {
-      if ((error as { code?: string }).code === '23505') {
+      const pg = error as { code?: string; cause?: { code?: string } };
+      if ((pg.code ?? pg.cause?.code) === '23505') {
         throw new AppError('CONFLICT', `Transfer ${input.transferRef} is already recorded.`);
       }
       throw error;
