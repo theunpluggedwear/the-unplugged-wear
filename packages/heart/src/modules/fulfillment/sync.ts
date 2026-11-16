@@ -123,6 +123,9 @@ async function loadOpen(ids: string[] | null, limit: number): Promise<OpenRow[]>
     WHERE f.provider_order_id IS NOT NULL
       AND f.status NOT IN ('delivered', 'cancelled', 'returned', 'failed')
       AND ip.capabilities->>'tracking' = 'poll'
+      -- Rows the simulator "created" have no order at Qikink; polling their
+      -- refs would just overwrite the row with an error every cycle.
+      AND f.provider_order_id NOT LIKE 'sim\_qk\_%'
       ${ids ? sql`AND f.id IN (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})` : sql``}
     ORDER BY f.synced_at ASC NULLS FIRST, f.created_at
     LIMIT ${limit}`);

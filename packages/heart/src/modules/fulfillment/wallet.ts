@@ -1,6 +1,6 @@
 import 'server-only';
 import { sql } from 'drizzle-orm';
-import { getDb, type Transaction } from '../../platform/db/index.ts';
+import { getDb, withTransaction, type Transaction } from '../../platform/db/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import { toRupees, toPaise } from '../../platform/money/index.ts';
 
@@ -73,6 +73,26 @@ export async function postWalletEntry(tx: Transaction, entry: {
            ${entry.note?.slice(0, 255) ?? null}, ${entry.actor ?? 'system'}
     ON CONFLICT DO NOTHING`);
   return (rowCount ?? 0) > 0;
+}
+
+/**
+ * A staff-entered recharge, withdrawal or correction. The wallet belongs to
+ * the active fulfilment partner (Qikink today), so the operator never has to
+ * name it.
+ */
+export async function recordWalletEntry(input: {
+  kind: 'recharge' | 'withdrawal' | 'adjustment'; amountPaise: number; note: string;
+  externalRef?: string; direction?: 'credit' | 'debit';
+}, actor: string): Promise<{ providerName: string; balancePaise: number }> {
+  const [provider] = await walletSummaries();
+  if (!provider) throw new Error('No active fulfilment partner holds a wallet.');
+  const direction = input.kind === 'recharge' ? 'credit' : input.kind === 'withdrawal' ? 'debit' : (input.direction ?? 'credit');
+  const posted = await withTransaction((tx) => postWalletEntry(tx, {
+    providerId: provider.providerId, kind: input.kind, direction, amountPaise: input.amountPaise,
+    externalRef: input.externalRef ?? null, note: input.note, actor,
+  }));
+  if (!posted) throw new Error('That entry duplicates an existing provider transaction id.');
+  return { providerName: provider.providerName, balancePaise: await walletBalancePaise(provider.providerId) };
 }
 
 export async function walletSummaries(): Promise<WalletSummary[]> {

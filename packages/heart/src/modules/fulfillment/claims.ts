@@ -205,13 +205,14 @@ export interface ReshipOutcome {
 export async function reshipFulfillment(input: { fulfillmentId: string }, actorId: string): Promise<ReshipOutcome> {
   const { rows: [src] } = await getDb().execute<{
     id: string; order_id: string; order_number: string; provider_id: string; provider_slug: string; status: string;
-    gateway: 'prepaid' | 'cod'; grand_total: string; shipping_address: Record<string, string>;
+    gateway: 'prepaid' | 'cod'; grand_total: string; shipping_address: Record<string, string>; email: string;
   }>(sql`
     SELECT f.id, f.order_id, o.order_number, f.provider_id, ip.slug AS provider_slug, f.status,
-           f.gateway, o.grand_total, o.shipping_address
+           f.gateway, o.grand_total, o.shipping_address, COALESCE(o.guest_email, u.email, '') AS email
     FROM fulfillment_orders f
     JOIN orders o ON o.id = f.order_id
     JOIN integration_providers ip ON ip.id = f.provider_id
+    LEFT JOIN users u ON u.id = o.placed_by_user_id
     WHERE f.id = ${input.fulfillmentId}`);
   if (!src) throw new AppError('NOT_FOUND', 'That parcel does not exist.');
   if (!['shipped', 'delivery_exception', 'delivered', 'rto_initiated', 'returned'].includes(src.status)) {
@@ -251,7 +252,7 @@ export async function reshipFulfillment(input: { fulfillmentId: string }, actorI
       shipTo: {
         name: address.fullName ?? 'Customer', line1: address.line1 ?? '', line2: address.line2 ?? null,
         city: address.city ?? '', state: address.state ?? '', postalCode: address.postalCode ?? '',
-        phone: address.phone ?? '', country: address.country ?? 'India',
+        phone: address.phone ?? '', email: src.email, country: address.country ?? 'India',
       },
     });
     await getDb().execute(sql`UPDATE fulfillment_orders SET status = ${state.status}, provider_status = ${state.providerStatus},

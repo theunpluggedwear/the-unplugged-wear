@@ -6,6 +6,7 @@ import { toRupees } from '../../platform/money/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
 import { getFulfillmentPartner } from '../../integrations/fulfillment/index.ts';
 import { notifyStaff } from '../notifications/index.ts';
+import { getSetting } from '../settings/index.ts';
 import { externalRef, planOrder, type PlannedGroup, type PlannedOrder } from './provider.ts';
 import { advanceOrderStatus, orderStatusFor } from './status.ts';
 import { postWalletEntry } from './wallet.ts';
@@ -180,6 +181,11 @@ async function recordFailure(input: {
  * Orders whose automatic attempts are exhausted wait for a human.
  */
 export async function submitDueOrders(limit = 25): Promise<{ processed: number; failed: number; note?: string }> {
+  // Staff can hold every automatic send (Settings → Fulfilment) while they
+  // watch the first live orders. Manual sends from the board still work.
+  if (!(await getSetting('fulfillment.auto_submit'))) {
+    return { processed: 0, failed: 0, note: 'Automatic submission is switched off in Settings → Fulfilment; orders wait for a manual send.' };
+  }
   const { rows } = await getDb().execute<{ id: string }>(sql`
     SELECT o.id FROM orders o
     WHERE o.status = 'pending'

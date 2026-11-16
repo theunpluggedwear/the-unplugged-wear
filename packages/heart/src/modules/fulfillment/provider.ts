@@ -75,7 +75,7 @@ export interface PlannedOrder {
 
 type OrderSql = {
   id: string; order_number: string; payment_status: 'pending' | 'paid' | 'failed' | 'refunded'; grand_total: string;
-  shipping_address: Record<string, string>; cod: boolean;
+  shipping_address: Record<string, string>; cod: boolean; email: string;
 };
 
 type LineSql = {
@@ -90,8 +90,10 @@ type LineSql = {
 export async function planOrder(orderId: string, db: Db = getDb()): Promise<PlannedOrder> {
   const { rows: [order] } = await db.execute<OrderSql>(sql`
     SELECT o.id, o.order_number, o.payment_status, o.grand_total, o.shipping_address,
+           COALESCE(o.guest_email, u.email, '') AS email,
            EXISTS (SELECT 1 FROM payments p WHERE p.order_id = o.id AND p.method = 'cod') AS cod
-    FROM orders o WHERE o.id = ${orderId}`);
+    FROM orders o LEFT JOIN users u ON u.id = o.placed_by_user_id
+    WHERE o.id = ${orderId}`);
   if (!order) throw new AppError('NOT_FOUND', 'That order does not exist.');
   if (!order.cod && order.payment_status !== 'paid') {
     throw new AppError('RULE_VIOLATION', 'Only a paid or cash-on-delivery order can go to the print partner.');
@@ -147,6 +149,7 @@ export async function planOrder(orderId: string, db: Db = getDb()): Promise<Plan
       state: address.state ?? '',
       postalCode: address.postalCode ?? '',
       phone: address.phone ?? '',
+      email: order.email, // Qikink requires one on every create call
       country: address.country ?? 'India',
     },
     groups: [...groups.values()],

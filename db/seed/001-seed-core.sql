@@ -293,16 +293,17 @@ INSERT INTO integration_providers (id, slug, name, category, environment, is_act
    '{}')
 ON CONFLICT DO NOTHING;
 
--- Fulfilment is switched on from the start (TL-BE-11, migration 026). Qikink
--- runs in sandbox: without QIKINK_CLIENT_ID / QIKINK_CLIENT_SECRET the adapter
--- is the simulator, with them it calls the sandbox (or live, QIKINK_MODE=live)
--- API. Custom Atelier is in-house fulfilment, so it is active too.
+-- Fulfilment is switched on from the start (TL-BE-11, migrations 026/027).
+-- Qikink runs with the simulator until QIKINK_CLIENT_ID / QIKINK_CLIENT_SECRET
+-- exist, then with the real API at QIKINK_BASE_URL (DOC/backend/16 §7). The
+-- store was issued sandbox keys first, so the row stays 'sandbox' until live
+-- keys arrive. Custom Atelier is in-house fulfilment, so it is active too.
 UPDATE integration_providers
 SET is_active = true,
     settings = settings || '{
-      "sandboxBaseUrl": "https://sandbox.qikink.com",
-      "liveBaseUrl": "https://api.qikink.com",
-      "defaultPrintTypeId": 1
+      "baseUrl": "https://sandbox.qikink.com",
+      "defaultPrintTypeId": 1,
+      "liveKeysPending": true
     }'::jsonb
 WHERE slug = 'qikink';
 UPDATE integration_providers SET is_active = true WHERE slug = 'custom_atelier';

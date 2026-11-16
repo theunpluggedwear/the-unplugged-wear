@@ -24,7 +24,8 @@ export interface FulfillmentOrderInput {
   /** Order value the provider records (COD amount or the paid total). */
   totalPaise?: number;
   lines: FulfillmentOrderLine[];
-  shipTo: { name: string; line1: string; line2?: string | null; city: string; state: string; postalCode: string; phone: string; country?: string };
+  /** Qikink's create call requires an email and a 2-letter country code. */
+  shipTo: { name: string; line1: string; line2?: string | null; city: string; state: string; postalCode: string; phone: string; email: string; country?: string };
 }
 
 export interface ProviderOrderState {

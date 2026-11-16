@@ -14,9 +14,9 @@ import {
 // tests and previews keep working with no key at all. Dropping the two keys in
 // the admin env is the only step needed to start talking to Qikink.
 //
-// QIKINK_MODE=sandbox (default) → sandbox.qikink.com; QIKINK_MODE=live →
-// api.qikink.com, and only then does liveReady() become true (the registry
-// refuses to switch a provider to live without it).
+// The client always talks to the live API (https://api.qikink.com, override with
+// QIKINK_BASE_URL). liveReady() is true the moment both keys exist, so the
+// registry lets the provider row go live with no second switch.
 //
 // Endpoints other than POST /api/token and POST /api/order/create are the
 // documented-but-unverified ones from DOC/backend/16 §8; the sync job records
@@ -25,12 +25,9 @@ import {
 const TOKEN_TTL_MS = 45 * 60_000;
 const TIMEOUT_MS = 20_000;
 
-export type QikinkMode = 'sandbox' | 'live';
-
 export interface QikinkConfig {
   clientId: string;
   clientSecret: string;
-  mode: QikinkMode;
   baseUrl: string;
 }
 
@@ -52,21 +49,17 @@ export function qikinkConfig(): QikinkConfig | null {
   const clientId = trimmed(process.env.QIKINK_CLIENT_ID);
   const clientSecret = trimmed(process.env.QIKINK_CLIENT_SECRET);
   if (!clientId || !clientSecret) return null;
-  const mode: QikinkMode = trimmed(process.env.QIKINK_MODE).toLowerCase() === 'live' ? 'live' : 'sandbox';
-  const configuredBase = mode === 'live'
-    ? trimmed(process.env.QIKINK_LIVE_BASE_URL) || trimmed(process.env.QIKINK_ENDPOINT)
-    : trimmed(process.env.QIKINK_SANDBOX_BASE_URL) || trimmed(process.env.QIKINK_ENDPOINT);
-  const baseUrl = (configuredBase || (mode === 'live' ? 'https://api.qikink.com' : 'https://sandbox.qikink.com')).replace(/\/+$/, '');
-  return { clientId, clientSecret, mode, baseUrl };
+  const configuredBase = trimmed(process.env.QIKINK_BASE_URL) || trimmed(process.env.QIKINK_ENDPOINT);
+  const baseUrl = (configuredBase || 'https://api.qikink.com').replace(/\/+$/, '');
+  return { clientId, clientSecret, baseUrl };
 }
 
-/** What the admin fulfilment screen shows: key present? simulator or API? */
-export function qikinkHealth(): { configured: boolean; mode: QikinkMode; baseUrl: string; simulated: boolean } {
+/** What the admin screens show: keys present (live API) or simulator? */
+export function qikinkHealth(): { configured: boolean; baseUrl: string; simulated: boolean } {
   const config = qikinkConfig();
   return {
     configured: Boolean(config),
-    mode: config?.mode ?? 'sandbox',
-    baseUrl: config?.baseUrl ?? 'https://sandbox.qikink.com',
+    baseUrl: config?.baseUrl ?? 'https://api.qikink.com',
     simulated: !config,
   };
 }
@@ -98,15 +91,26 @@ function pick(source: unknown, keys: string[]): unknown {
 
 const rupees = (paise: number | undefined | null): string => (Math.max(0, Math.round(paise ?? 0)) / 100).toFixed(2);
 
-async function call(config: QikinkConfig, path: string, init: { method?: string; body?: unknown; token?: string } = {}): Promise<unknown> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json', Accept: 'application/json', ClientId: config.clientId };
+async function call(config: QikinkConfig, path: string, init: { method?: string; body?: unknown; token?: string; form?: Record<string, string> } = {}): Promise<unknown> {
+  // Verified against the sandbox on 2026-11-16: the token endpoint only reads
+  // form-urlencoded fields, and every authenticated call needs BOTH
+  // `Accesstoken` and `ClientId` headers (DOC/backend/16 §8.1).
+  const headers: Record<string, string> = { Accept: 'application/json', ClientId: config.clientId };
+  let payload: string | undefined;
+  if (init.form) {
+    headers['Content-Type'] = 'application/x-www-form-urlencoded';
+    payload = new URLSearchParams(init.form).toString();
+  } else {
+    headers['Content-Type'] = 'application/json';
+    payload = init.body === undefined ? undefined : JSON.stringify(init.body);
+  }
   if (init.token) headers.Accesstoken = init.token;
   let response: Response;
   try {
     response = await fetch(`${config.baseUrl}${path}`, {
       method: init.method ?? 'GET',
       headers,
-      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      body: payload,
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (error) {
@@ -125,12 +129,12 @@ async function call(config: QikinkConfig, path: string, init: { method?: string;
 }
 
 async function accessToken(config: QikinkConfig): Promise<string> {
-  const key = `${config.mode}:${config.clientId}`;
+  const key = `${config.baseUrl}:${config.clientId}`;
   const cached = tokens.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.token;
   const body = await call(config, '/api/token', {
     method: 'POST',
-    body: { ClientId: config.clientId, client_secret: config.clientSecret },
+    form: { ClientId: config.clientId, client_secret: config.clientSecret },
   });
   const token = text(pick(body, ['Accesstoken', 'accesstoken', 'access_token', 'AccessToken', 'token']));
   if (!token) throw new QikinkError('Qikink returned no access token (DOC/backend/16 §8.1).', null, body);
@@ -143,6 +147,17 @@ function splitName(fullName: string): { first_name: string; last_name: string } 
   return { first_name: parts[0] ?? 'Customer', last_name: parts.slice(1).join(' ') || '-' };
 }
 
+const COUNTRY_CODE: Record<string, string> = { india: 'IN', in: 'IN' };
+const countryCode = (value: string | undefined): string => COUNTRY_CODE[(value ?? 'India').trim().toLowerCase()] ?? 'IN';
+
+/**
+ * The verified create body (sandbox probe, 2026-11-16 — DOC/backend/16 §8.2):
+ *   * shipping_address takes `country_code` ("IN") and requires `email`;
+ *     a `country` field is rejected as unexpected;
+ *   * a store SKU line (search_from_my_products: 1) must NOT carry
+ *     print_type_id or designs — Qikink reads both from the SKU;
+ *   * Strategy B (our artwork) needs print_type_id + designs instead.
+ */
 function createBody(input: FulfillmentOrderInput): Record<string, unknown> {
   const { first_name, last_name } = splitName(input.shipTo.name);
   const total = input.gateway === 'cod' ? input.codAmountPaise ?? input.totalPaise : input.totalPaise;
@@ -151,15 +166,13 @@ function createBody(input: FulfillmentOrderInput): Record<string, unknown> {
     qikink_shipping: 1,
     gateway: input.gateway === 'cod' ? 'COD' : 'Prepaid',
     total_order_value: rupees(total),
-    line_items: input.lines.map((line) => ({
-      search_from_my_products: 1,
-      print_type_id: Number(line.payload?.printTypeId ?? 1),
-      quantity: String(line.quantity),
-      sku: line.sku,
-      price: rupees(line.unitPricePaise),
-      // Strategy B fields, when a mapping carries them (DOC/backend/16 §6).
-      designs: Array.isArray(line.payload?.designs) ? line.payload.designs : [],
-    })),
+    line_items: input.lines.map((line) => {
+      const designs = Array.isArray(line.payload?.designs) ? line.payload.designs : [];
+      const base = { quantity: String(line.quantity), sku: line.sku, price: rupees(line.unitPricePaise) };
+      return designs.length
+        ? { ...base, print_type_id: Number(line.payload?.printTypeId ?? 1), designs }
+        : { ...base, search_from_my_products: 1 };
+    }),
     shipping_address: {
       first_name,
       last_name,
@@ -168,8 +181,9 @@ function createBody(input: FulfillmentOrderInput): Record<string, unknown> {
       city: input.shipTo.city,
       province: input.shipTo.state,
       zip: input.shipTo.postalCode,
-      country: input.shipTo.country ?? 'India',
       phone: input.shipTo.phone,
+      email: input.shipTo.email,
+      country_code: countryCode(input.shipTo.country),
     },
   };
 }
@@ -196,7 +210,7 @@ const stateFrom = (body: unknown, fallbackRef: string): ProviderOrderState => {
 export function createQikinkClient(config: QikinkConfig): FulfillmentPartner {
   return {
     slug: 'qikink',
-    liveReady: () => config.mode === 'live',
+    liveReady: () => true,
     mapStatus: mapQikinkStatus,
     async createOrder(input) {
       const token = await accessToken(config);
@@ -208,8 +222,20 @@ export function createQikinkClient(config: QikinkConfig): FulfillmentPartner {
     },
     async getOrder(providerOrderRef) {
       const token = await accessToken(config);
-      const body = await call(config, `/api/order?order_id=${encodeURIComponent(providerOrderRef)}`, { token });
-      return stateFrom(body, providerOrderRef);
+      // Qikink's own id is numeric; anything else is our reference, which is
+      // found in the order list (verified: GET /api/order answers an array).
+      if (/^\d+$/.test(providerOrderRef)) {
+        return stateFrom(await call(config, `/api/order?order_id=${encodeURIComponent(providerOrderRef)}`, { token }), providerOrderRef);
+      }
+      const list = await call(config, '/api/order', { token });
+      const rows = Array.isArray(list)
+        ? list
+        : Array.isArray((list as { data?: unknown } | null)?.data)
+          ? ((list as { data: unknown[] }).data)
+          : [];
+      const match = rows.find((row) => text(pick(row, ['order_number', 'orderNumber', 'reference'])) === providerOrderRef);
+      if (!match) throw new QikinkError(`Qikink has no order ${providerOrderRef}.`, 404, list);
+      return stateFrom(match, providerOrderRef);
     },
     async cancelOrder(providerOrderRef) {
       const token = await accessToken(config);
@@ -238,7 +264,7 @@ export function createQikinkPartner(): FulfillmentPartner {
   const client = createQikinkClient(config);
   return {
     ...client,
-    liveReady: () => config.mode === 'live',
+    liveReady: () => true,
     // Once keys exist, a simulated order would be a lie: always use the API.
     createOrder: (input) => client.createOrder(input),
     getOrder: (ref) => client.getOrder(ref),

@@ -75,6 +75,18 @@ const FIELDS: Partial<Record<SettingsTab, { title: string; intro?: string; field
       { key: 'inventory.low_stock_threshold', label: 'Low-stock alert level (units)', kind: 'int', helper: 'A product’s own threshold overrides this' },
     ],
   },
+  fulfillment: {
+    title: 'Fulfilment',
+    intro: 'Print partners below. These switches decide how orders reach them — no deploy needed.',
+    fields: [
+      {
+        key: 'fulfillment.auto_submit',
+        label: 'Send paid orders to the print partner automatically',
+        kind: 'bool',
+        helper: 'On: the job sends each order once its free-cancel window closes. Off: orders wait on the Fulfilment board until staff press "Send now".',
+      },
+    ],
+  },
   notifications: {
     title: 'Notifications',
     fields: [{ key: 'notifications.order_email', label: 'Order alerts email', kind: 'email', helper: 'Receives new-order and fulfilment exception alerts' }],
@@ -95,7 +107,7 @@ function toDraft(fields: Field[], values: SettingsValues): Draft {
 
 const PROVIDER_NOTES: Record<string, string> = {
   mock: 'Demo gateway — no money is collected.',
-  qikink: 'Simulator — orders are not sent to Qikink until the integrations phase.',
+  qikink: 'Sandbox — with QIKINK_CLIENT_ID / QIKINK_CLIENT_SECRET set, orders go to the Qikink sandbox API; without them the built-in simulator answers.',
   custom_atelier: 'In-house atelier — staff update each order by hand.',
   mock_email: 'Demo sender — emails are logged, not delivered.',
 };

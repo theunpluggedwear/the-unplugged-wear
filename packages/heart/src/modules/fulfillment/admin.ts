@@ -102,8 +102,8 @@ type BoardSql = {
 const customerName = sql`COALESCE(o.guest_name, NULLIF(trim(pr.first_name || ' ' || pr.last_name), ''), 'Customer')`;
 const customerEmail = sql`COALESCE(o.guest_email, u.email, '')`;
 
-export async function adminListFulfillment(input: { tab?: BoardTab; q?: string; page?: number; perPage?: number } = {}): Promise<AdminFulfillmentList> {
-  const tab = input.tab ?? 'all';
+export async function adminListFulfillment(input: { tab?: BoardTab | ''; q?: string; page?: number; perPage?: number } = {}): Promise<AdminFulfillmentList> {
+  const tab: BoardTab = !input.tab || input.tab === 'all' ? 'all' : input.tab;
   const page = input.page ?? 1;
   const perPage = input.perPage ?? 20;
   const offset = (page - 1) * perPage;
@@ -284,6 +284,9 @@ export async function adminCancelFulfillment(input: { fulfillmentId: string; not
   if (!row) throw new AppError('NOT_FOUND', 'That fulfilment order does not exist.');
   if (!['pending', 'submitted', 'on_hold', 'in_production', 'failed'].includes(row.status)) {
     throw new AppError('RULE_VIOLATION', `A ${row.status.replace(/_/g, ' ')} parcel can no longer be cancelled with the partner.`);
+  }
+  if (row.provider_order_id?.startsWith('sim_')) {
+    throw new AppError('RULE_VIOLATION', 'This order was accepted by the built-in simulator before real keys existed — there is nothing to cancel at Qikink. Mark it cancelled locally instead.');
   }
   let providerStatus = 'cancelled';
   if (row.provider_order_id) {

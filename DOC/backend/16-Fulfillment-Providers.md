@@ -128,34 +128,60 @@ docs): `order_number` ≤ 15 characters, no dashes; `quantity`, `price`,
 separate product databases (sandbox cannot see My Products); one invalid
 line holds the whole order; no webhooks (poll status).
 
-## 7. API (Postman 08-23 — **unverified until a sandbox call**)
+## 7. API — **verified against the sandbox, 2026-11-16**
 
-| | Sandbox | Live (request via dashboard → Integration → Custom API) |
-|---|---|---|
-| Base | `https://sandbox.qikink.com/` | `https://api.qikink.com/` |
-| Token | `POST /api/token` (ClientId + client_secret → access token) | same |
-| Create order | `POST /api/order/create` | same |
-| Headers | `ClientId`, `Accesstoken` | same |
+One base URL, set by `QIKINK_BASE_URL` (`https://api.qikink.com` by default;
+`https://sandbox.qikink.com` while the store still holds sandbox keys). There
+is **no mode switch in code**: keys decide whether the adapter is real, the URL
+decides which environment it talks to.
 
-Create-order body: `order_number` (= our `external_ref`), `qikink_shipping`
-(1 = Qikink ships), `gateway` (COD/Prepaid), `total_order_value`,
-`line_items[]` (`search_from_my_products`, `print_type_id`, quantity,
-`sku`, `designs[]`), `shipping_address`.
+| Call | Shape (verified) |
+|---|---|
+| Token | `POST /api/token`, **`application/x-www-form-urlencoded`**, fields `ClientId` + `client_secret` → `{ ClientId, Accesstoken }`. JSON bodies make the endpoint answer `500`; the form is mandatory. |
+| Auth on every other call | headers `Accesstoken` **and** `ClientId`. `Accesstoken` alone → `401 "Invalid AccessToken or Client Id"`. Bearer auth is not accepted. |
+| Create order | `POST /api/order/create` (JSON) |
+| Read one order | `GET /api/order?order_id=<Qikink numeric id>` |
+| List orders | `GET /api/order` → array (used to find our `order_number`) |
+| Cancel | `POST /api/order/cancel` |
 
-The public help centre documents **no API, no webhooks and no pincode
-lookup**. Until Qikink confirms otherwise: tracking is poll-only, NDR and
-claims are handled in the Qikink dashboard, and the admin has a per-row
-**Sync now** button.
+Create-order body (rejections observed in order, each fixed in the adapter):
+`order_number` (≤ 15 chars, no dashes), `qikink_shipping: 1`, `gateway`
+(`Prepaid`/`COD`), `total_order_value` as a string, `line_items[]`,
+`shipping_address`.
 
-## 8. Open verifications (ask Qikink / sandbox)
+* `shipping_address` needs `first_name`, `last_name`, `address1`, `address2`,
+  `city`, `province`, `zip`, `phone`, **`email`** and **`country_code`**
+  (`"IN"`). A `country` field is rejected as *unexpected*.
+* A store-SKU line is `{ search_from_my_products: 1, quantity, sku, price }`.
+  `print_type_id` and `designs` are **rejected** in that mode — Qikink reads
+  both from the SKU. Strategy B (our artwork) is the other way round:
+  `print_type_id` + `designs`, no `search_from_my_products`.
+* Sandbox and live have separate product databases, so a sandbox key can only
+  print SKUs that exist in the sandbox store (`Invalid SKU` otherwise).
 
-1. Exact `/api/token` params and token lifetime.
-2. Order-status / tracking endpoint (`GET /api/order?id=`?) and any webhook.
-3. Cancel endpoint, and whether **Live OOS** orders can be cancelled.
-4. Claim (replacement/refund) submission by API or dashboard only. (Evidence rules answered 2026-11-10 — see §4.)
-5. Design upload: link-based only, or an upload endpoint (files ≤ 25 MB,
+The public help centre documents **no webhooks and no pincode lookup**:
+tracking is poll-only (`GET /api/order`), NDR and claims are handled in the
+Qikink dashboard, and the admin has per-row **Sync now**.
+
+## 8. Open verifications
+
+**Answered 2026-11-16 (sandbox):** token params (§7), auth headers (§7),
+order-status/tracking endpoint (§7), and the create body (§7). The store's
+current keys are **sandbox keys** — `api.qikink.com` answers
+`401 "Invalid client_id or client_secret"` for them, so live needs credentials
+from the Qikink dashboard and one env change (`QIKINK_BASE_URL`).
+
+Still open:
+
+1. Cancel accepted statuses (does **Live OOS** cancel?) — `/api/order/cancel`
+   answers only for real orders, so this waits for the first live order.
+2. Claim (replacement/refund) submission by API or dashboard only. (Evidence rules answered 2026-11-10 — see §4.)
+3. Design upload: link-based only, or an upload endpoint (files ≤ 25 MB,
    300 DPI PNG/JPEG).
-6. Whether the RTO storage charge (₹20/product) applies.
+4. Whether the RTO storage charge (₹20/product) applies.
+5. Live credentials: when Qikink issues them, set
+   `QIKINK_CLIENT_ID`/`QIKINK_CLIENT_SECRET` and remove `QIKINK_BASE_URL`
+   (defaults to live), then switch the provider row to `live` in Settings.
 
 ## 9. As built (TL-BE-04, 2026-11-11)
 

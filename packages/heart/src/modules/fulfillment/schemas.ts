@@ -82,7 +82,8 @@ export const codRemittance = z.object({
 export const claimCreate = z.object({
   fulfillmentId: z.string().uuid(),
   type: claimType,
-  evidenceMediaIds: z.array(z.string().uuid()).min(1, 'Add the photos / unboxing video').max(10),
+  /** Empty means "use the customer's return-request evidence". */
+  evidenceMediaIds: z.array(z.string().uuid()).max(10).default([]),
   hasUnboxingVideo: z.boolean().default(false),
   customerNote: z.string().trim().max(1000).optional(),
   returnId: z.string().uuid().optional(),
@@ -94,7 +95,19 @@ export const claimUpdate = z.object({
   resolution: z.enum(['reprint', 'wallet_credit', 'refund', 'none']).optional(),
   staffNote: z.string().trim().max(1000).optional(),
   providerTicketRef: z.string().trim().max(100).optional(),
+  /** Wallet credit the partner agreed to, in paise (wallet_credit only). */
+  amountPaise: z.number().int().min(1).max(100_000_000_00).optional(),
 });
+
+export const setProviderState = z.object({
+  fulfillmentId: z.string().uuid(),
+  status: fulfillmentStatus,
+  note: z.string().trim().max(300).optional(),
+});
+
+export const walletScope = z.object({ providerId: z.string().uuid().optional() });
+
+export const empty = z.object({});
 
 /** A new provider order for a parcel that came back (RTO) or was lost. */
 export const reship = z.object({
