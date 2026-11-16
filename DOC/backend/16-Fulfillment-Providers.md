@@ -191,7 +191,7 @@ Still open:
 |---|---|
 | `registry/` | `listProviders`, `activeProviderSlug`, `updateProvider` — owns `integration_providers` |
 | `payments/` | `PaymentGateway` interface + `mock` demo gateway (captures, `simulate: 'decline'`); `getPaymentGateway()` picks the active row |
-| `fulfillment/` | `FulfillmentPartner` interface (§1), the **real Qikink client** (`qikink.ts`, §7) that falls back to the simulator when no keys are set, and `custom_atelier` (in-house, manual) |
+| `fulfillment/` | `FulfillmentPartner` interface (§1) + `qikink` **simulator** (sandbox only, §5 status map, cancel only while Live) + `custom_atelier` (in-house, manual) |
 | `storage/` | `ObjectStore` interface + in-memory mock (R2 in TL-INT-R2) |
 | `email/` | mock sender (email_logs only) |
 
@@ -207,35 +207,6 @@ Registry rules (tests: `registry.int.test.ts`):
    (`integration.update`).
 5. Unknown Qikink status words map to `on_hold` (ops alert), never to a
    happy state.
-
-## 9b. As built (TL-BE-11, 2026-11-16)
-
-`packages/heart/src/modules/fulfillment/` (tests:
-`fulfillment.int.test.ts`, 7 cases against a throwaway database):
-
-| File | What it does |
-|---|---|
-| `provider.ts` | `planOrder` — splits an order by partner, needs a paid/COD order, skips gift cards, refuses lines without a partner SKU, carries the customer email for Qikink |
-| `submit.ts` | `sendPlanned` (one row per provider per order, unique `external_ref` with retries), `submitDueOrders` for the job, and the `fulfillment.auto_submit` gate |
-| `sync.ts` | `syncFulfillment` / `syncOpenFulfillment` (poll), `recordProviderState` (creates/updates the `shipments` row + scans), `addEvent` (idempotent per status) |
-| `status.ts` | Provider status → order status mapping (`advanceOrderStatus` only moves forward) |
-| `wallet.ts` | Ledger reads/writes: `order_debit`, `cancel_credit`, `claim_credit`, `cod_remittance`, refunds; `walletSummaries` |
-| `remittances.ts` | COD: `pendingCodParcels`, `recordCodRemittance` (per-parcel settlement, optional wallet credit, one transfer ref only once) |
-| `claims.ts` | Partner claims (evidence + unboxing video rules, deadline from capabilities), `updateClaim` state machine, `reshipFulfillment` (new row, new reference) |
-| `admin.ts` | Board read models + every staff action (submit, sync, cancel, tracking, shipment status, mirror provider state, lists) |
-
-Jobs: `fulfillment.submitDue` (every 15 min) and `fulfillment.syncOpen`
-(every 30 min), both in `platform/jobs/catalog.ts` and both crons in
-`tuw-admin/vercel.json`.
-
-Screens: admin `/fulfillment` (board tabs + search, provider drawer with
-timeline, wallet panel, COD panel, auto-submit warning banner) and
-`/shipments` (parcel list, scans, manual status), both reading the database;
-storefront order pages and `/track-order` show the same parcels and scans.
-
-Simulator rows (`provider_order_id` starting `sim_qk_`) are never synced or
-cancelled as if Qikink had accepted them: the board says so and offers the
-manual move instead.
 
 ## 10. Partner SKU editor (TL-BE-05 slice 3, 2026-11-11)
 

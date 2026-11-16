@@ -392,9 +392,8 @@ cancel, so it happens once:
 - Cash on delivery took nothing, so it has nothing to refund.
 
 Guests cannot cancel online yet, because a refund needs a user as its actor.
-They can sign up and claim the order (slice 2) or contact support. The
-`fulfillment.submitDue` job moves the order to `confirmed` once the window
-closes and the partner accepts it (TL-BE-11, `16-Fulfillment-Providers.md`).
+They can sign up and claim the order (slice 2) or contact support. The job
+that moves orders to `confirmed` after the window is TL-BE-11.
 
 **Who sees an order.** The account that placed it, or whoever holds its
 receipt token (an HMAC returned at checkout and put in the success URL).
@@ -445,8 +444,8 @@ refusal. The history shows who acted and any note.
 Removed from this screen until their modules exist:
 
 - Partial refunds (TL-BE-09).
-- Partner sync. "Retry" is the move from failed to confirmed; a real retry is
-  the fulfilment board's **Send now** (TL-BE-11).
+- Partner sync. "Retry" is the move from failed to confirmed; the real retry
+  is TL-BE-11.
 - The demo "Create order" form. Manual orders are not planned yet; the owner
   can decide later.
 
@@ -488,9 +487,8 @@ member may read, in parallel, with five hits per area:
 An area without permission is left out, never an error. Page shortcuts stay
 local. Results deep-link to the record: `/orders?open=<number>`,
 `/products?open=<id>`, `/customers?customer=<profile id>`. The scope prefixes
-(`#orders`, `@customer`, `!inv`) narrow the server search. `!ship` opens the
-shipment search (`/shipments?q=`), which reads real parcels and AWBs since
-TL-BE-11. Recent queries stay in localStorage, a
+(`#orders`, `@customer`, `!inv`) narrow the server search. `!ship` explains
+that shipments arrive with TL-BE-11. Recent queries stay in localStorage, a
 per-person preference. Test: `catalog/staff-search.int.test.ts`.
 
 ## As built (TL-BE-09, 2026-11-14): payments and refunds
