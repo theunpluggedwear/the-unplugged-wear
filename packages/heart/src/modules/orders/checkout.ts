@@ -5,7 +5,7 @@ import { withTransaction, type Transaction } from '../../platform/db/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
 import { emit } from '../../platform/events/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
-import { toRupees } from '../../platform/money/index.ts';
+import { toRupees, toPaise } from '../../platform/money/index.ts';
 import { getPaymentGateway } from '../../integrations/payments/index.ts';
 import { signReceipt } from '../auth/tokens.ts';
 import { checkoutBlockers, lockForCheckout, markConverted, type CartOwner } from '../cart/index.ts';
@@ -15,6 +15,7 @@ import { release, reserve } from '../inventory/index.ts';
 import { refundCancelledOrder, takePayment } from '../payments/index.ts';
 import { getSettings } from '../settings/index.ts';
 import { findDiscount, redeemDiscount } from './discounts.ts';
+import * as giftCards from '../gift-cards/index.ts';
 import { priceOrder, type Totals } from './pricing.ts';
 import type { PlaceOrderInput } from './schemas.ts';
 
@@ -129,8 +130,41 @@ export async function placeOrder(buyer: Buyer, input: PlaceOrderInput): Promise<
 
       await reserve(tx, { orderId, lines: items.map((i) => ({ orderItemId: i.id, variantId: i.line.variantId!, qty: i.line.qty })) });
       if (discount) await redeemDiscount(tx, discount.id);
-      const payment = await takePayment(tx, gateway, { orderId, method: input.method, amountPaise: totals.grandTotalPaise, reference: orderId, simulate: input.simulate });
-      await tx.execute(sql`UPDATE orders SET payment_status = ${payment.captured ? 'paid' : 'pending'} WHERE id = ${orderId}`);
+      let giftCardApplied = 0;
+      if (input.giftCardCode) {
+        const redeemed = await giftCards.redeem(tx, { code: input.giftCardCode, amountPaise: totals.grandTotalPaise, orderId });
+        giftCardApplied = redeemed.appliedPaise;
+      }
+      const payable = totals.grandTotalPaise - giftCardApplied;
+      totals.giftCardPaise = giftCardApplied;
+      const payment = await takePayment(tx, gateway, { orderId, method: input.method, amountPaise: payable, reference: orderId, simulate: input.simulate });
+      await tx.execute(sql`UPDATE orders SET payment_status = ${payment.captured ? 'paid' : 'pending'}, gift_card_amount = ${toRupees(giftCardApplied)} WHERE id = ${orderId}`);
+
+      if (payment.captured) {
+        const { rows: giftLines } = await tx.execute<{ id: string; qty: number; unit_price: string }>(sql`
+          SELECT oi.id, oi.qty, oi.unit_price FROM order_items oi JOIN products p ON p.id = oi.product_id
+          WHERE oi.order_id = ${orderId}::uuid AND p.product_kind = 'gift_card'`);
+        let buyerEmail = guestEmail ?? null;
+        if (!buyerEmail && userId) {
+          const { rows: u } = await tx.execute<{ email: string }>(sql`SELECT email FROM users WHERE id = ${userId}::uuid`);
+          buyerEmail = u[0]?.email ?? null;
+        }
+        for (const line of giftLines) {
+          for (let unit = 1; unit <= line.qty; unit++) {
+            const issued = await giftCards.issue(tx, {
+              amountPaise: toPaise(line.unit_price),
+              purchasedOrderItemId: line.id,
+              purchasedUnitNo: unit,
+              issuedBy: userId ?? null,
+              recipientEmail: buyerEmail,
+            });
+            if (buyerEmail) {
+              const sender = await import('../../integrations/email/index.ts').then((m) => m.getEmailSender());
+              await sender.send({ to: buyerEmail, subject: 'Your The Unplugged Wear gift card', template: 'gift_card.issued', link: `code:${issued.code}`, dedupeKey: `gift_card.issued:${issued.id}` });
+            }
+          }
+        }
+      }
       await tx.execute(sql`INSERT INTO order_status_history (id, order_id, from_status, to_status, note, actor)
         VALUES (${uuidv7()}, ${orderId}, NULL, 'pending', ${payment.captured ? 'Paid; free to cancel until the window ends' : 'Cash on delivery; free to cancel until the window ends'}, ${userId ?? 'guest'})`);
       await markConverted(tx, bag.id);
@@ -151,6 +185,7 @@ export async function placeOrder(buyer: Buyer, input: PlaceOrderInput): Promise<
 /** What every cancel does once the status has flipped: stock back, payment refunded, history written. */
 export async function afterCancel(tx: Transaction, gateway: Awaited<ReturnType<typeof getPaymentGateway>>, input: { orderId: string; actorId: string; from: string; note: string }): Promise<{ refunded: boolean }> {
   await release(tx, { orderId: input.orderId });
+  await giftCards.reverseForOrder(tx, input.orderId, input.actorId);
   const { refunded } = await refundCancelledOrder(tx, gateway, { orderId: input.orderId, actorId: input.actorId, reason: input.note });
   if (refunded) await tx.execute(sql`UPDATE orders SET payment_status = 'refunded' WHERE id = ${input.orderId}`);
   await tx.execute(sql`INSERT INTO order_status_history (id, order_id, from_status, to_status, note, actor)

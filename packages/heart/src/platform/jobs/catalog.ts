@@ -3,6 +3,7 @@ import { registerJob, listJobs, runJob } from './index.ts';
 import { sweepExpired } from '../idempotency/index.ts';
 import { notifyRestocked } from '../../modules/inventory/index.ts';
 import { submitDueOrders, syncOpenFulfillment } from '../../modules/fulfillment/index.ts';
+import { expireDue } from '../../modules/gift-cards/index.ts';
 import { sweepRateLimits } from '../ratelimit/index.ts';
 
 // Every job the system runs, registered in one place so any trigger (Cron
@@ -37,6 +38,12 @@ export function loadJobs(): void {
     name: 'fulfillment.syncOpen',
     description: 'Poll the partner for parcel status and tracking on every open order (DOC/backend/16 §7).',
     run: () => syncOpenFulfillment(50),
+  });
+
+  registerJob({
+    name: 'giftCards.expireDue',
+    description: 'Flip gift cards past their expiry date to expired (DOC/backend/22).',
+    run: expireDue,
   });
 }
 

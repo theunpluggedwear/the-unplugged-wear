@@ -23,6 +23,7 @@ export const placeOrder = z.object({
   speed: z.enum(['standard', 'express']).default('standard'),
   method: z.enum(['card', 'upi', 'cod']),
   discountCode: z.string().trim().toUpperCase().max(50).optional(),
+  giftCardCode: z.string().trim().max(64).optional(),
   /** Demo gateway only: exercise the decline path. */
   simulate: z.literal('decline').optional(),
 });
