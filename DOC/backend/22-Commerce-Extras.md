@@ -126,3 +126,7 @@ Retries are harmless through `one_waiting_stock_alert` and the email
 `dedupe_key`, so the form needs no idempotency key. An address can wait on at
 most 25 items. Email is the mock sender until TL-INT-EMAIL, and the form says so.
 
+
+## As built (TL-BE-12, 2026-11-16)
+
+packages/heart/src/modules/gift-cards/ owns issue/redeem/reversal/adjust/balance/expiry. Checkout redeems a card in the same transaction (discount first, then gift card, then payment), paid gift-card product lines issue one hashed card per unit and email the code once, cancellation reverses the redeem, and giftCards.expireDue runs daily from Vercel Cron. Admin /gift-cards and storefront /gift-cards/balance use the module through server actions with giftcard.manage on the admin side.

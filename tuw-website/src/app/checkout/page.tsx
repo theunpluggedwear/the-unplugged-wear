@@ -11,10 +11,11 @@ import Listbox from '@storefront/components/ui/Listbox';
 import { useStore } from '@storefront/mocks/store';
 import { useSiteSettings } from '@storefront/lib/site-settings';
 import { placeOrderAction } from '@/server/order-actions';
+import { previewGiftCardAction } from '@/server/gift-card-actions';
 import { useSession } from '@storefront/lib/session';
 import { useAccount } from '@storefront/lib/account';
 import { RETURN_WINDOW_DAYS, deliveryEstimate, variantLabelOf } from '@storefront/lib/product';
-import { formatShortDate } from '@storefront/lib/format';
+import { formatRupees, formatShortDate } from '@storefront/lib/format';
 import { Address, Order } from '@storefront/lib/types';
 import {
   ShieldCheck,
@@ -123,6 +124,11 @@ export default function CheckoutPage() {
   const total = cartSubtotal - discountAmount + deliveryFee;
   const [promoInput, setPromoInput] = useState('');
   const [promoMessage, setPromoMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [giftCardInput, setGiftCardInput] = useState('');
+  const [giftCard, setGiftCard] = useState<{ code: string; last4: string; appliedPaise: number; balancePaise: number } | null>(null);
+  const [giftCardMessage, setGiftCardMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const giftCardApplied = giftCard ? giftCard.appliedPaise / 100 : 0;
+  const payableTotal = Math.max(0, total - giftCardApplied);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validateDetails = () => {
@@ -152,6 +158,28 @@ export default function CheckoutPage() {
     } else {
       setPromoMessage({ type: 'error', text: 'That code was not applied. Check it and try again.' });
     }
+  };
+
+  const handleApplyGiftCard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!giftCardInput.trim()) return;
+    const maxPaise = Math.round((cartSubtotal - discountAmount + deliveryFee) * 100);
+    if (maxPaise <= 0) {
+      setGiftCardMessage({ type: 'error', text: 'Add an item to your bag before applying a gift card.' });
+      return;
+    }
+    const result = await previewGiftCardAction({ code: giftCardInput.trim(), maxPaise });
+    if (!result.ok) {
+      setGiftCardMessage({ type: 'error', text: result.error.message });
+      return;
+    }
+    if (!result.data) {
+      setGiftCardMessage({ type: 'error', text: 'We could not find that gift card.' });
+      return;
+    }
+    setGiftCard({ code: giftCardInput.trim(), last4: result.data.last4, appliedPaise: result.data.appliedPaise, balancePaise: result.data.balancePaise });
+    setGiftCardMessage({ type: 'success', text: `Card ending ${result.data.last4} will cover ${formatRupees(result.data.appliedPaise / 100)} of this order.` });
+    setGiftCardInput('');
   };
 
   const handleProceedToDetails = () => {
@@ -187,6 +215,7 @@ export default function CheckoutPage() {
       speed: deliverySpeed,
       method: paymentMethod === 'Card' ? 'card' : paymentMethod === 'UPI' ? 'upi' : 'cod',
       discountCode: promoCode || undefined,
+      giftCardCode: giftCard?.code,
     });
     if (!result.ok) {
       setPlacing(false);
@@ -194,6 +223,8 @@ export default function CheckoutPage() {
       return;
     }
     removePromoCode();
+    setGiftCard(null);
+    setGiftCardMessage(null);
     router.push(`/checkout/success?order=${encodeURIComponent(result.data.orderNumber)}&t=${encodeURIComponent(result.data.receipt)}`);
     // After leaving, so the page does not flash "your bag is empty" first.
     setTimeout(() => void refreshBag(), 500);
@@ -777,7 +808,7 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                       <span className="text-sm font-bold text-store-charcoal">
-                        {shippingFee === 0 ? 'FREE' : `₹${shippingFee}`}
+                        {shippingFee === 0 ? 'FREE' : formatRupees(shippingFee)}
                       </span>
                     </label>
 
@@ -807,7 +838,7 @@ export default function CheckoutPage() {
                           </p>
                         </div>
                       </div>
-                      <span className="text-sm font-bold text-store-charcoal">₹{EXPRESS_FEE}</span>
+                      <span className="text-sm font-bold text-store-charcoal">{formatRupees(EXPRESS_FEE)}</span>
                     </label>
                   </div>
                 </div>
@@ -853,7 +884,7 @@ export default function CheckoutPage() {
                 )}
 
                 <PaymentSimulationPanel
-                  totalAmount={total}
+                  totalAmount={payableTotal}
                   onPaymentSuccess={handlePaymentSuccess}
                   onPaymentFail={(reason) => console.log('Payment declined:', reason)}
                   onCancel={() => setStep(2)}
@@ -879,20 +910,26 @@ export default function CheckoutPage() {
               <div className="space-y-2.5 text-xs text-white/80">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span className="font-semibold text-white">₹{cartSubtotal.toLocaleString()}</span>
+                  <span className="font-semibold text-white">{formatRupees(cartSubtotal)}</span>
                 </div>
 
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-emerald-300 font-medium">
-                    <span>Discount (10%)</span>
-                    <span>-₹{discountAmount.toLocaleString()}</span>
+                    <span>Discount{promoCode ? ` (${promoCode})` : ''}</span>
+                    <span>-{formatRupees(discountAmount)}</span>
+                  </div>
+                )}
+                {giftCard && (
+                  <div className="flex justify-between text-emerald-300 font-medium">
+                    <span>Gift card (••••{giftCard.last4})</span>
+                    <span>-{formatRupees(giftCardApplied)}</span>
                   </div>
                 )}
 
                 <div className="flex justify-between">
                   <span>Delivery{deliverySpeed === 'express' ? ' (express)' : ''}</span>
                   <span className="font-semibold text-white">
-                    {deliveryFee === 0 ? 'Free' : `₹${deliveryFee}`}
+                    {deliveryFee === 0 ? 'Free' : formatRupees(deliveryFee)}
                   </span>
                 </div>
 
@@ -923,7 +960,7 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                       <span className="font-semibold text-white shrink-0">
-                        ₹{(item.priceINR * item.quantity).toLocaleString()}
+                        {formatRupees((item.priceINR * item.quantity))}
                       </span>
                     </div>
                   ))}
@@ -990,10 +1027,50 @@ export default function CheckoutPage() {
                 )}
                 {discountAmount > 0 && !promoMessage && (
                   <div className="flex items-center justify-between text-2xs text-emerald-300 pt-0.5 font-medium">
-                    <span>Coupon applied: 10% off</span>
+                    <span>Code {promoCode} applied</span>
                     <button
                       type="button"
                       onClick={removePromoCode}
+                      className="underline text-white/70 hover:text-white transition-colors cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </form>
+
+              {/* GIFT CARD */}
+              <form onSubmit={handleApplyGiftCard} className="space-y-2 pt-2">
+                <label className="text-2xs uppercase tracking-widest text-white/70 font-semibold block">
+                  GIFT CARD
+                </label>
+                <div className="flex items-center gap-2 rounded-full border border-dashed border-white/30 bg-transparent px-3 py-1.5 focus-within:border-white/70 transition-colors">
+                  <Tag size={16} className="text-white/70 shrink-0 ml-1.5" />
+                  <input
+                    type="text"
+                    value={giftCardInput}
+                    onChange={(e) => setGiftCardInput(e.target.value)}
+                    placeholder="Gift card code"
+                    className="flex-1 bg-transparent text-white placeholder-white/40 text-xs tracking-wider outline-hidden py-1 uppercase"
+                  />
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-full bg-white hover:bg-white/90 text-store-charcoal font-bold text-xs tracking-wider transition-all shadow-xs active:scale-95 cursor-pointer shrink-0"
+                  >
+                    Apply
+                  </button>
+                </div>
+                {giftCardMessage && (
+                  <p className={`text-2xs mt-1 font-medium ${giftCardMessage.type === 'success' ? 'text-emerald-300' : 'text-rose-300'}`}>
+                    {giftCardMessage.text}
+                  </p>
+                )}
+                {giftCard && !giftCardMessage && (
+                  <div className="flex items-center justify-between text-2xs text-emerald-300 pt-0.5 font-medium">
+                    <span>Card ••••{giftCard.last4} applied</span>
+                    <button
+                      type="button"
+                      onClick={() => { setGiftCard(null); setGiftCardMessage(null); }}
                       className="underline text-white/70 hover:text-white transition-colors cursor-pointer"
                     >
                       Remove
@@ -1007,7 +1084,7 @@ export default function CheckoutPage() {
                 <span className="text-xs text-white font-medium block">
                   {freeShippingRemaining === 0
                     ? 'You have unlocked free shipping'
-                    : `Add ₹${freeShippingRemaining.toLocaleString()} to unlock free shipping`}
+                    : `Add ${formatRupees(freeShippingRemaining)} to unlock free shipping`}
                 </span>
                 <div className="w-full h-1.5 rounded-full bg-black/25 overflow-hidden">
                   <div
@@ -1023,7 +1100,7 @@ export default function CheckoutPage() {
               <div className="pt-4 border-t border-white/15 flex items-baseline justify-between">
                 <span className="text-sm font-medium text-white/90">Total</span>
                 <span className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-                  ₹{total.toLocaleString()}
+                  {formatRupees(payableTotal)}
                 </span>
               </div>
 
@@ -1063,11 +1140,11 @@ export default function CheckoutPage() {
             <ul className="p-5 bg-white border border-store-card-border space-y-2.5 text-xs text-store-text-secondary">
               <li className="flex items-center gap-2.5">
                 <Truck size={16} aria-hidden="true" className="text-store-charcoal shrink-0" />
-                Free delivery across India on orders over ₹3,000
+                Free delivery across India on orders over {formatRupees(freeShippingThreshold)}
               </li>
               <li className="flex items-center gap-2.5">
                 <RotateCcw size={16} aria-hidden="true" className="text-store-charcoal shrink-0" />
-                {RETURN_WINDOW_DAYS}-day returns on unworn clothing
+                {RETURN_WINDOW_DAYS}-day exchanges on unworn clothing
               </li>
               <li className="flex items-center gap-2.5">
                 <Lock size={16} aria-hidden="true" className="text-store-charcoal shrink-0" />

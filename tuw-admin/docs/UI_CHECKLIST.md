@@ -196,3 +196,32 @@
 - [x] `pnpm run typecheck` passes with no diagnostics; `pnpm run test` passes 99/99 admin + 11/11 website tests; `pnpm run build` prerenders all 41 admin routes and 31 website routes, with the four journal articles statically generated.
 - [ ] Full admin journal list/editor keyboard, focus, empty/loading/error and Reset Demo browser pass at 360/768/1024/1440 remains pending.
 - [ ] Runtime PostgreSQL validation remains blocked because `psql`/PostgreSQL is not installed locally; the static schema guard is the current substitute.
+
+## Returns / RMA evidence
+
+### Exchanges + defect replacements (TL-BE-10, 2026-11-15)
+
+- [x] Admin `/returns` reads the DB: stat cards, status/type filters, search, CSV export, and a review drawer with per-line variant/reason, evidence list, history and disposition selects.
+- [x] Approve requires a decision note; reject requires a reason (trimmed, max 255) and is refused without one. Both write `return_status_history`.
+- [x] Approving an exchange sets `order_lines.returned_qty` and creates the linked follow-up order (`order_type = exchange|replacement`); a negative price difference is refundable only when the original payment was `paid`; refund uses a client idempotency key so a double click cannot double-refund.
+- [x] `permission: return.view` (admin + support) / `return.manage` (admin) guard every action through `guards.action`, and the page redirects to `/login` or `/403` rather than rendering a dead screen.
+- [x] Storefront `/account/returns` reads the same tables: orders past the exchange window are excluded server-side (7 days from delivery from `store_settings.exchange.window_days`), one open request per line, photo required, unboxing video required for `wrong_item`.
+- [x] Copy no longer promises money-back returns: policies, product, checkout, success, invoice and footer all say 7-day exchanges on unworn clothing and free defect replacements.
+- [x] `packages/heart/src/modules/returns/returns.int.test.ts` passes 6/6 (window boundary, one-per-line, video rule, difference both ways, approval effect, status transitions).
+- [x] `npx tsc --noEmit` passes in both apps; `npx next build` succeeds in both with `/returns` as a Partial Prerender route.
+- [ ] Browser pass of the admin board and the storefront request/payment flow at 360/768/1024/1440 with MB-004/MB-005/MB-006 (latent fixture orders only cover two delivered lines), keyboard focus in the drawers, and Reset Demo. User verification pending.
+- [ ] Reverse pickup booking, real evidence uploads and reverse AWB stay with TL-BE-11 / TL-INT-R2; the sidebar count badge was removed because it was static demo data.
+
+## Fulfilment board & shipments (TL-BE-11, 2026-11-16)
+
+- [x] `/fulfillment` reads the database: stat cards (waiting, queue, hold, in production, shipped, issues, delivered 30d, COD pending), seven tabs, search, and a row drawer with the provider timeline, lines, wallet debits, claims and the raw provider status.
+- [x] Every action round-trips through `guards.action` (`shipment.manage`) into `packages/heart/src/modules/fulfillment`: **Send now**, retry after a failure, **Sync now**, cancel with the partner (credited to the wallet ledger when a cost was charged), manual tracking, re-ship, and claim draft → submitted → approved → resolved.
+- [x] "Send now" still works when the auto-submit switch is off, and the board shows a banner naming the switch when it is.
+- [x] The provider footer names the API host and whether real keys are configured, so nobody assumes the simulator is Qikink.
+- [x] A simulator row (`sim_qk_…`) cannot be synced or cancelled as if Qikink accepted it; the drawer explains why and offers the manual move.
+- [x] `/shipments` lists real parcels with carrier, AWB, pieces, promised date, scan count and a status control; the spotlight `!ship` scope searches them instead of apologising.
+- [x] Wallet and COD panels read the ledger and remittances: balance, 30-day debits/credits, per-parcel settlement and unallocated amounts; recording a transfer twice is refused as a conflict.
+- [x] `packages/heart/src/modules/fulfillment/fulfillment.int.test.ts` passes 7/7 (unpaid skip + one send only, auto-submit gate, cancel credit, manual dispatch + timeline, claim evidence/video/wallet credit, COD remittance and duplicate refusal, board/stats read models). It caught two real bugs: a wrapped unique-violation error that hid duplicates, and a text parameter bound where a `uuid[]` was expected.
+- [x] `npx tsc --noEmit` passes in both apps; `npx next build` succeeds with `/fulfillment` and `/shipments` as Partial Prerender routes, and every fulfilment cron is declared in `vercel.json`.
+- [ ] Browser pass of the board, the drawer actions, the COD/wallet panels and the shipments table at 360/768/1024/1440, plus keyboard focus and Reset Demo. User verification pending.
+- [ ] Live Qikink: the store's current keys are sandbox keys, so no live order has been sent yet; the first live submission, cancellation and sync still need a real key. Reverse pickup and reverse AWB stay with TL-INT-R2.

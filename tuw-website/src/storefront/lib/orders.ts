@@ -17,8 +17,27 @@ const TIMELINE: Record<OrderView['status'], string> = {
   pending: 'Order placed', confirmed: 'Sent to print', processing: 'Printing', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled', failed: 'Delayed at the print partner', refunded: 'Refunded',
 };
 const METHOD: Record<string, Order['paymentMethod']> = { card: 'Card', upi: 'UPI', cod: 'COD (Demo)', netbanking: 'UPI', wallet: 'UPI' };
+/** Courier scans in the customer's words (fetched by the fulfilment poll). */
+const TRACK_LABEL: Record<string, string> = {
+  pending: 'Parcel prepared', shipped: 'Handed to the courier', in_transit: 'In transit',
+  out_for_delivery: 'Out for delivery', delivered: 'Delivered', exception: 'Delivery delayed', returned: 'Returned to us',
+};
 
 export function toStoreOrder(o: OrderView): Order {
+  const parcel = o.shipments[0];
+  const scans = o.shipments
+    .flatMap((s) => s.events)
+    .sort((a, b) => a.at.localeCompare(b.at))
+    .map((e) => {
+      const at = new Date(e.at);
+      return {
+        date: at.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }),
+        time: at.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }),
+        status: TRACK_LABEL[e.status] ?? e.status.replace(/_/g, ' '),
+        location: e.location ?? parcel?.carrier ?? 'The Unplugged Wear',
+        description: e.description ?? '',
+      };
+    });
   const items: CartItem[] = o.lines.map((l) => ({
     id: l.id, productId: l.productId, title: l.title, color: l.color ?? 'Standard', size: l.size ?? 'One size',
     priceINR: l.unitPaise / 100, priceMinorINR: l.unitPaise, quantity: l.qty, image: l.image ?? '',
@@ -41,9 +60,16 @@ export function toStoreOrder(o: OrderView): Order {
     sqlStatus: o.status,
     cancellableUntil: o.cancellableUntil ?? undefined,
     canCancel: o.canCancel,
-    trackingEvents: o.history.map((h) => {
-      const at = new Date(h.at);
-      return { date: at.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }), time: at.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }), status: TIMELINE[h.status], location: 'The Unplugged Wear', description: h.note ?? '' };
-    }),
+    trackingNumber: parcel?.trackingNumber ?? undefined,
+    carrier: parcel?.carrier ?? undefined,
+    estimatedDelivery: parcel?.estimatedDeliveryAt ?? undefined,
+    // Real courier scans once the parcel exists; before that, the order's own
+    // history still gives the customer a truthful timeline.
+    trackingEvents: scans.length
+      ? scans
+      : o.history.map((h) => {
+          const at = new Date(h.at);
+          return { date: at.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }), time: at.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }), status: TIMELINE[h.status], location: 'The Unplugged Wear', description: h.note ?? '' };
+        }),
   };
 }

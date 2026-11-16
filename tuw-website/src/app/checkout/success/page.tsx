@@ -270,7 +270,7 @@ function OrderSuccessContent() {
       {/* Help */}
       <p className="mt-10 text-center text-sm text-store-text-secondary leading-relaxed">
         Need to change something? <Link href="/contact" className="text-store-charcoal underline underline-offset-4 decoration-store-gold">Contact us</Link>{' '}
-        before printing starts. {RETURN_WINDOW_DAYS}-day returns on unworn clothing —{' '}
+        before printing starts. {RETURN_WINDOW_DAYS}-day exchanges on unworn clothing —{' '}
         <Link href="/policies/returns" className="text-store-charcoal underline underline-offset-4 decoration-store-gold">returns policy</Link>.
       </p>
     </div>

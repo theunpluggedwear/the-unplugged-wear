@@ -6,12 +6,14 @@ import { ShoppingBag, Heart, Truck } from 'lucide-react';
 import { Product, ProductColor, ProductSize } from '@storefront/lib/types';
 import { useStore } from '@storefront/mocks/store';
 import Button from '@storefront/components/ui/Button';
+import { formatRupees } from '@storefront/lib/format';
 import SizeGuideModal from './SizeGuideModal';
 import ColorSwatchSelector from './ColorSwatchSelector';
 import VariantPillSelector from './VariantPillSelector';
 import RadioOptionSelector from './RadioOptionSelector';
 import NotifyMe from './NotifyMe';
 import { useSiteSettings, rupeesLabel } from '@storefront/lib/site-settings';
+import { useLiveSizes } from '@storefront/lib/live-stock';
 import {
   sizePriceINR,
   RETURN_WINDOW_DAYS,
@@ -45,8 +47,12 @@ export default function VariantSelector({
   const sizeChart = sizeCharts.find((c) => c.id === product.sizeChartId) ?? null;
   const wearable = isWearable(productType);
 
+  // Stock arrives from the page's live read (see LiveStock) and replaces the
+  // cached catalogue's sizes once it lands; until then the cached values show.
+  const sizes = useLiveSizes(product.slug, product.sizes);
+
   const hasColors = Boolean(product.colors && product.colors.length > 0);
-  const hasSizes = Boolean(product.sizes && product.sizes.length > 0);
+  const hasSizes = sizes.length > 0;
   const hasRadioGroups = Boolean(product.radioGroups && product.radioGroups.length > 0);
 
   const [internalColor, setInternalColor] = useState<ProductColor | undefined>(
@@ -54,11 +60,14 @@ export default function VariantSelector({
   );
   const [internalSize, setInternalSize] = useState<ProductSize | null>(
     // A single sold-out option starts selected, so "notify me" is on show.
-    hasSizes ? product.sizes!.find((s) => s.inStock) || (product.sizes!.length === 1 ? product.sizes![0]! : null) : null
+    hasSizes ? sizes.find((s) => s.inStock) || (sizes.length === 1 ? sizes[0]! : null) : null
   );
 
   const selectedColor = controlledColor !== undefined ? controlledColor : internalColor;
-  const selectedSize = controlledSize !== undefined ? controlledSize : internalSize;
+  // Re-read the chosen size from the live list so its stock and tier price
+  // refresh with the stream, while the selection itself is preserved.
+  const chosenSize = controlledSize !== undefined ? controlledSize : internalSize;
+  const selectedSize = chosenSize ? sizes.find((s) => s.size === chosenSize.size) ?? chosenSize : null;
 
   // Track active radio option selections per group
   const [selectedRadioValues, setSelectedRadioValues] = useState<Record<string, string>>(() => {
@@ -86,7 +95,7 @@ export default function VariantSelector({
   }, 0);
 
   // Price tiers: the chosen size's own price (see lib/product sizePriceINR).
-  const effectiveUnitPriceINR = sizePriceINR(product, selectedSize?.size) + radioDeltaINR;
+  const effectiveUnitPriceINR = sizePriceINR({ ...product, sizes }, selectedSize?.size) + radioDeltaINR;
 
   const handleColorSelect = (color: ProductColor) => {
     if (onColorChange) {
@@ -186,7 +195,7 @@ export default function VariantSelector({
       {/* 2. Dynamic Variant Pill Selector (Omitted if no sizes defined) */}
       {hasSizes && (
         <VariantPillSelector
-          sizes={product.sizes}
+          sizes={sizes}
           selectedSize={selectedSize}
           onSelect={handleSizeSelect}
           label={`${variantLabel}:`}
@@ -221,7 +230,7 @@ export default function VariantSelector({
 
       {/* 4. Quantity & Purchase Actions */}
       <div id="purchase-actions" className="space-y-3 pt-2 scroll-mt-28">
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           {/* Quantity Selector */}
           <div className="flex items-center border border-store-card-border rounded-full bg-store-surface h-14 px-3 shrink-0" role="group" aria-label="Quantity">
             <button
@@ -253,14 +262,14 @@ export default function VariantSelector({
           <button
             type="button"
             onClick={handleAddToCart}
-            className="w-full h-14 px-6 rounded-full bg-[#111111] text-white hover:bg-black transition-all flex items-center justify-between font-medium text-xs uppercase tracking-wider shadow-sm cursor-pointer active:scale-98 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold focus-visible:ring-offset-2"
+            className="min-w-0 flex-1 h-14 px-4 sm:px-6 gap-2 rounded-full bg-[#111111] text-white hover:bg-black transition-all flex items-center justify-between font-medium text-xs uppercase tracking-wider shadow-sm cursor-pointer active:scale-98 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold focus-visible:ring-offset-2"
           >
             <span className="flex items-center gap-2">
-              <ShoppingBag size={18} aria-hidden="true" />
+              <ShoppingBag size={18} aria-hidden="true" className="hidden sm:block" />
               <span>Add to bag</span>
             </span>
             <span className="text-sm tracking-normal tuw-tabular-nums">
-              ₹{(effectiveUnitPriceINR * quantity).toLocaleString('en-IN')}
+              {formatRupees(effectiveUnitPriceINR * quantity)}
             </span>
           </button>
 
@@ -307,7 +316,7 @@ export default function VariantSelector({
           <li>Free delivery on orders over {rupeesLabel(freeThresholdPaise)}</li>
           <li>
             {wearable
-              ? `${RETURN_WINDOW_DAYS}-day returns on unworn pieces with tags`
+              ? `${RETURN_WINDOW_DAYS}-day exchanges on unworn pieces with tags`
               : 'Replacement if it arrives damaged or misprinted (draft policy)'}
           </li>
         </ul>
@@ -319,7 +328,7 @@ export default function VariantSelector({
           onClose={() => setIsSizeGuideOpen(false)}
           chart={sizeChart}
           sizeHeader={product.variantLabel}
-          sizes={product.sizes.map((s) => s.size)}
+          sizes={sizes.map((s) => s.size)}
         />
       )}
     </div>

@@ -19,6 +19,7 @@ next-env.d.ts
 
 # local env files (keep .env.example tracked)
 .env*.local
+.env*.prod
 .env
 !.env.example
 

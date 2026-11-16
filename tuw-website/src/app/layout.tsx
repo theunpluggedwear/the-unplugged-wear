@@ -6,7 +6,9 @@ import { Providers } from './providers';
 import { getSessionSummary } from '@/server/session';
 import { getStorefrontSettings } from '@/server/settings';
 import { getCatalog } from '@/server/catalog';
+import { getNavigation } from '@/server/nav';
 import BrandIntro from '@storefront/components/layout/BrandIntro';
+import { INTRO_SEEN_SCRIPT } from '@storefront/lib/intro';
 
 // Self-hosted Outfit for headings and body (vendored from @fontsource, OFL licensed).
 // next/font/local keeps Turbopack production builds deterministic with zero
@@ -47,12 +49,17 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Both cached ('settings' / 'products' tags) — part of the static shell,
-  // not dynamic holes. The catalog reaches Client Components through the
-  // store provider until shop/PDP become Server Components (TL-WEB-BE-08/10).
-  const [settings, catalog] = await Promise.all([getStorefrontSettings(), getCatalog()]);
+  // All cached ('settings' / 'products' / 'nav' tags) — part of the static
+  // shell, not dynamic holes. Shop and PDP now read the catalog on the server;
+  // the provider keeps it for Header (mega-menu counts, suggestions) and the
+  // per-browser bag/wishlist. Narrowing it to a nav-sized read is the next win.
+  const [settings, catalog, nav] = await Promise.all([getStorefrontSettings(), getCatalog(), getNavigation()]);
   return (
     <html lang="en" className={outfit.variable} suppressHydrationWarning>
+      <head>
+        {/* Before first paint: skip the brand intro for visitors who saw it this session. */}
+        <script dangerouslySetInnerHTML={{ __html: INTRO_SEEN_SCRIPT }} />
+      </head>
       <body className="font-sans antialiased bg-store-canvas text-store-text-primary min-h-screen">
         <a
           href="#main-content"
@@ -61,7 +68,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           Skip to main content
         </a>
         {/* Un-awaited: read with use() inside Suspense boundaries. */}
-        <Providers session={getSessionSummary()} settings={settings} catalog={catalog}>
+        <Providers session={getSessionSummary()} settings={settings} catalog={catalog} nav={nav}>
           {/* Reads the URL; streamed so dynamic routes keep a static shell. */}
           <Suspense fallback={null}>
             <BrandIntro />

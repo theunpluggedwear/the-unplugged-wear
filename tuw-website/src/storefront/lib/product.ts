@@ -1,7 +1,7 @@
 // Product helpers shared by the product page, cards and size guide. Pure functions only.
 import type { Product, ProductType } from './types';
 
-export const RETURN_WINDOW_DAYS = 14;
+export const RETURN_WINDOW_DAYS = 7;
 
 /** Shopper-facing name for each category (breadcrumbs, eyebrows). */
 export const CATEGORY_LABELS: Record<Product['category'], string> = {

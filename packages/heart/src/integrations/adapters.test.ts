@@ -26,7 +26,7 @@ test('Qikink map: every documented word, case/space tolerant; unknown words neve
 
 test('Qikink simulator: idempotent per reference, cancel only while Live, input validated', async () => {
   const qk = createQikinkSimulator();
-  const order = { reference: 'TUW-1', gateway: 'prepaid' as const, lines: [{ sku: 'v-123', quantity: 1 }], shipTo: { name: 'Asha', line1: '12 100 Feet Rd', city: 'Bengaluru', state: 'Karnataka', postalCode: '560038', phone: '9876543210' } };
+  const order = { reference: 'TUW-1', gateway: 'prepaid' as const, lines: [{ sku: 'v-123', quantity: 1 }], shipTo: { name: 'Asha', line1: '12 100 Feet Rd', city: 'Bengaluru', state: 'Karnataka', postalCode: '560038', phone: '9876543210', email: 'asha@example.com' } };
   const a = await qk.createOrder(order);
   const b = await qk.createOrder(order);
   assert.equal(a.providerOrderRef, b.providerOrderRef);

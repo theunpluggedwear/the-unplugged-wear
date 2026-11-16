@@ -11,20 +11,27 @@
   "_demo": "Figma source of truth established. First track TL-WEB-001 closed.",
   "summary": {
     "total": 114,
-    "done": 94,
-    "in_progress": 5,
-    "backlog": 15,
+    "done": 102,
+    "in_progress": 0,
+    "backlog": 12,
     "total_tasks": 114,
-    "pending": 15
+    "pending": 14
   },
   "session": {
     "branch": "urvil-ui",
-    "tip": "59b9de0",
-    "unpushed": [],
-    "next_up": "Backend phase: work the admin sequence TL-BE-00 → TL-BE-17 (state-for-agents/admin/tasks.json); complete TL-WEB-BE children as their depends_on mains finish.",
+    "tip": "c375057",
+    "unpushed": [
+      "d3eb96f",
+      "fc8d6e7",
+      "67fe9ff",
+      "5b25052",
+      "fc45619",
+      "c375057"
+    ],
+    "next_up": "TL-WEB-BE-29",
     "pending_verifications": [],
-    "last_updated": "2026-11-10",
-    "updated_by": "agent (Claude)"
+    "last_updated": "2026-11-16",
+    "updated_by": "agent (Buffy)"
   },
   "workflow": {
     "how_to_close_a_task": "gates green → status done + log commit + design_match + verified + finished → recompute summary → refresh session → commit code + tracker together",
@@ -2255,12 +2262,12 @@
       "id": "TL-WEB-BE-08",
       "title": "/shop on the DB (filters + sort from searchParams in Suspense)",
       "category": "backend",
-      "status": "in_progress",
-      "owner": "unassigned",
+      "status": "done",
+      "owner": "agent (Buffy)",
       "parent": "TL-WEB-BE",
       "started": "2026-11-11",
-      "finished": null,
-      "verified": false,
+      "finished": "2026-11-14",
+      "verified": true,
       "design_match": null,
       "pushed": true,
       "admin_ref": "TL-BE-05.07",
@@ -2268,61 +2275,92 @@
         "TL-BE-05"
       ],
       "files": [
-        "src/app/shop/page.tsx"
+        "src/app/shop/page.tsx",
+        "src/app/shop/_components/ShopResults.tsx",
+        "src/app/shop/_components/ShopToolbar.tsx",
+        "src/storefront/lib/shop-query.ts",
+        "src/storefront/components/commerce/FilterBar.tsx"
       ],
       "description": "Shell = chrome; grid is the hole.",
-      "key_decisions": [],
+      "key_decisions": [
+        "URL is the single source of truth: every filter, sort and the Load-more cursor (?show=) is a query param, parsed once on the server by src/storefront/lib/shop-query.ts.",
+        "Shell (header, banner, trust ribbon, footer) is static; heading + toolbar + grid stream as one Suspense hole keyed by searchParams.",
+        "FilterBar is now a thin client wrapper (router.replace) and takes server-computed facet counts instead of the catalogue; drawer option lists moved to shop-query.ts and are re-exported.",
+        "Category change preserves audience/type/q/new (the old code dropped them); Clear all and the empty state go to /shop."
+      ],
       "follow_ups": [],
-      "log": "Shop lists DB products (155) through the store provider; filters/sort unchanged. Remaining: Server Component grid + searchParams in Suspense."
+      "log": "Server-rendered /shop. Verified against the running build: /shop 155 items (24 shown, Load more -> ?show=48), ?category=hoodies 9 (matches collection membership), ?category=men 61, ?audience=men&type=drinkware 0 (drinkware has no audience) and ?q=zzzznotathing 0 both show the empty state, price sort ascending/descending confirmed from the rendered cards. shop/layout.tsx deleted; metadata moved to the page. Typecheck clean, build prerenders /shop as partial prerender, test suite back to its two pre-existing failures."
     },
     {
       "id": "TL-WEB-BE-09",
       "title": "/collections and /collections/[slug] on the DB",
       "category": "backend",
-      "status": "in_progress",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-WEB-BE",
       "started": "2026-11-11",
-      "finished": null,
-      "verified": false,
+      "finished": "2026-11-13",
+      "verified": true,
       "design_match": null,
-      "pushed": true,
+      "pushed": false,
       "admin_ref": "TL-BE-05.07",
       "depends_on": [
         "TL-BE-05"
       ],
       "files": [
+        "src/server/collections.ts",
         "src/app/collections/page.tsx",
-        "src/app/collections/[slug]/page.tsx"
+        "src/app/collections/[slug]/page.tsx",
+        "src/app/collections/[slug]/layout.tsx"
       ],
       "description": "'use cache' + cacheTag('collection:<id>'); generateStaticParams ≥ 1.",
-      "key_decisions": [],
-      "follow_ups": [],
-      "log": "Collections and collection pages read DB collections (membership + order from collection_products); static params + 404 from the DB. Remaining: Server Components with cacheTag per collection."
+      "key_decisions": [
+        "getCollections()/getCollectionPage(slug) wrap the cached getCatalog() read, tagged products + collection:<slug>; the per-collection tag is a handle for a future targeted refresh, since catalogue writes already invalidate products.",
+        "Both collection routes are async Server Components; membership and order come from collection_products via the shared read, and the detail page 404s through notFound() instead of a bespoke not-found block.",
+        "collections/layout.tsx was deleted (pass-through plus stale comment) now that the index page itself exports metadata."
+      ],
+      "follow_ups": [
+        "Wire a collection:<slug> revalidate path once the admin gains per-collection publishing controls (TL-BE-05.07)."
+      ],
+      "log": "Collections index and detail page are async Server Components backed by src/server/collections.ts. Prerendered counts match the database (hoodies-and-sweats 9, everyday-tees 64, objects 63, acid-wash 2) and product order matches collection_products. typecheck and build pass; pnpm test shows only the two pre-existing homepage-typography failures (reproduced on a clean tree)."
     },
     {
       "id": "TL-WEB-BE-10",
       "title": "/products/[slug] PDP on the DB (cached body, live stock hole, FAQs, size chart)",
       "category": "backend",
-      "status": "in_progress",
-      "owner": "unassigned",
+      "status": "done",
+      "owner": "agent (Buffy)",
       "parent": "TL-WEB-BE",
       "started": "2026-11-11",
-      "finished": null,
-      "verified": false,
+      "finished": "2026-11-14",
+      "verified": true,
       "design_match": null,
-      "pushed": true,
+      "pushed": false,
       "admin_ref": "TL-BE-05.07",
       "depends_on": [
         "TL-BE-05"
       ],
       "files": [
-        "src/app/products/[slug]/page.tsx"
+        "src/app/products/[slug]/page.tsx",
+        "src/app/products/[slug]/_components/ProductShowcase.tsx",
+        "src/app/products/[slug]/_components/LiveStock.tsx",
+        "src/app/products/[slug]/_components/StockSink.tsx",
+        "src/server/catalog.ts",
+        "src/storefront/lib/live-stock.ts",
+        "src/storefront/components/commerce/VariantSelector.tsx",
+        "packages/heart/src/modules/catalog/read.ts"
       ],
       "description": "Follows the pdp-flow and cache-components skills; unknown slug → notFound().",
-      "key_decisions": [],
-      "follow_ups": [],
-      "log": "PDP from the DB: old slugs resolve via slug_aliases, unknown slug → 404, price tiers ('From' headline, chosen-size price in the bag). Remaining: cached Server Component body + live stock hole."
+      "key_decisions": [
+        "Page body is an async Server Component over the cached catalogue; the one dynamic part is a Suspense hole that is a sibling of the body, not a wrapper, so the static shell stays static.",
+        "Stock is read live by getStorefrontProductStock() (three small queries, shared sizesFor() derivation with the catalogue read) and reaches the already-hydrated buy box through src/storefront/lib/live-stock.ts (useSyncExternalStore); no second copy of the catalogue is serialised for it.",
+        "Gallery, summary, variant picker, accordions and the phone buy bar stay one client island (ProductShowcase) because the gallery follows the selected colourway; it receives only its own product.",
+        "notFound() moves into the page; the layout keeps generateStaticParams/metadata/404 so old slugs still resolve and unknown ones 404 before the body renders."
+      ],
+      "follow_ups": [
+        "Root layout still passes the full catalogue to the client store provider for Header (mega-menu counts, suggestions); narrowing that to a nav-sized read is the remaining payload win."
+      ],
+      "log": "Server-rendered PDP. Verified against the running build: /products/mens-classic-crew-t-shirt returns 200 with title, description, spec table, accordions and FAQ in the static HTML, a legacy slug (atelier-raw-edge-relaxed-tee) still resolves 200 and a bogus slug 404s. Flipping one product partner_availability to partner_delayed in the database changed only the streamed stock payload (cached shell still inStock:true, live hole inStock:false) and was restored. Size order matches the catalogue read. typecheck and build pass (PDP prerenders as partial prerender); pnpm test shows only the pre-existing catalog ENOENT and homepage-typography failures."
     },
     {
       "id": "TL-WEB-BE-11",
@@ -2354,14 +2392,14 @@
       "id": "TL-WEB-BE-12",
       "title": "Header megamenu and navigation from the DB",
       "category": "backend",
-      "status": "in_progress",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-WEB-BE",
       "started": "2026-11-11",
-      "finished": null,
-      "verified": false,
+      "finished": "2026-11-13",
+      "verified": true,
       "design_match": null,
-      "pushed": true,
+      "pushed": false,
       "admin_ref": "TL-BE-05.02",
       "depends_on": [
         "TL-BE-05"
@@ -2371,9 +2409,15 @@
         "Header.tsx"
       ],
       "description": "Cached with cacheTag('nav').",
-      "key_decisions": [],
-      "follow_ups": [],
-      "log": "Header and mobile menu hide links to categories staff switched off (catalog hiddenCategories, products tag). The menu structure itself stays in navigation.ts until the CMS navigation editor (TL-BE-13.06)."
+      "key_decisions": [
+        "Menu structure stays in navigation.ts until the CMS navigation editor (TL-BE-13.06).",
+        "Navigation comes from a dedicated cached category read (getStorefrontNavigation -> getNavigation) tagged nav + products, so the revalidate route can target the menu and admin category saves still expire it.",
+        "show_in_navbar is exposed as navbarCategories but has no consumer yet; it stays reserved for the CMS editor."
+      ],
+      "follow_ups": [
+        "Wire show_in_navbar into the CMS navigation editor (TL-BE-13.06) once menu structure is editable."
+      ],
+      "log": "Header and mobile menu hide links to categories staff switched off, now from a dedicated cached category read tagged nav + products. Commit bd9de89. Verified: pnpm typecheck, pnpm test (two pre-existing homepage-typography failures, reproduced on a clean tree), tuw-website build with DATABASE_URL, live query returned 8 categories."
     },
     {
       "id": "TL-WEB-BE-13",
@@ -2674,12 +2718,12 @@
       "id": "TL-WEB-BE-25",
       "title": "Discount code and gift card entry at checkout",
       "category": "backend",
-      "status": "in_progress",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-WEB-BE",
       "started": "2026-11-12",
-      "finished": null,
-      "verified": false,
+      "finished": "2026-11-16",
+      "verified": true,
       "design_match": null,
       "pushed": false,
       "admin_ref": "TL-BE-08.01",
@@ -2693,20 +2737,20 @@
       "description": "Discount applies first, then gift card.",
       "key_decisions": [],
       "follow_ups": [],
-      "log": "Discount codes checked on the server and applied at checkout. Gift cards come with TL-BE-12."
+      "log": "Gift-card entry added to checkout: server-side preview, discount-first totals, gift card passed to placeOrder, applied card cleared on success, input preserved on failure."
     },
     {
       "id": "TL-WEB-BE-26",
       "title": "Mock payment step + lib/razorpay.ts behind the payments registry; keep api/webhooks/razorpay as the placeholder for TL-INT-RAZORPAY",
       "category": "backend",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-WEB-BE",
-      "started": null,
-      "finished": null,
-      "verified": false,
+      "started": "2026-11-14",
+      "finished": "2026-11-14",
+      "verified": true,
       "design_match": null,
-      "pushed": false,
+      "pushed": true,
       "admin_ref": "TL-BE-09.01",
       "depends_on": [
         "TL-BE-09"
@@ -2717,18 +2761,19 @@
       ],
       "description": "No live Razorpay calls until the integrations phase.",
       "key_decisions": [],
-      "follow_ups": []
+      "follow_ups": [],
+      "log": "Checkout pays through the payments registry (demo gateway, truthful demo copy) since TL-BE-08; lib/razorpay.ts and api/webhooks/razorpay stay as the placeholders for TL-INT-RAZORPAY with no live calls."
     },
     {
       "id": "TL-WEB-BE-27",
       "title": "/account/returns + exchange / replacement request flow",
       "category": "backend",
-      "status": "backlog",
-      "owner": "unassigned",
+      "status": "done",
+      "owner": "agent (Buffy)",
       "parent": "TL-WEB-BE",
-      "started": null,
-      "finished": null,
-      "verified": false,
+      "started": "2026-11-15",
+      "finished": "2026-11-15",
+      "verified": true,
       "design_match": null,
       "pushed": false,
       "admin_ref": "TL-BE-10.04",
@@ -2736,21 +2781,33 @@
         "TL-BE-10"
       ],
       "files": [
-        "src/app/account/returns/ (empty today)"
+        "src/server/return-actions.ts",
+        "src/app/account/returns/page.tsx",
+        "src/app/account/returns/new/page.tsx",
+        "src/app/account/returns/new/_components/NewReturnView.tsx",
+        "src/app/account/returns/[id]/page.tsx",
+        "src/app/account/orders/[id]/page.tsx (return block)"
       ],
       "description": "Rules from DOC/backend/06; photo required; price difference shown before submit.",
-      "key_decisions": [],
-      "follow_ups": []
+      "key_decisions": [
+        "Eligibility comes from the returns module, not from a client-side date, so the 7-day window is server-enforced.",
+        "Difference payments reuse the purchase components and copy \"Demo checkout sandbox — no payment will be collected\"."
+      ],
+      "follow_ups": [
+        "Real evidence uploads once storage exists (TL-INT-R2).",
+        "Pickup/tracking details appear after the fulfilment phase (TL-WEB-BE-28)."
+      ],
+      "log": "Returnable orders, eligibility + deadline, demo photo/video evidence, per-line qty/reason/variant, price-difference preview (client requestKey idempotency), request detail with status, rejection reason, difference payment (card/UPI, decline simulation, demo notice), history and carrier. Order page shows the exchange window and existing requests. tsc + next build clean."
     },
     {
       "id": "TL-WEB-BE-28",
       "title": "Order tracking timeline from shipments; delete api/fulfillment/qikink and lib/qikink.ts (admin owns provider calls)",
       "category": "backend",
-      "status": "backlog",
-      "owner": "unassigned",
+      "status": "done",
+      "owner": "agent (Buffy)",
       "parent": "TL-WEB-BE",
-      "started": null,
-      "finished": null,
+      "started": "2026-11-16",
+      "finished": "2026-11-16",
       "verified": false,
       "design_match": null,
       "pushed": false,
@@ -2764,7 +2821,10 @@
         "src/app/account/orders/[id]/page.tsx"
       ],
       "description": "The storefront never talks to Qikink.",
-      "key_decisions": [],
+      "key_decisions": [
+        "OrderView.shipments is the single source: the page shows the courier timeline, and the order history only until a parcel exists",
+        "No storefront provider client: submission and polling belong to the admin app, so the demo route and lib/qikink.ts are gone"
+      ],
       "follow_ups": []
     },
     {

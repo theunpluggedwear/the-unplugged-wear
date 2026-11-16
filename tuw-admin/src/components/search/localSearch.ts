@@ -49,6 +49,7 @@ export interface ServerHits {
   orders: { orderNumber: string; customerName: string; totalPaise: number; status: string; paymentStatus: string }[];
   products: { id: string; name: string; category: string; status: string; pricePaise: number; stock: number; madeToOrder: boolean }[];
   customers: { profileId: string; name: string; email: string; city: string }[];
+  shipments: { id: string; orderNumber: string; customerName: string; carrier: string | null; trackingNumber: string | null; status: string }[];
 }
 
 const rupees = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
@@ -78,6 +79,14 @@ export function buildSections(hits: ServerHits | null, rawQuery: string): Result
     sections.push({ key: 'customers', title: 'Customers', items: hits.customers.map((c): SpotlightResult => ({
       id: `customer-${c.profileId}`, scope: 'customers', title: c.name, subtitle: [c.email, c.city].filter(Boolean).join(' · '),
       href: `/customers?customer=${encodeURIComponent(c.profileId)}`, tileTone: 'blue',
+    })) });
+  }
+
+  if (hits && wants('shipments') && hits.shipments.length) {
+    sections.push({ key: 'shipments', title: 'Shipments', items: hits.shipments.map((sh): SpotlightResult => ({
+      id: `shipment-${sh.id}`, scope: 'shipments', title: `${sh.orderNumber} · ${sh.customerName}`,
+      subtitle: [sh.carrier, sh.trackingNumber, sh.status.replace(/_/g, ' ')].filter(Boolean).join(' · '),
+      href: `/shipments?q=${encodeURIComponent(sh.trackingNumber ?? sh.orderNumber)}`, tileTone: 'cyan',
     })) });
   }
 

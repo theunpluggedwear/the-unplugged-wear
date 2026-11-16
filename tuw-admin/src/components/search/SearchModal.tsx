@@ -34,7 +34,7 @@ export function SearchModal({ onNavigate, onClose }: SearchModalProps) {
   const latest = React.useRef(0);
   React.useEffect(() => {
     const { scope, term } = parseScopedQuery(query);
-    if (term.length < 2 || scope === 'pages' || scope === 'shipments') { setHits(null); setSearching(false); return; }
+    if (term.length < 2 || scope === 'pages') { setHits(null); setSearching(false); return; }
     const mine = ++latest.current;
     setSearching(true);
     const t = setTimeout(() => {
@@ -265,9 +265,7 @@ export function SearchModal({ onNavigate, onClose }: SearchModalProps) {
             <EmptyState
               title="No matches found"
               description={
-                parseScopedQuery(query).scope === 'shipments'
-                  ? 'Shipments arrive with the fulfilment module; nothing to search yet.'
-                  : query.trim()
+                query.trim()
                     ? `Nothing matches "${query.trim()}". Try a prefix like #orders or @customer, or at least two characters.`
                     : 'Type to search orders, products and customers.'
               }

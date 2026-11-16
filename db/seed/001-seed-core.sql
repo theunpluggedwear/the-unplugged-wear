@@ -35,7 +35,7 @@ INSERT INTO roles (id, name, slug, description) VALUES
    'Storefront shopper with no admin permissions')
 ON CONFLICT DO NOTHING;
 
--- --------------------------------------------------- 2. permissions (19)
+-- --------------------------------------------------- 2. permissions (21)
 INSERT INTO permissions (id, name, slug, description) VALUES
   ('00000000-0000-4000-8000-000000000201', 'Create product',      'product.create',
    'Add products and variants'),
@@ -74,7 +74,11 @@ INSERT INTO permissions (id, name, slug, description) VALUES
   ('00000000-0000-4000-8000-000000000212', 'Manage settings',     'settings.manage',
    'Write store_settings (brand, shipping, tax, payments)'),
   ('00000000-0000-4000-8000-000000000213', 'View reports',        'report.view',
-   'Read analytics and revenue reports')
+   'Read analytics and revenue reports'),
+  ('00000000-0000-4000-8000-000000000214', 'View returns',        'return.view',
+   'Read exchange and replacement requests, their lines and timelines'),
+  ('00000000-0000-4000-8000-000000000215', 'Manage returns',      'return.manage',
+   'Approve or reject requests, set dispositions and refund differences')
 ON CONFLICT DO NOTHING;
 
 -- ------------------------------------------------ 3. role_permissions
@@ -90,7 +94,8 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
 JOIN permissions p ON p.slug IN (
-  'order.view', 'order.update_status', 'customer.view', 'customer.update_status'
+  'order.view', 'order.update_status', 'customer.view', 'customer.update_status',
+  'return.view'
 )
 WHERE r.slug = 'support'
 ON CONFLICT DO NOTHING;
@@ -99,7 +104,7 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
 JOIN permissions p ON p.slug IN (
-  'order.view', 'order.update_status', 'shipment.manage'
+  'order.view', 'order.update_status', 'shipment.manage', 'return.view'
 )
 WHERE r.slug = 'warehouse'
 ON CONFLICT DO NOTHING;
@@ -287,3 +292,18 @@ INSERT INTO integration_providers (id, slug, name, category, environment, is_act
   ('00000000-0000-4000-8000-000000100108', 'mock_email',     'Demo email (log only)', 'email', 'sandbox', true,
    '{}')
 ON CONFLICT DO NOTHING;
+
+-- Fulfilment is switched on from the start (TL-BE-11, migrations 026/027).
+-- Qikink runs with the simulator until QIKINK_CLIENT_ID / QIKINK_CLIENT_SECRET
+-- exist, then with the real API at QIKINK_BASE_URL (DOC/backend/16 §7). The
+-- store was issued sandbox keys first, so the row stays 'sandbox' until live
+-- keys arrive. Custom Atelier is in-house fulfilment, so it is active too.
+UPDATE integration_providers
+SET is_active = true,
+    settings = settings || '{
+      "baseUrl": "https://sandbox.qikink.com",
+      "defaultPrintTypeId": 1,
+      "liveKeysPending": true
+    }'::jsonb
+WHERE slug = 'qikink';
+UPDATE integration_providers SET is_active = true WHERE slug = 'custom_atelier';

@@ -4,10 +4,13 @@
 // is never touched: the schema name is unique per run and always dropped.
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { closeDb } from '../db/index.ts';
 
-const ROOT = new URL('../../../../../', import.meta.url).pathname;
+// fileURLToPath, not URL#pathname: on Windows the latter keeps a leading
+// slash (\E:\repo) and every integration test dies on ENOENT.
+const ROOT = fileURLToPath(new URL('../../../../../', import.meta.url));
 const MIGRATE = join(ROOT, 'db/migrate');
 const SEED = join(ROOT, 'db/seed');
 

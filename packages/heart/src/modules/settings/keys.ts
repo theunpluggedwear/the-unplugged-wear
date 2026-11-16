@@ -46,7 +46,7 @@ const gstin = z
   .refine((v) => v === '' || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(v), 'Enter a valid 15-character GSTIN')
   .transform((v) => (v === '' ? null : v));
 
-export type SettingGroup = 'general' | 'brand' | 'shipping' | 'taxes' | 'policies' | 'notifications';
+export type SettingGroup = 'general' | 'brand' | 'shipping' | 'taxes' | 'policies' | 'notifications' | 'fulfillment';
 
 interface KeyDef<T> {
   group: SettingGroup;
@@ -88,6 +88,10 @@ export const SETTING_KEYS = {
   'gift_card.validity_months': def({ group: 'policies', public: true, schema: int(1, 60, 'months'), fallback: 6 }),
   'inventory.low_stock_threshold': def({ group: 'policies', public: false, schema: int(0, 10000, 'units'), fallback: 10 }),
   'notifications.order_email': def({ group: 'notifications', public: false, schema: email, fallback: 'orders@theunpluggedwear.com' }),
+  // The live switch: off means paid orders wait on the fulfilment board until
+  // staff press "Send now", so a real provider wallet cannot be charged by a
+  // clock alone.
+  'fulfillment.auto_submit': def({ group: 'fulfillment', public: false, schema: bool, fallback: true }),
 } as const;
 
 export type SettingKey = keyof typeof SETTING_KEYS;

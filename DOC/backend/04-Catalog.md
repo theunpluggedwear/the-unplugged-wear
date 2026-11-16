@@ -434,10 +434,28 @@ the old storefront classification + the 14 curated products and 4
 collections (`db/seed/catalog/*.json`) and publishes: 155 products,
 2,348 active variants. Re-running classifies only new products.
 
-**Not yet:** Shop/PDP are still Client Components reading the catalog from
-the provider (≈25 KB gzipped, same as the old bundle); moving them to Server
-Components is TL-WEB-BE-08/10. Everything else listed for this task landed in
-slice 3, below.
+**Shop** is now a Server Component (TL-WEB-BE-08): the shell and trust
+ribbon are static, and the heading, filter toolbar and grid stream as one
+Suspense hole that reads the URL. Every filter, sort and the "Load more"
+cursor live in the query string (`category`, `audience`, `type`, `q`, `new`,
+`size`, `color`, `price`, `sort`, `show`), parsed once on the server by
+`src/storefront/lib/shop-query.ts`; the toolbar is a thin client wrapper that
+rewrites the URL. The option lists moved there too, so facet counts are
+computed server-side instead of shipping the catalogue.
+
+The PDP followed (TL-WEB-BE-10): `src/app/products/[slug]/page.tsx` is an async
+Server Component over the cached catalogue, and the only dynamic part is a
+small Suspense hole (`_components/LiveStock.tsx`) that reads fresh sizes from
+`getStorefrontProductStock()` — deliberately uncached, since the catalogue
+behind it may be an hour old — and hands them to the already-hydrated buy box
+through `src/storefront/lib/live-stock.ts`. The interactive top section lives
+in one client island (`_components/ProductShowcase.tsx`) because the gallery
+and the size picker share the selected colourway.
+
+**Not yet:** the root layout still hands the whole catalogue to the client
+store provider for `Header` (mega-menu counts, search); narrowing that is the
+remaining payload win. Everything else listed for this task landed in slice 3,
+below.
 
 ## As built (TL-BE-05 slice 2, 2026-11-11)
 
