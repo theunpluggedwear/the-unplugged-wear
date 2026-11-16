@@ -92,6 +92,11 @@ export async function placeOrder(buyer: Buyer, input: PlaceOrderInput): Promise<
       if (blockers.length) throw new AppError('STOCK_INSUFFICIENT', blockers[0]!.reason, blockers.map((b) => ({ field: b.lineId, message: b.reason })));
 
       const facts = await orderLineFacts(tx, bag.lines.map((l) => l.variantId!));
+      const { rows: kinds } = await tx.execute<{ product_kind: string }>(sql`
+        SELECT product_kind FROM products WHERE id IN (${sql.join([...new Set(bag.lines.map((l) => l.productUuid))].map((id) => sql`${id}::uuid`), sql`, `)})`);
+      if (input.method === 'cod' && kinds.some((k) => k.product_kind === 'gift_card')) {
+        throw new AppError('VALIDATION_FAILED', 'Gift cards must be paid for online — cash on delivery is not available for digital gift cards.', [{ field: 'method', message: 'Choose card or UPI for gift cards.' }]);
+      }
       const subtotal = bag.lines.reduce((n, l) => n + l.unitPaise * l.qty, 0);
       const discount = input.discountCode ? await findDiscount(tx, input.discountCode, subtotal) : null;
       const settings = await getSettings(tx);
@@ -141,8 +146,8 @@ export async function placeOrder(buyer: Buyer, input: PlaceOrderInput): Promise<
       await tx.execute(sql`UPDATE orders SET payment_status = ${payment.captured ? 'paid' : 'pending'}, gift_card_amount = ${toRupees(giftCardApplied)} WHERE id = ${orderId}`);
 
       if (payment.captured) {
-        const { rows: giftLines } = await tx.execute<{ id: string; qty: number; unit_price: string }>(sql`
-          SELECT oi.id, oi.qty, oi.unit_price FROM order_items oi JOIN products p ON p.id = oi.product_id
+        const { rows: giftLines } = await tx.execute<{ id: string; qty: number; unit_price: string; personalization: { recipientName?: string; recipientEmail?: string; message?: string } | null }>(sql`
+          SELECT oi.id, oi.qty, oi.unit_price, oi.personalization FROM order_items oi JOIN products p ON p.id = oi.product_id
           WHERE oi.order_id = ${orderId}::uuid AND p.product_kind = 'gift_card'`);
         let buyerEmail = guestEmail ?? null;
         if (!buyerEmail && userId) {
@@ -151,16 +156,27 @@ export async function placeOrder(buyer: Buyer, input: PlaceOrderInput): Promise<
         }
         for (const line of giftLines) {
           for (let unit = 1; unit <= line.qty; unit++) {
+            const recipientName = line.personalization?.recipientName ?? null;
+            const recipientEmail = line.personalization?.recipientEmail ?? buyerEmail;
             const issued = await giftCards.issue(tx, {
               amountPaise: toPaise(line.unit_price),
               purchasedOrderItemId: line.id,
               purchasedUnitNo: unit,
               issuedBy: userId ?? null,
-              recipientEmail: buyerEmail,
+              recipientName,
+              recipientEmail,
+              message: line.personalization?.message ?? null,
             });
-            if (buyerEmail) {
+            if (recipientEmail) {
               const sender = await import('../../integrations/email/index.ts').then((m) => m.getEmailSender());
-              await sender.send({ to: buyerEmail, subject: 'Your The Unplugged Wear gift card', template: 'gift_card.issued', link: `code:${issued.code}`, dedupeKey: `gift_card.issued:${issued.id}` });
+              const expiry = new Date(issued.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+              await sender.send({
+                to: recipientEmail,
+                subject: 'Your The Unplugged Wear gift card',
+                template: 'gift_card.issued',
+                link: `code:${issued.code};expires:${expiry}`,
+                dedupeKey: `gift_card.issued:${issued.id}`,
+              });
             }
           }
         }

@@ -10,7 +10,13 @@ export const addLine = z.object({
   color: z.string().trim().max(150).optional(),
   size: z.string().trim().max(150).optional(),
   qty: z.number().int('Choose a whole number').min(1, 'Choose at least 1').max(100, 'Choose at most 100'),
-  personalization: z.object({ monogram: z.string().trim().max(30).optional(), placement: z.string().trim().max(50).optional() }).optional(),
+  personalization: z.object({
+    monogram: z.string().trim().max(30).optional(),
+    placement: z.string().trim().max(50).optional(),
+    recipientName: z.string().trim().max(150).optional(),
+    recipientEmail: z.string().trim().toLowerCase().email().max(255).optional(),
+    message: z.string().trim().max(500).optional(),
+  }).optional(),
   previewImageUrl: previewUrl.optional(),
 });
 export const setQty = z.object({ lineId, qty: z.number().int().min(0).max(100) });

@@ -588,7 +588,7 @@ export async function adminDeleteCategory(id: string, actorId: string): Promise<
 
 export interface CartSnapshot {
   productId: string; publicId: string; variantId: string; name: string; slug: string;
-  image: string | null; color: string | null; size: string; label: string; unitPaise: number; monogram: { maxChars: number } | null;
+  image: string | null; color: string | null; size: string; label: string; unitPaise: number; monogram: { maxChars: number } | null; productKind: 'physical' | 'gift_card';
 }
 
 /** A product reference from the storefront: its public id (legacy 'prod-1') or uuid. */
@@ -617,7 +617,6 @@ export async function cartSnapshot(ref: string, color: string | undefined, size:
       SELECT i.url, av.value AS color FROM product_images i LEFT JOIN attribute_values av ON av.id = i.color_value_id
       WHERE i.product_id = ${product.id} ORDER BY i.is_primary DESC, i.sort_order, i.created_at`),
   ]);
-  if (p!.product_kind !== 'physical') throw new AppError('RULE_VIOLATION', 'Gift cards are bought from the gift card page.');
   const chosenColor = v!.color;
   const chosenSize = v!.size ?? size ?? 'One size';
   const image = images.find((i) => chosenColor && i.color?.toLowerCase() === chosenColor.toLowerCase())?.url ?? images[0]?.url ?? null;
@@ -625,6 +624,7 @@ export async function cartSnapshot(ref: string, color: string | undefined, size:
     productId: product.id, publicId: product.publicId, variantId, name: p!.name, slug: p!.slug, image, color: chosenColor, size: chosenSize,
     label: [chosenColor, chosenSize].filter(Boolean).join(' / ').slice(0, 150), unitPaise: toPaise(v!.price),
     monogram: p!.monogram_enabled ? { maxChars: p!.monogram_max_chars } : null,
+    productKind: p!.product_kind === 'gift_card' ? 'gift_card' : 'physical',
   };
 }
 

@@ -73,7 +73,19 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
         const twin = prev.find((i) => i.productId === item.productId && i.color === item.color && i.size === item.size);
         return twin ? prev.map((i) => (i === twin ? { ...i, quantity: i.quantity + item.quantity } : i)) : [...prev, { ...item, id: tempId }];
       },
-      () => addToBagAction({ productId: item.productId, color: axis(item.color, /^standard$/i), size: axis(item.size, /^one size$/i), qty: item.quantity }),
+      () => addToBagAction({
+        productId: item.productId,
+        color: axis(item.color, /^standard$/i),
+        size: axis(item.size, /^one size$/i),
+        qty: item.quantity,
+        ...(item.giftRecipientEmail ? {
+          personalization: {
+            recipientName: item.giftRecipientName,
+            recipientEmail: item.giftRecipientEmail,
+            message: item.giftMessage,
+          },
+        } : {}),
+      }),
       'Could not add to bag',
     );
   }, [send]);

@@ -11,6 +11,7 @@ import RelatedProductsSection from '@storefront/components/commerce/RelatedProdu
 import ProductReviews from '@storefront/components/commerce/ProductReviews';
 import { EditorialFeatureSplit } from '@storefront/components/editorial';
 import { getCatalog } from '@/server/catalog';
+import { getStorefrontSettings } from '@/server/settings';
 import type { Product, ProductSpecTable, ProductType } from '@storefront/lib/types';
 import {
   categoryLabel,
@@ -21,6 +22,7 @@ import {
 } from '@storefront/lib/product';
 import LiveStock from './_components/LiveStock';
 import ProductShowcase from './_components/ProductShowcase';
+import GiftCardPurchase from './_components/GiftCardPurchase';
 
 // Server-rendered from the cached catalogue (see lib/live-stock for the one
 // dynamic part). The only interactive island on the page is ProductShowcase.
@@ -59,13 +61,15 @@ export default async function ProductDetailPage({
 }) {
   const { slug } = await params;
   const key = slug.toLowerCase();
-  const { products } = await getCatalog();
+  const { products, giftCards } = await getCatalog();
+  const all = [...products, ...giftCards];
   // Old slugs keep resolving after a rename (see the layout).
   const product =
-    products.find((p) => p.slug.toLowerCase() === key) ??
-    products.find((p) => p.aliases?.some((alias) => alias.toLowerCase() === key)) ??
+    all.find((p) => p.slug.toLowerCase() === key) ??
+    all.find((p) => p.aliases?.some((alias) => alias.toLowerCase() === key)) ??
     null;
   if (!product) notFound();
+  const settings = await getStorefrontSettings();
 
   const type = productTypeOf(product);
   const categoryName = categoryLabel(product.category);
@@ -88,19 +92,27 @@ export default async function ProductDetailPage({
           />
         </div>
 
-        <ProductShowcase product={product} />
+        {product.productKind === 'gift_card' ? (
+          <GiftCardPurchase product={product} validityMonths={settings.giftCardValidityMonths} />
+        ) : (
+          <ProductShowcase product={product} />
+        )}
 
-        {/* Stock, read fresh per request and handed to the buy box above. */}
-        <Suspense fallback={null}>
-          <LiveStock slug={product.slug} productId={product.productId} />
-        </Suspense>
+        {product.productKind !== 'gift_card' && (
+          <>
+            {/* Stock, read fresh per request and handed to the buy box above. */}
+            <Suspense fallback={null}>
+              <LiveStock slug={product.slug} productId={product.productId} />
+            </Suspense>
 
-        <section className="my-16 pt-8 border-t border-store-card-border">
-          <DynamicDataTable table={specTable} />
-        </section>
+            <section className="my-16 pt-8 border-t border-store-card-border">
+              <DynamicDataTable table={specTable} />
+            </section>
 
-        {/* Real reviews only: delivered orders, approved by staff. */}
-        {product.productId && <ProductReviews productId={product.productId} productTitle={product.title} />}
+            {/* Real reviews only: delivered orders, approved by staff. */}
+            {product.productId && <ProductReviews productId={product.productId} productTitle={product.title} />}
+          </>
+        )}
 
         {related.length > 0 && (
           <RelatedProductsSection
@@ -111,12 +123,14 @@ export default async function ProductDetailPage({
           />
         )}
 
-        <EditorialFeatureSplit
-          title="Printed when you order."
-          eyebrow="How it’s made"
-          description="Nothing is printed ahead of time. Your piece is made after you order by our print partner in India, so there’s no unsold stock waiting in a warehouse."
-          imageSrc="/images/editorial/products-made-with-love.png"
-        />
+        {product.productKind !== 'gift_card' && (
+          <EditorialFeatureSplit
+            title="Printed when you order."
+            eyebrow="How it’s made"
+            description="Nothing is printed ahead of time. Your piece is made after you order by our print partner in India, so there’s no unsold stock waiting in a warehouse."
+            imageSrc="/images/editorial/products-made-with-love.png"
+          />
+        )}
 
         {product.faqs && product.faqs.length > 0 && (
           <DynamicAccordionFaq

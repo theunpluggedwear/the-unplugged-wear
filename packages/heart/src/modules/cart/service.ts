@@ -20,6 +20,9 @@ export const MAX_CART_LINES = 100;
 export interface Personalization {
   monogram?: string;
   placement?: string;
+  recipientName?: string;
+  recipientEmail?: string;
+  message?: string;
 }
 
 export interface CartLine {
@@ -36,6 +39,7 @@ export interface CartLine {
   qty: number;
   image: string | null;
   personalization: Personalization | null;
+  productKind: 'physical' | 'gift_card';
   previewImageUrl: string | null;
   previewApproved: boolean;
   /** How many this line may hold now; 0 when it can no longer be bought. */
@@ -47,7 +51,7 @@ export interface CartView { id: string | null; lines: CartLine[] }
 type Row = {
   id: string; product_id: string; external_id: string | null; variant_id: string | null; product_slug: string | null; product_name: string;
   color: string | null; size: string | null; variant_label: string | null; unit_price: string; qty: number; image_url: string | null;
-  personalization: Personalization | null; preview_image_url: string | null; preview_approved_at: string | null;
+  personalization: Personalization | null; product_kind: 'physical' | 'gift_card'; preview_image_url: string | null; preview_approved_at: string | null;
 };
 
 const ownerKey = (owner: CartOwner) => ('userId' in owner ? `user:${owner.userId}` : `guest:${owner.sessionId}`);
@@ -74,13 +78,13 @@ async function ensureCart(tx: Transaction, owner: CartOwner): Promise<string> {
 async function readLines(db: Pick<Transaction, 'execute'>, cartId: string): Promise<CartLine[]> {
   const { rows } = await db.execute<Row>(sql`
     SELECT ci.id, ci.product_id, p.external_id, ci.variant_id, ci.product_slug, ci.product_name, ci.color, ci.size, ci.variant_label, ci.unit_price, ci.qty,
-           ci.image_url, ci.personalization, ci.preview_image_url, ci.preview_approved_at
+           ci.image_url, ci.personalization, p.product_kind, ci.preview_image_url, ci.preview_approved_at
     FROM cart_items ci JOIN products p ON p.id = ci.product_id WHERE ci.cart_id = ${cartId} ORDER BY ci.added_at, ci.id`);
   const caps = await availableQty(db, rows.flatMap((r) => (r.variant_id ? [r.variant_id] : [])));
   return rows.map((r) => ({
     id: r.id, productId: r.external_id ?? r.product_id, productUuid: r.product_id, variantId: r.variant_id, slug: r.product_slug, title: r.product_name,
     color: r.color, size: r.size, variantLabel: r.variant_label, unitPaise: paise(r.unit_price), qty: r.qty, image: r.image_url,
-    personalization: r.personalization, previewImageUrl: r.preview_image_url, previewApproved: r.preview_approved_at !== null,
+    personalization: r.personalization, productKind: r.product_kind === 'gift_card' ? 'gift_card' : 'physical', previewImageUrl: r.preview_image_url, previewApproved: r.preview_approved_at !== null,
     maxQty: r.variant_id ? caps.get(r.variant_id) ?? 0 : 0,
   }));
 }
@@ -107,8 +111,18 @@ function checkQty(qty: number, cap: number, what: string): void {
 const stable = (p: Personalization | null) => (p ? JSON.stringify(Object.fromEntries(Object.entries(p).sort(([a], [b]) => a.localeCompare(b)))) : 'null');
 const samePersonalization = (a: Personalization | null, b: Personalization | null) => stable(a) === stable(b);
 
-function cleanPersonalization(input: Personalization | undefined, monogram: { maxChars: number } | null, previewUrl: string | undefined): Personalization | null {
-  if (!input || (!input.monogram && !input.placement)) return null;
+function cleanPersonalization(input: Personalization | undefined, monogram: { maxChars: number } | null, previewUrl: string | undefined, productKind: 'physical' | 'gift_card'): Personalization | null {
+  if (!input) return null;
+  const gift = input.recipientName || input.recipientEmail || input.message;
+  if (productKind === 'gift_card' && gift) {
+    if (!input.recipientEmail) throw new AppError('VALIDATION_FAILED', 'Enter the recipient email.', [{ field: 'recipientEmail', message: 'Recipient email required.' }]);
+    return {
+      ...(input.recipientName ? { recipientName: input.recipientName.trim().slice(0, 150) } : {}),
+      recipientEmail: input.recipientEmail.trim().toLowerCase(),
+      ...(input.message ? { message: input.message.trim().slice(0, 500) } : {}),
+    };
+  }
+  if (!input.monogram && !input.placement) return null;
   if (!monogram) throw new AppError('RULE_VIOLATION', 'This product cannot be personalised.');
   const text = input.monogram?.trim() ?? '';
   if (!text || text.length > monogram.maxChars) throw new AppError('VALIDATION_FAILED', `Use 1 to ${monogram.maxChars} characters.`, [{ field: 'monogram', message: `Use 1 to ${monogram.maxChars} characters.` }]);
@@ -128,7 +142,7 @@ export interface AddLineInput {
 /** Re-adding the same item adds to its line and refreshes what the line shows. */
 export async function addLine(owner: CartOwner, input: AddLineInput): Promise<CartView> {
   const snap = await cartSnapshot(input.productRef, input.color, input.size);
-  const personalization = cleanPersonalization(input.personalization, snap.monogram, input.previewImageUrl);
+  const personalization = cleanPersonalization(input.personalization, snap.monogram, input.previewImageUrl, snap.productKind);
   return withTransaction(async (tx) => {
     await lockOwner(tx, owner);
     const cartId = await ensureCart(tx, owner);
@@ -239,7 +253,7 @@ export async function approvePreview(owner: CartOwner, lineId: string): Promise<
 /** Lines checkout must refuse: personalised without an approved preview, or no longer buyable in that quantity. */
 export function checkoutBlockers(cart: CartView): { lineId: string; reason: string }[] {
   return cart.lines.flatMap((l) => {
-    if (l.personalization && !l.previewApproved) return [{ lineId: l.id, reason: 'Approve the print preview first.' }];
+    if (l.personalization && l.productKind !== 'gift_card' && !l.previewApproved) return [{ lineId: l.id, reason: 'Approve the print preview first.' }];
     if (l.maxQty <= 0) return [{ lineId: l.id, reason: `${l.title} is no longer available.` }];
     if (l.qty > l.maxQty) return [{ lineId: l.id, reason: `Only ${l.maxQty} of ${l.title} available.` }];
     return [];
