@@ -33,6 +33,19 @@ export interface OrderView {
   /** True while the free-cancel window is open for the account that placed it. */
   canCancel: boolean;
   history: { status: OrderStatus; at: string; note: string | null }[];
+  /** Parcels, with the courier timeline the customer is allowed to see. */
+  shipments: OrderShipmentView[];
+}
+
+export interface OrderShipmentView {
+  id: string;
+  carrier: string | null;
+  trackingNumber: string | null;
+  status: 'pending' | 'shipped' | 'in_transit' | 'out_for_delivery' | 'delivered' | 'exception' | 'returned';
+  shippedAt: string | null;
+  estimatedDeliveryAt: string | null;
+  deliveredAt: string | null;
+  events: { status: string; at: string; location: string | null; description: string | null }[];
 }
 
 const paise = (v: string) => Math.round(Number(v) * 100);
@@ -48,13 +61,20 @@ async function load(where: ReturnType<typeof sql>, limit = 1): Promise<Loaded[]>
     FROM orders o WHERE ${where} ORDER BY o.created_at DESC LIMIT ${limit}`);
   if (!orders.length) return [];
   const ids = sql.join(orders.map((o) => sql`${o.id}::uuid`), sql`, `);
-  const [{ rows: items }, { rows: history }] = await Promise.all([
+  const [{ rows: items }, { rows: history }, { rows: parcels }, { rows: scans }] = await Promise.all([
     db.execute<{ id: string; order_id: string; product_id: string; external_id: string | null; slug: string | null; product_name: string; options: Record<string, string> | null; unit_price: string; qty: number; image: string | null }>(sql`
       SELECT oi.id, oi.order_id, oi.product_id, p.external_id, p.slug, oi.product_name, oi.options, oi.unit_price, oi.qty,
              (SELECT i.url FROM product_images i WHERE i.product_id = oi.product_id ORDER BY i.is_primary DESC, i.sort_order LIMIT 1) AS image
       FROM order_items oi JOIN products p ON p.id = oi.product_id WHERE oi.order_id IN (${ids}) ORDER BY oi.created_at, oi.id`),
     db.execute<{ order_id: string; to_status: OrderStatus; note: string | null; created_at: string; actor: string }>(sql`
       SELECT order_id, to_status, note, created_at, actor FROM order_status_history WHERE order_id IN (${ids}) ORDER BY created_at, id`),
+    db.execute<{ id: string; order_id: string; carrier: string | null; tracking_number: string | null; status: OrderShipmentView['status']; shipped_at: string | null; estimated_delivery_at: string | null; delivered_at: string | null }>(sql`
+      SELECT id, order_id, carrier, tracking_number, status, shipped_at, estimated_delivery_at, delivered_at
+      FROM shipments WHERE order_id IN (${ids}) ORDER BY created_at, id`),
+    db.execute<{ shipment_id: string; status: string; location: string | null; description: string | null; occurred_at: string }>(sql`
+      SELECT e.shipment_id, e.status, e.location, e.description, e.occurred_at
+      FROM shipment_events e JOIN shipments s ON s.id = e.shipment_id
+      WHERE s.order_id IN (${ids}) ORDER BY e.occurred_at, e.id`),
   ]);
   const now = Date.now();
   return orders.map((o) => ({
@@ -69,6 +89,15 @@ async function load(where: ReturnType<typeof sql>, limit = 1): Promise<Loaded[]>
     canCancel: o.placed_by_user_id !== null && o.status === 'pending' && o.cancellable_until !== null && new Date(o.cancellable_until).getTime() > now,
     // Staff notes are internal: a customer sees only notes written by them or the system at checkout.
     history: history.filter((h) => h.order_id === o.id).map((h) => ({ status: h.to_status, at: new Date(h.created_at).toISOString(), note: h.actor === 'guest' || h.actor === o.placed_by_user_id ? h.note : null })),
+    shipments: parcels.filter((p) => p.order_id === o.id).map((p) => ({
+      id: p.id, carrier: p.carrier, trackingNumber: p.tracking_number, status: p.status,
+      shippedAt: p.shipped_at ? new Date(p.shipped_at).toISOString() : null,
+      estimatedDeliveryAt: p.estimated_delivery_at ? new Date(p.estimated_delivery_at).toISOString().slice(0, 10) : null,
+      deliveredAt: p.delivered_at ? new Date(p.delivered_at).toISOString() : null,
+      // A staff-only description never reaches the customer; the words on the
+      // timeline are always the courier's scan status.
+      events: scans.filter((e) => e.shipment_id === p.id).map((e) => ({ status: e.status, at: new Date(e.occurred_at).toISOString(), location: e.location, description: e.description })),
+    })),
   }));
 }
 
