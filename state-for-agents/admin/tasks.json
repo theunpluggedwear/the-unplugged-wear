@@ -8,10 +8,10 @@
     "reference": "Figma WmpPcdGcXerVgqNpgr6Q6S + production screenshots"
   },
   "summary": {
-    "total": 440,
+    "total": 441,
     "done": 367,
     "in_progress": 1,
-    "backlog": 72
+    "backlog": 69
   },
   "session": {
     "branch": "urvil-ui",
@@ -59,7 +59,7 @@
       "PEDIT Clothing Specs cards (c86e718): Compact one card per row; Expanded/Full pairs Display options+Clothing specs and Size chart+Monogram at 1024/1440; Display options switch hides/shows the monogram card; independent collapse survives tab switches; size-chart table scrolls inside a half-width card; monogram pair collapses to one column at 360; chart add/remove + in-use guard feedback; Reset Demo; 360/768/1024/1440 - browser pass pending",
       "SQL dry-run (f9de18b + 04f31ec): psql is not installed; validate 002 + 010 against a real Postgres instance before the first migration run. The static schema guard (28eccec + 04f31ec) checks inventory/FK order/retired names/semantic columns but does not replace a real parser."
     ],
-    "last_updated": "2026-11-15",
+    "last_updated": "2026-11-16",
     "updated_by": "agent (Buffy)"
   },
   "tasks": [
@@ -6875,7 +6875,8 @@
       "follow_ups": [
         "Live keys: Qikink issued sandbox keys only; set QIKINK_CLIENT_ID/SECRET and drop QIKINK_BASE_URL, then flip the provider row to live",
         "Rotate the client secret that was pasted into chat",
-        "Browser pass of /fulfillment, /shipments and the storefront timeline at 360/768/1024/1440"
+        "Browser pass of /fulfillment, /shipments and the storefront timeline at 360/768/1024/1440",
+        "Vercel Hobby cron limit: high-frequency fulfilment crons are temporarily daily; restore after Pro upgrade — see TL-BE-17.13."
       ],
       "storefront_tasks": [
         "TL-WEB-BE-28"
@@ -7709,6 +7710,35 @@
       "started": null,
       "finished": null,
       "log": "Not started. DOC/backend/13 limits (login/refresh 10/s per IP). Lockout per account already exists; add an IP limiter (Postgres-backed or Vercel firewall rule).",
+      "design_match": null,
+      "key_decisions": [],
+      "verified": false,
+      "pushed": false,
+      "follow_ups": []
+    },
+    {
+      "id": "TL-BE-17.13",
+      "title": "Vercel Hobby cron limit — restore frequent fulfilment schedules after Pro upgrade",
+      "status": "backlog",
+      "owner": "unassigned",
+      "parent": "TL-BE-17",
+      "started": null,
+      "finished": null,
+      "log": "Vercel Hobby allows only once-per-day cron jobs. The two high-frequency fulfilment crons were temporarily changed from */15 and */30 to daily schedules. Restore the original expressions in tuw-admin/vercel.json after upgrading to Vercel Pro. No code comments were added; this record is the source of truth.",
+      "file": "tuw-admin/vercel.json",
+      "original_schedules": {
+        "/api/cron/fulfillment.submitDue": "*/15 * * * *",
+        "/api/cron/fulfillment.syncOpen": "*/30 * * * *"
+      },
+      "temporary_schedules": {
+        "/api/cron/fulfillment.submitDue": "0 3 * * *",
+        "/api/cron/fulfillment.syncOpen": "30 3 * * *"
+      },
+      "restore_condition": "Vercel Pro plan is active on the tuw-admin project",
+      "restore_schedules": {
+        "/api/cron/fulfillment.submitDue": "*/15 * * * *",
+        "/api/cron/fulfillment.syncOpen": "*/30 * * * *"
+      },
       "design_match": null,
       "key_decisions": [],
       "verified": false,
