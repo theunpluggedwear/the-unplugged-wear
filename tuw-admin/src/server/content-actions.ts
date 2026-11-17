@@ -3,6 +3,7 @@
 import * as content from '@tuw/heart/modules/content';
 import { contentSchemas as s } from '@tuw/heart/modules/content';
 import { guards } from './session';
+import { refreshStorefront } from './storefront-cache';
 
 export const listPagesAction = guards.action({ permission: 'content.manage', input: s.listPages }, ({ ctx }) =>
   content.adminListPages(ctx.user!.id));
@@ -37,11 +38,17 @@ export const deleteMediaAction = guards.action({ permission: 'content.manage', i
 export const listSectionsAction = guards.action({ permission: 'content.manage', input: s.listSections }, ({ input, ctx }) =>
   content.adminListSections(input.pageKey, ctx.user!.id));
 
-export const saveSectionAction = guards.action({ permission: 'content.manage', input: s.saveSection }, ({ input, ctx }) =>
-  content.adminSaveSection(input, ctx.user!.id));
+export const saveSectionAction = guards.action({ permission: 'content.manage', input: s.saveSection }, async ({ input, ctx }) => {
+  const result = await content.adminSaveSection(input, ctx.user!.id);
+  await refreshStorefront(['cms:home']);
+  return result;
+});
 
-export const deleteSectionAction = guards.action({ permission: 'content.manage', input: s.sectionRef }, ({ input, ctx }) =>
-  content.adminDeleteSection(input.id, ctx.user!.id));
+export const deleteSectionAction = guards.action({ permission: 'content.manage', input: s.sectionRef }, async ({ input, ctx }) => {
+  const result = await content.adminDeleteSection(input.id, ctx.user!.id);
+  await refreshStorefront(['cms:home']);
+  return result;
+});
 
 export const listDesignsAction = guards.action({ permission: 'content.manage', input: s.listDesigns }, ({ input, ctx }) =>
   content.adminListDesigns(input, ctx.user!.id));

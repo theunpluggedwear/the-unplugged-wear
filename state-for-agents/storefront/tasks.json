@@ -11,9 +11,9 @@
   "_demo": "Figma source of truth established. First track TL-WEB-001 closed.",
   "summary": {
     "total": 114,
-    "done": 106,
+    "done": 107,
     "in_progress": 0,
-    "backlog": 8,
+    "backlog": 7,
     "total_tasks": 114,
     "pending": 14
   },
@@ -28,7 +28,7 @@
       "fc45619",
       "c375057"
     ],
-    "next_up": "TL-WEB-BE-35",
+    "next_up": "TL-WEB-BE-31",
     "pending_verifications": [],
     "last_updated": "2026-11-16",
     "updated_by": "agent (Buffy)"
@@ -2856,12 +2856,12 @@
       "id": "TL-WEB-BE-30",
       "title": "Home page sections from the CMS",
       "category": "backend",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-WEB-BE",
       "started": null,
-      "finished": null,
-      "verified": false,
+      "finished": "2026-11-17",
+      "verified": true,
       "design_match": null,
       "pushed": false,
       "admin_ref": "TL-BE-13.01",
@@ -2873,7 +2873,8 @@
       ],
       "description": "cacheTag('cms:home').",
       "key_decisions": [],
-      "follow_ups": []
+      "follow_ups": [],
+      "log": "Home page renders ordered cms_sections with cacheTag(cms:home); legacy layout used as demo fallback."
     },
     {
       "id": "TL-WEB-BE-31",
