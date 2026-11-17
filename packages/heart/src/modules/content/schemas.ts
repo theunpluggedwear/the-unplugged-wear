@@ -46,3 +46,51 @@ export const publicFaqs = z.object({
   productId: z.string().uuid().optional(),
   categoryId: z.string().uuid().optional(),
 });
+
+export const mediaUsage = z.enum(['product', 'section', 'blog', 'design']);
+export const listMedia = z.object({ usage: mediaUsage.optional() });
+export const saveMedia = z.object({
+  id: z.string().uuid().optional(),
+  url: z.string().trim().min(1).max(2048),
+  filename: z.string().trim().max(255).nullable().optional(),
+  sizeBytes: z.number().int().min(1).nullable().optional(),
+  alt: z.string().trim().max(255).nullable().optional(),
+  width: z.number().int().min(1).nullable().optional(),
+  height: z.number().int().min(1).nullable().optional(),
+  mimeType: z.string().trim().max(100).nullable().optional(),
+  usage: mediaUsage,
+});
+export const mediaRef = z.object({ id: z.string().uuid() });
+
+export const sectionType = z.enum(['hero', 'banner', 'featured_products', 'blog_teaser', 'brands', 'testimonial']);
+export const listSections = z.object({ pageKey: z.string().trim().min(1).max(100).default('home') });
+export const saveSection = z.object({
+  id: z.string().uuid().optional(),
+  key: z.string().trim().min(1).max(150),
+  pageKey: z.string().trim().min(1).max(100),
+  type: sectionType,
+  title: z.string().trim().max(255).nullable().optional(),
+  content: z.record(z.unknown()),
+  settings: z.record(z.unknown()).optional(),
+  sortOrder: z.number().int().min(-1000).max(1000).default(0),
+  isActive: z.boolean().default(true),
+});
+export const sectionRef = z.object({ id: z.string().uuid() });
+
+export const designCategory = z.enum(['print_artwork', 'embroidery', 'typography', 'label_spec']);
+export const designStatus = z.enum(['approved', 'in_review', 'archived']);
+export const listDesigns = z.object({ category: designCategory.optional(), status: designStatus.optional() });
+export const saveDesign = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().trim().min(1).max(255),
+  category: designCategory,
+  designer: z.string().trim().max(150).nullable().optional(),
+  placement: z.string().trim().max(100).nullable().optional(),
+  dimensions: z.string().trim().max(50).nullable().optional(),
+  fileFormat: z.string().trim().max(30).nullable().optional(),
+  fileSizeBytes: z.number().int().min(1).max(26214400).nullable().optional(),
+  status: designStatus.default('in_review'),
+  mediaId: z.string().uuid().nullable().optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
+});
+export const designRef = z.object({ id: z.string().uuid() });

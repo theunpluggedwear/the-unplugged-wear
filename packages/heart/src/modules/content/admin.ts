@@ -3,6 +3,8 @@ import { sql } from 'drizzle-orm';
 import { getDb } from '../../platform/db/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
 import * as svc from './service.ts';
+import * as media from './media.ts';
+import * as designs from './designs.ts';
 
 async function requireContentManager(actorId: string): Promise<void> {
   const { rows } = await getDb().execute<{ ok: boolean }>(sql`
@@ -51,4 +53,49 @@ export async function adminSaveFaq(input: Parameters<typeof svc.saveFaq>[0], act
 export async function adminDeleteFaq(id: string, actorId: string) {
   await requireContentManager(actorId);
   return svc.deleteFaq(id);
+}
+
+export async function adminListMedia(usage?: Parameters<typeof media.listMedia>[0], actorId?: string) {
+  if (actorId) await requireContentManager(actorId);
+  return media.listMedia(usage);
+}
+
+export async function adminSaveMedia(input: Parameters<typeof media.saveMedia>[0], actorId: string) {
+  await requireContentManager(actorId);
+  return media.saveMedia(input, actorId);
+}
+
+export async function adminDeleteMedia(id: string, actorId: string) {
+  await requireContentManager(actorId);
+  return media.deleteMedia(id, actorId);
+}
+
+export async function adminListSections(pageKey: string, actorId: string) {
+  await requireContentManager(actorId);
+  return svc.listSections(pageKey);
+}
+
+export async function adminSaveSection(input: Parameters<typeof svc.saveSection>[0], actorId: string) {
+  await requireContentManager(actorId);
+  return svc.saveSection(input, actorId);
+}
+
+export async function adminDeleteSection(id: string, actorId: string) {
+  await requireContentManager(actorId);
+  return svc.deleteSection(id);
+}
+
+export async function adminListDesigns(input: Parameters<typeof designs.listDesigns>[0], actorId: string) {
+  await requireContentManager(actorId);
+  return designs.listDesigns(input);
+}
+
+export async function adminSaveDesign(input: Parameters<typeof designs.saveDesign>[0], actorId: string) {
+  await requireContentManager(actorId);
+  return designs.saveDesign(input, actorId);
+}
+
+export async function adminDeleteDesign(id: string, actorId: string) {
+  await requireContentManager(actorId);
+  return designs.deleteDesign(id);
 }

@@ -24,3 +24,30 @@ export const saveFaqAction = guards.action({ permission: 'content.manage', input
 
 export const deleteFaqAction = guards.action({ permission: 'content.manage', input: s.faqRef }, ({ input, ctx }) =>
   content.adminDeleteFaq(input.id, ctx.user!.id));
+
+export const listMediaAction = guards.action({ permission: 'content.manage', input: s.listMedia }, ({ input, ctx }) =>
+  content.adminListMedia(input.usage, ctx.user!.id));
+
+export const saveMediaAction = guards.action({ permission: 'content.manage', input: s.saveMedia }, ({ input, ctx }) =>
+  content.adminSaveMedia(input, ctx.user!.id));
+
+export const deleteMediaAction = guards.action({ permission: 'content.manage', input: s.mediaRef }, ({ input, ctx }) =>
+  content.adminDeleteMedia(input.id, ctx.user!.id));
+
+export const listSectionsAction = guards.action({ permission: 'content.manage', input: s.listSections }, ({ input, ctx }) =>
+  content.adminListSections(input.pageKey, ctx.user!.id));
+
+export const saveSectionAction = guards.action({ permission: 'content.manage', input: s.saveSection }, ({ input, ctx }) =>
+  content.adminSaveSection(input, ctx.user!.id));
+
+export const deleteSectionAction = guards.action({ permission: 'content.manage', input: s.sectionRef }, ({ input, ctx }) =>
+  content.adminDeleteSection(input.id, ctx.user!.id));
+
+export const listDesignsAction = guards.action({ permission: 'content.manage', input: s.listDesigns }, ({ input, ctx }) =>
+  content.adminListDesigns(input, ctx.user!.id));
+
+export const saveDesignAction = guards.action({ permission: 'content.manage', input: s.saveDesign }, ({ input, ctx }) =>
+  content.adminSaveDesign(input, ctx.user!.id));
+
+export const deleteDesignAction = guards.action({ permission: 'content.manage', input: s.designRef }, ({ input, ctx }) =>
+  content.adminDeleteDesign(input.id, ctx.user!.id));

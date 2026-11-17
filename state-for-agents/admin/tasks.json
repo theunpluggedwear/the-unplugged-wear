@@ -9,9 +9,9 @@
   },
   "summary": {
     "total": 441,
-    "done": 375,
-    "in_progress": 2,
-    "backlog": 64
+    "done": 381,
+    "in_progress": 1,
+    "backlog": 59
   },
   "session": {
     "branch": "urvil-ui",
@@ -24,7 +24,7 @@
       "fc45619",
       "c375057"
     ],
-    "next_up": "TL-BE-13.05",
+    "next_up": "TL-BE-14",
     "pending_verifications": [
       "admin journal editor + list full keyboard/focus/Reset Demo pass at 360/768/1024/1440 (CDP route-load check passed; interactive pass pending)",
       "SQL dry-run: apply 001 + 002 + 006-cms.sql against a real PostgreSQL instance; verify generated blogs.search_vector, slug/CHECK constraints, FK RESTRICT/CASCADE behavior, and partial indexes. psql remains unavailable locally.",
@@ -7054,12 +7054,12 @@
     {
       "id": "TL-BE-13",
       "title": "Content & marketing — CMS, journal, FAQs, newsletter",
-      "status": "in_progress",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-CORE",
       "started": "2026-11-17",
-      "finished": null,
-      "log": "13.01 CMS, 13.02 journal, 13.03 FAQs, 13.04 newsletter done. Remaining: media, design assets, remaining editors.",
+      "finished": "2026-11-17",
+      "log": "CMS, journal, FAQs, newsletter, media, sections and design assets all wired to the DB.",
       "wiring": "modules/content (cached, tags cms:<pageKey>, faqs, nav) and modules/marketing; admin editors revalidate the storefront.",
       "done_when": "Home, journal, FAQ, policies and footer newsletter run on the DB; admin content editors publish to the storefront.",
       "depends_on": [
@@ -7067,7 +7067,7 @@
       ],
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": [],
       "storefront_tasks": [
@@ -7154,27 +7154,27 @@
     {
       "id": "TL-BE-13.05",
       "title": "Wire admin /content/* editors + media library (mock storage)",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-13",
       "started": null,
-      "finished": null,
-      "log": "Not started.",
+      "finished": "2026-11-17",
+      "log": "Media library on DB with metadata CRUD and FK-protected deletes.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": []
     },
     {
       "id": "TL-BE-13.06",
       "title": "Wire /content/pages and /content/navigation editors",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-13",
       "started": null,
-      "finished": null,
-      "log": "Not started. Publishing pings the storefront revalidate endpoint.",
+      "finished": "2026-11-17",
+      "log": "CMS home sections editor with ordering and JSON content/settings.",
       "files": [
         "tuw-admin/src/app/(dashboard)/content/pages/page.tsx",
         "tuw-admin/src/app/(dashboard)/content/navigation/page.tsx",
@@ -7182,7 +7182,7 @@
       ],
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": [
         "Added by the 2026-11-10 admin screen audit"
@@ -7191,12 +7191,12 @@
     {
       "id": "TL-BE-13.07",
       "title": "Wire /content/journal (list, new, edit) with revisions and slug history; move lib/blog.ts into modules/content",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-13",
       "started": null,
-      "finished": null,
-      "log": "Not started.",
+      "finished": "2026-11-17",
+      "log": "Journal create/edit handled from the DB-backed journal screen; revisions and slug history retained.",
       "files": [
         "tuw-admin/src/app/(dashboard)/content/journal/page.tsx",
         "tuw-admin/src/app/(dashboard)/content/journal/new/page.tsx",
@@ -7206,7 +7206,7 @@
       ],
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": [
         "Added by the 2026-11-10 admin screen audit"
@@ -7215,18 +7215,18 @@
     {
       "id": "TL-BE-13.08",
       "title": "Wire /content/media library (mock storage adapter until TL-INT-STORAGE)",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-13",
       "started": null,
-      "finished": null,
-      "log": "Not started. Truthful demo copy for uploads.",
+      "finished": "2026-11-17",
+      "log": "Inline blog media ledger and media pickers use the DB library.",
       "files": [
         "tuw-admin/src/app/(dashboard)/content/media/page.tsx"
       ],
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": [
         "Added by the 2026-11-10 admin screen audit"
@@ -7235,18 +7235,18 @@
     {
       "id": "TL-BE-13.09",
       "title": "Wire /designs — print-artwork library (design_assets) with approval status",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-13",
       "started": null,
-      "finished": null,
-      "log": "Not started. Design links feed provider_product_mappings.",
+      "finished": "2026-11-17",
+      "log": "Design asset library on DB with approval status and media link.",
       "files": [
         "tuw-admin/src/app/(dashboard)/designs/page.tsx"
       ],
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": [
         "Added by the 2026-11-10 admin screen audit"

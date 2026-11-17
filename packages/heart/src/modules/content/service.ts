@@ -196,3 +196,42 @@ export async function deleteFaq(id: string): Promise<void> {
     if (!rowCount) throw new AppError('NOT_FOUND', 'FAQ not found.');
   });
 }
+
+export async function listSections(pageKey: string): Promise<CmsSection[]> {
+  const { rows } = await getDb().execute<{
+    id: string; key: string; page_key: string; type: string; title: string | null;
+    content: Record<string, unknown>; settings: Record<string, unknown>; sort_order: number;
+  }>(sql`SELECT id, key, page_key, type, title, content, settings, sort_order FROM cms_sections WHERE page_key = ${pageKey} ORDER BY sort_order, key`);
+  return rows.map((r) => ({ id: r.id, key: r.key, pageKey: r.page_key, type: r.type, title: r.title, content: r.content, settings: r.settings, sortOrder: r.sort_order }));
+}
+
+export async function saveSection(input: {
+  id?: string; key: string; pageKey: string; type: string; title?: string | null;
+  content: Record<string, unknown>; settings?: Record<string, unknown>; sortOrder?: number; isActive?: boolean;
+}, actorId: string): Promise<CmsSection> {
+  return withTransaction(async (tx) => {
+    const id = input.id ?? uuidv7();
+    if (input.id) {
+      const { rowCount } = await tx.execute(sql`SELECT 1 FROM cms_sections WHERE id = ${input.id}::uuid`);
+      if (!rowCount) throw new AppError('NOT_FOUND', 'Section not found.');
+      await tx.execute(sql`UPDATE cms_sections SET key=${input.key}, page_key=${input.pageKey}, type=${input.type}, title=${input.title ?? null},
+        content=${JSON.stringify(input.content)}::jsonb, settings=${JSON.stringify(input.settings ?? {})}::jsonb,
+        sort_order=${input.sortOrder ?? 0}, is_active=${input.isActive ?? true}, updated_at=now() WHERE id=${id}::uuid`);
+    } else {
+      await tx.execute(sql`INSERT INTO cms_sections (id, key, page_key, type, title, content, settings, sort_order, is_active)
+        VALUES (${id}::uuid, ${input.key}, ${input.pageKey}, ${input.type}, ${input.title ?? null}, ${JSON.stringify(input.content)}::jsonb,
+          ${JSON.stringify(input.settings ?? {})}::jsonb, ${input.sortOrder ?? 0}, ${input.isActive ?? true})`);
+    }
+    const { rows } = await tx.execute<{ id: string; key: string; page_key: string; type: string; title: string | null; content: Record<string, unknown>; settings: Record<string, unknown>; sort_order: number }>(sql`
+      SELECT id, key, page_key, type, title, content, settings, sort_order FROM cms_sections WHERE id=${id}::uuid`);
+    const r = rows[0]!;
+    return { id: r.id, key: r.key, pageKey: r.page_key, type: r.type, title: r.title, content: r.content, settings: r.settings, sortOrder: r.sort_order };
+  });
+}
+
+export async function deleteSection(id: string): Promise<void> {
+  await withTransaction(async (tx) => {
+    const { rowCount } = await tx.execute(sql`DELETE FROM cms_sections WHERE id = ${id}::uuid`);
+    if (!rowCount) throw new AppError('NOT_FOUND', 'Section not found.');
+  });
+}
