@@ -142,7 +142,23 @@ export async function placeOrder(buyer: Buyer, input: PlaceOrderInput): Promise<
       }
       const payable = totals.grandTotalPaise - giftCardApplied;
       totals.giftCardPaise = giftCardApplied;
-      const payment = await takePayment(tx, gateway, { orderId, method: input.method, amountPaise: payable, reference: orderId, simulate: input.simulate });
+      let payment: { captured: boolean };
+      if (input.prepaid) {
+        const { rows: intents } = await tx.execute<{ id: string; amount_paise: string; status: string; provider: string }>(sql`
+          SELECT id, amount_paise, status, provider FROM payment_intents WHERE checkout_key = ${input.checkoutKey}::uuid FOR UPDATE`);
+        const intent = intents[0];
+        if (!intent) throw new AppError('RULE_VIOLATION', 'That payment attempt was not found.');
+        if (intent.status !== 'paid') throw new AppError('RULE_VIOLATION', 'That payment has not been verified yet.');
+        if (Number(intent.amount_paise) !== payable) {
+          throw new AppError('RULE_VIOLATION', 'The paid amount does not match this order. Contact support; do not pay again.');
+        }
+        await tx.execute(sql`INSERT INTO payments (id, order_id, provider, method, amount, status, transaction_id, paid_at)
+          VALUES (${uuidv7()}, ${orderId}::uuid, ${intent.provider}, ${input.method}, ${toRupees(payable)}, 'captured', ${input.prepaid.providerPaymentId}, now())`);
+        await tx.execute(sql`UPDATE payment_intents SET order_id=${orderId}::uuid, updated_at=now() WHERE id=${intent.id}::uuid`);
+        payment = { captured: true };
+      } else {
+        payment = await takePayment(tx, gateway, { orderId, method: input.method, amountPaise: payable, reference: orderId, simulate: input.simulate });
+      }
       await tx.execute(sql`UPDATE orders SET payment_status = ${payment.captured ? 'paid' : 'pending'}, gift_card_amount = ${toRupees(giftCardApplied)} WHERE id = ${orderId}`);
 
       if (payment.captured) {

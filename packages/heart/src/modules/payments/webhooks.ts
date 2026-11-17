@@ -1,0 +1,136 @@
+import 'server-only';
+import { sql } from 'drizzle-orm';
+import { getDb, withTransaction } from '../../platform/db/index.ts';
+import { uuidv7 } from '../../platform/ids/index.ts';
+import { getWebhookProvider, type NormalizedWebhookEvent } from '../../integrations/webhooks/index.ts';
+
+export interface IngestResult {
+  status: 200 | 401 | 400 | 500;
+  body: { received?: boolean; error?: string; ignored?: boolean };
+}
+
+/** Verify, dedupe and dispatch a provider webhook. Safe to call for any provider. */
+export async function ingestWebhook(provider: string, rawBody: string, headers: Headers): Promise<IngestResult> {
+  const adapter = getWebhookProvider(provider);
+  if (!adapter) return { status: 400, body: { error: 'Unknown webhook provider' } };
+
+  // 1. Verify signature before any DB write.
+  if (!adapter.verify(rawBody, headers)) return { status: 401, body: { error: 'Invalid webhook signature' } };
+
+  const event = adapter.normalize(rawBody, headers);
+  if (!event) return { status: 400, body: { error: 'Unusable webhook payload' } };
+
+  // 2. Durable inbox. ON CONFLICT gives us provider-level dedupe.
+  const inserted = await withTransaction(async (tx) => {
+    const { rows } = await tx.execute<{ id: string; status: string; attempts: number }>(sql`
+      INSERT INTO webhook_events (id, provider, provider_event_id, event_type, signature_verified, payload,
+        status, business_ref, amount_paise, currency, received_at)
+      VALUES (${uuidv7()}, ${event.provider}, ${event.providerEventId}, ${event.eventType}, true,
+        ${JSON.stringify(event.raw)}::jsonb, 'received', ${event.providerOrderId ?? event.providerRefundId ?? null},
+        ${event.amountPaise ?? null}, ${event.currency ?? null}, now())
+      ON CONFLICT (provider, provider_event_id) DO NOTHING
+      RETURNING id, status, attempts`);
+    return rows[0] ?? null;
+  });
+
+  // Duplicate delivery: already recorded (processed or failed) -> ack without re-applying.
+  if (!inserted) return { status: 200, body: { received: true, ignored: true } };
+
+  try {
+    await processWebhookEvent(event);
+    await getDb().execute(sql`
+      UPDATE webhook_events SET status='processed', processed_at=now() WHERE id=${inserted.id}::uuid`);
+    return { status: 200, body: { received: true } };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await getDb().execute(sql`
+      UPDATE webhook_events SET status='failed', attempts=attempts+1, error=${message.slice(0, 2000)},
+        next_attempt_at=now() + make_interval(mins => 5) WHERE id=${inserted.id}::uuid`);
+    return { status: 500, body: { error: message } };
+  }
+}
+
+/** Apply a normalized event to business state. Idempotent by provider ids. */
+export async function processWebhookEvent(event: NormalizedWebhookEvent): Promise<void> {
+  await withTransaction(async (tx) => {
+    switch (event.kind) {
+      case 'payment_captured':
+        await markIntentCaptured(tx, event);
+        break;
+      case 'payment_failed':
+        await markIntentFailed(tx, event);
+        break;
+      case 'refund_created':
+      case 'refund_processed':
+      case 'refund_failed':
+        await reconcileRefund(tx, event);
+        break;
+      default:
+        // Audit-only events: stored in webhook_events, no state change.
+        break;
+    }
+  });
+}
+
+async function markIntentCaptured(tx: Parameters<Parameters<typeof withTransaction>[0]>[0], event: NormalizedWebhookEvent): Promise<void> {
+  if (!event.providerOrderId) return;
+  const { rows } = await tx.execute<{ id: string; order_id: string | null; amount_paise: string; status: string }>(sql`
+    SELECT id, order_id, amount_paise, status FROM payment_intents WHERE provider_order_id = ${event.providerOrderId} FOR UPDATE`);
+  const intent = rows[0];
+  if (!intent) return; // Unknown order: recorded in webhook_events, nothing to apply.
+
+  if (event.amountPaise !== undefined && event.amountPaise !== Number(intent.amount_paise)) {
+    throw new Error(`Webhook amount ${event.amountPaise} does not match intent ${intent.amount_paise}`);
+  }
+  if (intent.status === 'paid') return; // idempotent replay
+
+  await tx.execute(sql`
+    UPDATE payment_intents SET status='paid', payment_id=${event.providerPaymentId ?? null},
+      signature_verified_at=now(), paid_at=now(), updated_at=now() WHERE id=${intent.id}::uuid`);
+
+  // If this intent was verified through the client callback, its payment row
+  // already exists in 'captured'. The webhook must not create a second one.
+  if (intent.order_id) {
+    const { rows: pay } = await tx.execute<{ id: string; status: string }>(sql`
+      SELECT id, status FROM payments WHERE order_id=${intent.order_id}::uuid AND status IN ('captured','refunded') LIMIT 1`);
+    if (!pay.length) {
+      await tx.execute(sql`
+        INSERT INTO payments (id, order_id, provider, method, amount, status, transaction_id, paid_at)
+        VALUES (${uuidv7()}, ${intent.order_id}::uuid, ${event.provider}, 'card', ${Number(intent.amount_paise) / 100}, 'captured', ${event.providerPaymentId ?? event.providerOrderId}, now())`);
+    }
+  }
+}
+
+async function markIntentFailed(tx: Parameters<Parameters<typeof withTransaction>[0]>[0], event: NormalizedWebhookEvent): Promise<void> {
+  if (!event.providerOrderId) return;
+  const { rows } = await tx.execute<{ id: string; status: string }>(sql`
+    SELECT id, status FROM payment_intents WHERE provider_order_id=${event.providerOrderId} FOR UPDATE`);
+  const intent = rows[0];
+  if (!intent || intent.status === 'paid') return; // late failure after success -> ignore
+  await tx.execute(sql`UPDATE payment_intents SET status='failed', note=${event.status ?? null}, updated_at=now() WHERE id=${intent.id}::uuid`);
+}
+
+async function reconcileRefund(tx: Parameters<Parameters<typeof withTransaction>[0]>[0], event: NormalizedWebhookEvent): Promise<void> {
+  if (!event.providerRefundId) return;
+  const { rows } = await tx.execute<{ id: string; status: string; order_id: string }>(sql`
+    SELECT id, status, order_id FROM refunds WHERE payout_reference=${event.providerRefundId} FOR UPDATE`);
+  const refund = rows[0];
+  if (!refund) return; // auto-refund or unknown: audit row is enough
+  if (event.kind === 'refund_processed' && refund.status === 'processing') {
+    await tx.execute(sql`UPDATE refunds SET status='completed', updated_at=now() WHERE id=${refund.id}::uuid`);
+    await settleIfFullyRefunded(tx, refund.order_id);
+  } else if (event.kind === 'refund_failed') {
+    await tx.execute(sql`UPDATE refunds SET status='rejected', updated_at=now() WHERE id=${refund.id}::uuid`);
+  }
+}
+
+async function settleIfFullyRefunded(tx: Parameters<Parameters<typeof withTransaction>[0]>[0], orderId: string): Promise<void> {
+  const { rows: [totals] } = await tx.execute<{ captured: string | null; refunded: string | null }>(sql`
+    SELECT (SELECT sum(amount) FROM payments WHERE order_id=${orderId}::uuid AND status IN ('captured','refunded')) AS captured,
+           (SELECT sum(amount) FROM refunds WHERE order_id=${orderId}::uuid AND status='completed') AS refunded`);
+  const captured = Math.round(Number(totals?.captured ?? 0) * 100);
+  const refunded = Math.round(Number(totals?.refunded ?? 0) * 100);
+  if (captured > 0 && refunded >= captured) {
+    await tx.execute(sql`UPDATE payments SET status='refunded', updated_at=now() WHERE order_id=${orderId}::uuid AND status='captured'`);
+  }
+}

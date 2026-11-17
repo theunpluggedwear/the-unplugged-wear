@@ -4,6 +4,10 @@ import { getDb } from '../../platform/db/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
 import { verifyReceipt } from '../auth/tokens.ts';
 import { findDiscount } from './discounts.ts';
+import { orderLineFacts } from '../catalog/index.ts';
+import { priceOrder } from './pricing.ts';
+import { getSettings } from '../settings/index.ts';
+import * as giftCards from '../gift-cards/index.ts';
 import type { ShippingAddress } from './schemas.ts';
 import type { DiscountRule } from './pricing.ts';
 
@@ -120,6 +124,35 @@ export async function getOrderForViewer(orderNumber: string, viewer: { userId: s
 }
 
 /** "Apply" on the checkout form: is this code usable for this subtotal? Nothing is reserved. */
+/** Server-computed amount due for a checkout attempt (discount first, then gift card). */
+export async function quoteCheckout(
+  lines: { productUuid: string; variantId: string | null; unitPaise: number; qty: number }[],
+  input: { discountCode?: string; giftCardCode?: string; speed: 'standard' | 'express'; method: 'card' | 'upi' | 'cod' },
+): Promise<{ payablePaise: number; totalPaise: number; discountPaise: number; giftCardPaise: number }> {
+  const db = getDb();
+  const facts = await orderLineFacts(db, lines.map((l) => l.variantId!).filter(Boolean));
+  const settings = await getSettings(db);
+  const subtotal = lines.reduce((n, l) => n + l.unitPaise * l.qty, 0);
+  const discount = input.discountCode ? await findDiscount(db, input.discountCode, subtotal) : null;
+  const totals = priceOrder({
+    lines: lines.map((l) => ({ unitPaise: l.unitPaise, qty: l.qty, taxRate: facts.get(l.variantId!)?.taxRate ?? null })),
+    discount: discount?.rule ?? null,
+    rates: { freeThresholdPaise: settings['shipping.free_threshold'], standardFeePaise: settings['shipping.standard_fee'], expressFeePaise: settings['shipping.express_fee'], codFeePaise: settings['shipping.cod_fee'] },
+    speed: input.speed, cashOnDelivery: input.method === 'cod', taxIncluded: settings['tax.included'],
+  });
+  let giftCardPaise = 0;
+  if (input.giftCardCode) {
+    const balance = await giftCards.balance(input.giftCardCode);
+    if (balance) giftCardPaise = Math.min(balance.balancePaise, totals.grandTotalPaise);
+  }
+  return {
+    payablePaise: Math.max(0, totals.grandTotalPaise - giftCardPaise),
+    totalPaise: totals.grandTotalPaise,
+    discountPaise: totals.discountPaise,
+    giftCardPaise,
+  };
+}
+
 export async function previewDiscount(code: string, subtotalPaise: number): Promise<{ code: string; discountPaise: number; rule: DiscountRule; minOrderPaise: number | null }> {
   const d = await findDiscount(getDb(), code, subtotalPaise);
   const discountPaise = d.rule.type === 'percent' ? Math.round((subtotalPaise * Math.min(100, d.rule.percent)) / 100) : Math.min(subtotalPaise, d.rule.paise);

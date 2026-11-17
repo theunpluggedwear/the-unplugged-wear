@@ -10,8 +10,8 @@
   "summary": {
     "total": 441,
     "done": 381,
-    "in_progress": 1,
-    "backlog": 59
+    "in_progress": 3,
+    "backlog": 57
   },
   "session": {
     "branch": "urvil-ui",
@@ -24,7 +24,7 @@
       "fc45619",
       "c375057"
     ],
-    "next_up": "TL-BE-14",
+    "next_up": "TL-INT-RAZORPAY-live-test",
     "pending_verifications": [
       "admin journal editor + list full keyboard/focus/Reset Demo pass at 360/768/1024/1440 (CDP route-load check passed; interactive pass pending)",
       "SQL dry-run: apply 001 + 002 + 006-cms.sql against a real PostgreSQL instance; verify generated blogs.search_vector, slug/CHECK constraints, FK RESTRICT/CASCADE behavior, and partial indexes. psql remains unavailable locally.",
@@ -5110,11 +5110,11 @@
     {
       "id": "TL-INT-PHASE",
       "title": "Integrations phase (LAST) — wire third-party services only after core modules are done",
-      "status": "backlog",
+      "status": "in_progress",
       "owner": "agent",
-      "started": null,
+      "started": "2026-11-17",
       "finished": null,
-      "log": "Owner decision 2026-11-10: build every core module first with mock/sandbox adapters; integrate providers last. Do not start a TL-INT task until the owner opens this phase.",
+      "log": "Integrations phase opened by owner: Razorpay live payments.",
       "design_match": "n/a",
       "key_decisions": [
         "Providers sit behind integrations/<category>/registry.ts so each is swappable"
@@ -5125,12 +5125,12 @@
     {
       "id": "TL-INT-RAZORPAY",
       "title": "Razorpay payments + webhook + refunds; COD rules",
-      "status": "backlog",
+      "status": "in_progress",
       "owner": "agent",
       "parent": "TL-INT-PHASE",
-      "started": null,
+      "started": "2026-11-17",
       "finished": null,
-      "log": "Proposed defaults to confirm then: COD allowed up to ₹3,000 and not for custom prints; Razorpay test account needed; webhook via webhook_events.",
+      "log": "Live Razorpay adapter, provider-agnostic webhook inbox, two-phase checkout and refunds implemented. Pending live Rs1 payment/refund test.",
       "design_match": "n/a",
       "key_decisions": [],
       "verified": false,

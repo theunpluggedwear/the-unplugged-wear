@@ -26,6 +26,8 @@ export interface PaymentGateway {
   liveReady(): boolean;
   createPayment(input: PaymentIntentInput): Promise<PaymentResult>;
   refund(input: { providerRef: string; amountPaise: number; reference: string }): Promise<PaymentResult>;
+  /** Public config the browser needs (never the secret). Only real gateways implement this. */
+  clientConfig?(): { keyId: string } | null;
 }
 
 /** Demo gateway: deterministic, collects nothing ("Demo payment — no money will be collected"). */
@@ -43,4 +45,6 @@ export const mockGateway: PaymentGateway = {
   },
 };
 
-export const paymentAdapters: readonly PaymentGateway[] = [mockGateway];
+import { razorpayGateway } from './razorpay.ts';
+
+export const paymentAdapters: readonly PaymentGateway[] = [mockGateway, razorpayGateway];

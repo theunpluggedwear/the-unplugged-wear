@@ -12,6 +12,8 @@ import { useStore } from '@storefront/mocks/store';
 import { useSiteSettings } from '@storefront/lib/site-settings';
 import { placeOrderAction } from '@/server/order-actions';
 import { previewGiftCardAction } from '@/server/gift-card-actions';
+import { createPaymentIntentAction, confirmPaymentAction, getPaymentConfigAction } from '@/server/payment-actions';
+import { openRazorpayCheckout } from '@storefront/lib/razorpay-checkout';
 import { useSession } from '@storefront/lib/session';
 import { useAccount } from '@storefront/lib/account';
 import { RETURN_WINDOW_DAYS, deliveryEstimate, variantLabelOf } from '@storefront/lib/product';
@@ -58,6 +60,13 @@ export default function CheckoutPage() {
   const [checkoutKey] = useState(() => crypto.randomUUID());
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
+  const [paymentConfig, setPaymentConfig] = useState<{ provider: string; live: boolean; keyId: string | null } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getPaymentConfigAction({}).then((r) => { if (active && r.ok) setPaymentConfig(r.data); });
+    return () => { active = false; };
+  }, []);
 
   const { session } = useSession();
   // Saved addresses come from the real address book (TL-BE-03); guests have none.
@@ -193,41 +202,71 @@ export default function CheckoutPage() {
     }
   };
 
-  // The server reads the bag, prices it, takes the stock and the (demo) payment
-  // in one step. On a refusal every typed value stays as it was.
+  // The server reads the bag, prices it, takes the stock and the payment in
+  // one step. Live gateway payments are captured before the order is placed.
   const handlePaymentSuccess = async (paymentMethod: 'UPI' | 'Card' | 'COD (Demo)') => {
     if (placing) return;
     setPlacing(true);
     setPlaceError(null);
-    const result = await placeOrderAction({
-      checkoutKey,
-      email: email.trim() || undefined,
-      shippingAddress: {
-        fullName: `${firstName} ${lastName}`.trim(),
-        line1: addressLine1,
-        line2: addressLine2 || undefined,
-        city,
-        state,
-        postalCode,
-        country: 'India',
-        phone,
-      },
-      speed: deliverySpeed,
-      method: paymentMethod === 'Card' ? 'card' : paymentMethod === 'UPI' ? 'upi' : 'cod',
-      discountCode: promoCode || undefined,
-      giftCardCode: giftCard?.code,
-    });
-    if (!result.ok) {
+    try {
+      const method = paymentMethod === 'Card' ? 'card' : paymentMethod === 'UPI' ? 'upi' : 'cod';
+      let prepaid: { providerOrderId: string; providerPaymentId: string } | undefined;
+
+      if (paymentConfig?.live && paymentConfig.keyId && method !== 'cod') {
+        const intent = await createPaymentIntentAction({
+          checkoutKey, discountCode: promoCode || undefined, giftCardCode: giftCard?.code, speed: deliverySpeed, method,
+        });
+        if (!intent.ok) throw new Error(intent.error.message);
+        const paid = await openRazorpayCheckout({
+          keyId: intent.data.keyId,
+          orderId: intent.data.providerOrderId,
+          amountPaise: intent.data.amountPaise,
+          name: 'The Unplugged Wear',
+          email: email.trim() || undefined,
+          phone: phone.trim() || undefined,
+        });
+        const confirmed = await confirmPaymentAction({
+          checkoutKey,
+          providerPaymentId: paid.razorpay_payment_id,
+          signature: paid.razorpay_signature,
+        });
+        if (!confirmed.ok) throw new Error(confirmed.error.message);
+        prepaid = confirmed.data;
+      }
+
+      const result = await placeOrderAction({
+        checkoutKey,
+        email: email.trim() || undefined,
+        shippingAddress: {
+          fullName: `${firstName} ${lastName}`.trim(),
+          line1: addressLine1,
+          line2: addressLine2 || undefined,
+          city,
+          state,
+          postalCode,
+          country: 'India',
+          phone,
+        },
+        speed: deliverySpeed,
+        method,
+        discountCode: promoCode || undefined,
+        giftCardCode: giftCard?.code,
+        ...(prepaid ? { prepaid } : {}),
+      });
+      if (!result.ok) {
+        setPlaceError(result.error.details[0]?.message && result.error.code === 'VALIDATION_FAILED' ? `${result.error.message} ${result.error.details[0].message}` : result.error.message);
+        return;
+      }
+      removePromoCode();
+      setGiftCard(null);
+      setGiftCardMessage(null);
+      router.push(`/checkout/success?order=${encodeURIComponent(result.data.orderNumber)}&t=${encodeURIComponent(result.data.receipt)}`);
+      setTimeout(() => void refreshBag(), 500);
+    } catch (error) {
+      setPlaceError(error instanceof Error ? error.message : 'Payment could not be completed.');
+    } finally {
       setPlacing(false);
-      setPlaceError(result.error.details[0]?.message && result.error.code === 'VALIDATION_FAILED' ? `${result.error.message} ${result.error.details[0].message}` : result.error.message);
-      return;
     }
-    removePromoCode();
-    setGiftCard(null);
-    setGiftCardMessage(null);
-    router.push(`/checkout/success?order=${encodeURIComponent(result.data.orderNumber)}&t=${encodeURIComponent(result.data.receipt)}`);
-    // After leaving, so the page does not flash "your bag is empty" first.
-    setTimeout(() => void refreshBag(), 500);
   };
 
   // Empty cart fallback
