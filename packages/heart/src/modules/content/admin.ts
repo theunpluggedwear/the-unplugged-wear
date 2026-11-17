@@ -37,3 +37,18 @@ export async function adminGetTheme(actorId: string) {
   await requireContentManager(actorId);
   return svc.getTheme();
 }
+
+export async function adminListFaqs(actorId: string) {
+  await requireContentManager(actorId);
+  return svc.listAllFaqs();
+}
+
+export async function adminSaveFaq(input: Parameters<typeof svc.saveFaq>[0], actorId: string) {
+  await requireContentManager(actorId);
+  return svc.saveFaq(input, actorId);
+}
+
+export async function adminDeleteFaq(id: string, actorId: string) {
+  await requireContentManager(actorId);
+  return svc.deleteFaq(id);
+}

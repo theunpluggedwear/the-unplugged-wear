@@ -9,9 +9,9 @@
   },
   "summary": {
     "total": 441,
-    "done": 373,
+    "done": 374,
     "in_progress": 2,
-    "backlog": 66
+    "backlog": 65
   },
   "session": {
     "branch": "urvil-ui",
@@ -24,7 +24,7 @@
       "fc45619",
       "c375057"
     ],
-    "next_up": "TL-BE-13.03",
+    "next_up": "TL-BE-13.04",
     "pending_verifications": [
       "admin journal editor + list full keyboard/focus/Reset Demo pass at 360/768/1024/1440 (CDP route-load check passed; interactive pass pending)",
       "SQL dry-run: apply 001 + 002 + 006-cms.sql against a real PostgreSQL instance; verify generated blogs.search_vector, slug/CHECK constraints, FK RESTRICT/CASCADE behavior, and partial indexes. psql remains unavailable locally.",
@@ -7059,7 +7059,7 @@
       "parent": "TL-BE-CORE",
       "started": "2026-11-17",
       "finished": null,
-      "log": "13.01 CMS pages/navigation and 13.02 journal done. Remaining: FAQs, newsletter, media, design assets.",
+      "log": "13.01 CMS, 13.02 journal, 13.03 FAQs done. Remaining: newsletter, media, design assets.",
       "wiring": "modules/content (cached, tags cms:<pageKey>, faqs, nav) and modules/marketing; admin editors revalidate the storefront.",
       "done_when": "Home, journal, FAQ, policies and footer newsletter run on the DB; admin content editors publish to the storefront.",
       "depends_on": [
@@ -7118,15 +7118,15 @@
     {
       "id": "TL-BE-13.03",
       "title": "FAQs (general/product/category) on /faq and PDP",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-13",
       "started": null,
-      "finished": null,
-      "log": "Not started.",
+      "finished": "2026-11-17",
+      "log": "FAQ CRUD with scope invariants, admin editor and cached public reads for general/product/category scopes.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": [],
       "storefront_tasks": [

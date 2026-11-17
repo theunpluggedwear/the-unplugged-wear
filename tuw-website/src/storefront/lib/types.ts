@@ -113,6 +113,8 @@ export type Product = {
   videoUrl?: string;
   /** Page layout family; defaults from category when missing (see productTypeOf). */
   productType?: ProductType;
+  /** Category uuid, used for category-scoped FAQs. */
+  categoryId?: string | null;
   /** Digital gift cards are purchasable but never printed or shipped. */
   productKind?: 'physical' | 'gift_card';
   /** Label for the variant picker, e.g. "Size", "Phone model", "Age". */

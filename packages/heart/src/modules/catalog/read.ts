@@ -50,6 +50,8 @@ export interface StorefrontProduct {
   /** Digital gift cards are purchasable but never sent to a print partner. */
   productKind?: 'physical' | 'gift_card';
   variantLabel?: string;
+  /** Slug of the product's category; used for scoped FAQs. */
+  categoryId?: string | null;
   priceIsDraft?: boolean;
   printAreas?: string[];
   weightGrams?: number;
@@ -160,7 +162,7 @@ function extraDetails(links: { slug: string; def_name: string; visible: boolean;
 
 type ProductRow = {
   id: string; external_id: string | null; slug: string; slug_aliases: string[]; name: string; short_description: string | null;
-  description: string | null; category_slug: string | null; gender: string | null; style_code: string | null;
+  description: string | null; category_slug: string | null; category_id: string | null; gender: string | null; style_code: string | null;
   compare_at_price: string | null; spec_table: unknown; details: string[]; care_instructions: string | null;
   composition: string | null; partner_provider: string | null; partner_availability: StorefrontProduct['partnerAvailability'] | null;
   badge: string | null; tags: string[] | null; product_type: ProductType | null; product_kind: 'physical' | 'gift_card'; variant_label: string | null;
@@ -171,7 +173,7 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
   const db = getDb();
   const [products, variants, variantValues, linkValues, images, faqs, collections, members, categories, charts] = await Promise.all([
     db.execute<ProductRow>(sql`
-      SELECT p.id, p.external_id, p.slug, p.slug_aliases, p.name, p.short_description, p.description, c.slug AS category_slug,
+      SELECT p.id, p.external_id, p.slug, p.slug_aliases, p.name, p.short_description, p.description, c.slug AS category_slug, p.category_id,
              p.gender, p.style_code, p.compare_at_price, p.spec_table, p.details, p.care_instructions, p.composition,
              p.partner_provider, p.partner_availability, p.badge, p.tags, p.product_type, p.product_kind, p.variant_label, p.price_is_draft,
              p.weight_g, p.tax_rate, p.hsn_code, p.size_chart_id
@@ -261,6 +263,7 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
       title: p.name,
       subtitle: p.short_description ?? '',
       category: p.category_slug ?? 'accessories',
+      ...(p.category_id ? { categoryId: p.category_id } : {}),
       ...(type && WEARABLE.has(type) && p.gender && AUDIENCE[p.gender] ? { audience: AUDIENCE[p.gender] } : {}),
       ...(p.product_kind ? { productKind: p.product_kind } : {}),
       ...(p.style_code ? { partnerStyleCode: p.style_code } : {}),
