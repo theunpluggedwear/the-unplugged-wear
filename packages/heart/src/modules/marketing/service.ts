@@ -52,10 +52,8 @@ function mediaIdsFromContent(content: Record<string, unknown>[]): string[] {
   return [...ids];
 }
 
-const POST_SELECT = sql`SELECT b.id, b.slug, b.title, b.excerpt, b.status, b.published_at, b.updated_at,
-       bc.name AS category_name, ba.name AS author_name
-  FROM blogs b LEFT JOIN blog_categories bc ON bc.id = b.category_id
-  JOIN blog_authors ba ON ba.id = b.author_id`;
+const POST_COLUMNS = sql`b.id, b.slug, b.title, b.excerpt, b.status, b.published_at, b.updated_at,
+       bc.name AS category_name, ba.name AS author_name`;
 
 type Row = Record<string, unknown>;
 
@@ -75,7 +73,10 @@ export async function listPosts(input: { status?: string; q?: string; page?: num
   const page = input.page ?? 1;
   const perPage = input.perPage ?? 20;
   const { rows } = await getDb().execute<Row & { total: string }>(sql`
-    ${POST_SELECT}, count(*) OVER()::text AS total
+    SELECT ${POST_COLUMNS}, count(*) OVER()::text AS total
+    FROM blogs b
+    LEFT JOIN blog_categories bc ON bc.id = b.category_id
+    JOIN blog_authors ba ON ba.id = b.author_id
     WHERE (${status}::text IS NULL OR b.status = ${status}) AND (${q}::text IS NULL OR b.title ILIKE ${q})
     ORDER BY b.updated_at DESC
     LIMIT ${perPage} OFFSET ${(page - 1) * perPage}`);
@@ -87,8 +88,12 @@ export async function listPublished(input: { category?: string; page?: number; p
   const page = input.page ?? 1;
   const perPage = input.perPage ?? 12;
   const { rows } = await getDb().execute<Row & { total: string }>(sql`
-    ${POST_SELECT}, count(*) OVER()::text AS total
-    WHERE b.status = 'published' AND b.published_at <= now() AND (${category}::text IS NULL OR bc.slug = ${category})
+    SELECT ${POST_COLUMNS}, count(*) OVER()::text AS total
+    FROM blogs b
+    LEFT JOIN blog_categories bc ON bc.id = b.category_id
+    JOIN blog_authors ba ON ba.id = b.author_id
+    WHERE b.status = 'published' AND b.published_at <= now()
+      AND (${category}::text IS NULL OR bc.slug = ${category})
     ORDER BY b.published_at DESC, b.id DESC
     LIMIT ${perPage} OFFSET ${(page - 1) * perPage}`);
   return { rows: rows.map(toSummary), total: rows[0] ? Number(rows[0].total) : 0 };

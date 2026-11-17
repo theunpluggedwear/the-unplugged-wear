@@ -3,6 +3,8 @@ import Header from '@storefront/components/layout/Header';
 import Footer from '@storefront/components/layout/Footer';
 import { unsubscribe } from '@tuw/heart/modules/marketing';
 
+export const instant = false;
+
 export default async function NewsletterUnsubscribePage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const { token } = await searchParams;
   let message = 'We could not process that request.';
