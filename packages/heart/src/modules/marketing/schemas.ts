@@ -37,3 +37,9 @@ export const publicListInput = z.object({
   page: z.number().int().min(1).default(1),
   perPage: z.number().int().min(1).max(50).default(12),
 });
+
+export const newsletterSubscribe = z.object({
+  email: z.string().trim().toLowerCase().email().max(255),
+});
+export const newsletterToken = z.object({ token: z.string().trim().min(16).max(200) });
+export const newsletterList = z.object({});

@@ -15,3 +15,6 @@ export const getPostAction = guards.action({ permission: 'content.manage', input
 
 export const journalMetaAction = guards.action({ permission: 'content.manage', input: s.listInput.partial() }, ({ ctx }) =>
   marketing.adminJournalMeta(ctx.user!.id));
+
+export const listSubscribersAction = guards.action({ permission: 'content.manage', input: s.newsletterList }, ({ ctx }) =>
+  marketing.adminListSubscribers(ctx.user!.id));

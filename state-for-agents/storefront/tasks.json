@@ -11,9 +11,9 @@
   "_demo": "Figma source of truth established. First track TL-WEB-001 closed.",
   "summary": {
     "total": 114,
-    "done": 105,
+    "done": 106,
     "in_progress": 0,
-    "backlog": 9,
+    "backlog": 8,
     "total_tasks": 114,
     "pending": 14
   },
@@ -28,7 +28,7 @@
       "fc45619",
       "c375057"
     ],
-    "next_up": "TL-WEB-BE-34",
+    "next_up": "TL-WEB-BE-35",
     "pending_verifications": [],
     "last_updated": "2026-11-16",
     "updated_by": "agent (Buffy)"
@@ -2958,12 +2958,12 @@
       "id": "TL-WEB-BE-34",
       "title": "Footer newsletter subscribe + confirm / unsubscribe pages",
       "category": "backend",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-WEB-BE",
       "started": null,
-      "finished": null,
-      "verified": false,
+      "finished": "2026-11-17",
+      "verified": true,
       "design_match": null,
       "pushed": false,
       "admin_ref": "TL-BE-13.04",
@@ -2977,7 +2977,8 @@
       ],
       "description": "Double opt-in via mock email.",
       "key_decisions": [],
-      "follow_ups": []
+      "follow_ups": [],
+      "log": "Footer newsletter form wired to DB with confirm/unsubscribe pages and demo email notice."
     },
     {
       "id": "TL-WEB-BE-35",

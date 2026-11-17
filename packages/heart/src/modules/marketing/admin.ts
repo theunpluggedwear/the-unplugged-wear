@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { getDb } from '../../platform/db/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
 import * as svc from './service.ts';
+import * as newsletter from './newsletter.ts';
 
 async function requireContentManager(actorId: string): Promise<void> {
   const { rows } = await getDb().execute<{ ok: boolean }>(sql`
@@ -32,4 +33,9 @@ export async function adminJournalMeta(actorId: string) {
   await requireContentManager(actorId);
   const [categories, authors, tags] = await Promise.all([svc.listCategories(), svc.listAuthors(), svc.listTags()]);
   return { categories, authors, tags };
+}
+
+export async function adminListSubscribers(actorId: string) {
+  await requireContentManager(actorId);
+  return newsletter.listSubscribers();
 }
