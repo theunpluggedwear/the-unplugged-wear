@@ -62,20 +62,22 @@ export const saveMedia = z.object({
 });
 export const mediaRef = z.object({ id: z.string().uuid() });
 
-export const sectionType = z.enum(['hero', 'banner', 'featured_products', 'blog_teaser', 'brands', 'testimonial']);
-export const listSections = z.object({ pageKey: z.string().trim().min(1).max(100).default('home') });
-export const saveSection = z.object({
-  id: z.string().uuid().optional(),
-  key: z.string().trim().min(1).max(150),
-  pageKey: z.string().trim().min(1).max(100),
-  type: sectionType,
-  title: z.string().trim().max(255).nullable().optional(),
-  content: z.record(z.unknown()),
-  settings: z.record(z.unknown()).optional(),
-  sortOrder: z.number().int().min(-1000).max(1000).default(0),
-  isActive: z.boolean().default(true),
+export const homeCount = z.union([
+  z.literal(3), z.literal(6), z.literal(9), z.literal(12), z.literal(15),
+]);
+export const homeMode = z.enum(['featured', 'latest']);
+export const saveHomeFeatured = z.object({
+  mode: homeMode,
+  count: homeCount,
+  productIds: z.array(z.string().trim().min(1).max(100)).max(15).default([]),
 });
-export const sectionRef = z.object({ id: z.string().uuid() });
+export const saveHomeJournal = z.object({
+  mode: homeMode,
+  count: homeCount,
+  postIds: z.array(z.string().uuid()).max(15).default([]),
+  categorySlug: z.string().trim().max(100).nullable().optional(),
+});
+export const getHomeCms = z.object({});
 
 export const designCategory = z.enum(['print_artwork', 'embroidery', 'typography', 'label_spec']);
 export const designStatus = z.enum(['approved', 'in_review', 'archived']);

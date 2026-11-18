@@ -1,13 +1,11 @@
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { JOURNAL_ARTICLES } from '@storefront/mocks/fixtures';
+import { listPublished, getPostBySlug } from '@tuw/heart/modules/marketing';
 
-// The article page is a client component, so per-article metadata lives here.
-// Cache Components: prerender every known article; the list moves to the
-// database with its module (storefront TL-WEB-BE tasks).
-export function generateStaticParams() {
-  return JOURNAL_ARTICLES.map((a) => ({ slug: a.slug }));
+export async function generateStaticParams() {
+  const { rows } = await listPublished({ perPage: 100 });
+  return rows.length ? rows.map((p) => ({ slug: p.slug })) : [{ slug: '__none__' }];
 }
 
 export async function generateMetadata({
@@ -16,16 +14,15 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const article = JOURNAL_ARTICLES.find((a) => a.slug === slug);
-  if (!article) return { title: 'Article Not Found | The Unplugged Wear' };
-
+  const { post } = await getPostBySlug(slug);
+  if (!post) return { title: 'Article Not Found | The Unplugged Wear' };
   return {
-    title: `${article.title} | The Unplugged Wear Journal`,
-    description: article.excerpt,
+    title: `${post.title} | The Unplugged Wear Journal`,
+    description: post.excerpt ?? undefined,
     openGraph: {
-      title: article.title,
-      description: article.excerpt,
-      images: [{ url: article.coverImage }],
+      title: post.title,
+      description: post.excerpt ?? undefined,
+      images: post.coverImageUrl ? [{ url: post.coverImageUrl }] : undefined,
     },
   };
 }
@@ -38,6 +35,7 @@ export default async function JournalArticleLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  if (!JOURNAL_ARTICLES.some((a) => a.slug === slug)) notFound();
+  const { post } = await getPostBySlug(slug);
+  if (!post) notFound();
   return children;
 }

@@ -1,15 +1,28 @@
 import 'server-only';
 import { cacheLife, cacheTag } from 'next/cache';
-import { CMS_TAGS, FAQ_TAG, getHomeSections, getNavigation, getPage, listGeneralFaqs, listProductFaqs, type CmsPage, type CmsSection, type Faq, type GeneralFaqGroup } from '@tuw/heart/modules/content';
-import { BLOG_TAG, listPublished, getPostBySlug, type PostDetail, type PostSummary } from '@tuw/heart/modules/marketing';
+import { CMS_TAGS, FAQ_TAG, getHomeCmsConfig, getNavigation, getPage, listGeneralFaqs, listProductFaqs, type CmsPage, type Faq, type GeneralFaqGroup, type HomeCmsConfig } from '@tuw/heart/modules/content';
+import { BLOG_TAG, listPublished, listPublishedByIds, getPostBySlug, type PostDetail, type PostSummary } from '@tuw/heart/modules/marketing';
 
-export type { CmsPage, CmsSection };
+export type { CmsPage };
 
-export async function cmsHomeSections(): Promise<CmsSection[]> {
+export async function cmsHomeConfig(): Promise<HomeCmsConfig> {
   'use cache';
   cacheTag(CMS_TAGS.home);
   cacheLife('hours');
-  return getHomeSections();
+  return getHomeCmsConfig();
+}
+
+export async function cmsHomePosts(config: HomeCmsConfig['journal']): Promise<PostSummary[]> {
+  'use cache';
+  cacheTag(CMS_TAGS.home);
+  cacheTag(BLOG_TAG);
+  cacheLife('hours');
+  if (config.mode === 'featured') {
+    const chosen = await listPublishedByIds(config.postIds);
+    if (chosen.length) return chosen.slice(0, config.count);
+  }
+  const latest = await listPublished({ category: config.categorySlug ?? undefined, perPage: config.count });
+  return latest.rows;
 }
 
 export async function cmsPage(slug: string): Promise<CmsPage | null> {

@@ -35,17 +35,17 @@ export const saveMediaAction = guards.action({ permission: 'content.manage', inp
 export const deleteMediaAction = guards.action({ permission: 'content.manage', input: s.mediaRef }, ({ input, ctx }) =>
   content.adminDeleteMedia(input.id, ctx.user!.id));
 
-export const listSectionsAction = guards.action({ permission: 'content.manage', input: s.listSections }, ({ input, ctx }) =>
-  content.adminListSections(input.pageKey, ctx.user!.id));
+export const getHomeCmsAction = guards.action({ permission: 'content.manage', input: s.getHomeCms }, ({ ctx }) =>
+  content.adminGetHomeCms(ctx.user!.id));
 
-export const saveSectionAction = guards.action({ permission: 'content.manage', input: s.saveSection }, async ({ input, ctx }) => {
-  const result = await content.adminSaveSection(input, ctx.user!.id);
+export const saveHomeFeaturedAction = guards.action({ permission: 'content.manage', input: s.saveHomeFeatured }, async ({ input, ctx }) => {
+  const result = await content.adminSaveHomeFeatured(input, ctx.user!.id);
   await refreshStorefront(['cms:home']);
   return result;
 });
 
-export const deleteSectionAction = guards.action({ permission: 'content.manage', input: s.sectionRef }, async ({ input, ctx }) => {
-  const result = await content.adminDeleteSection(input.id, ctx.user!.id);
+export const saveHomeJournalAction = guards.action({ permission: 'content.manage', input: s.saveHomeJournal }, async ({ input, ctx }) => {
+  const result = await content.adminSaveHomeJournal({ ...input, categorySlug: input.categorySlug ?? null }, ctx.user!.id);
   await refreshStorefront(['cms:home']);
   return result;
 });

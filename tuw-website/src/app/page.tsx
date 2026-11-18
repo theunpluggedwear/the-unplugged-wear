@@ -1,35 +1,26 @@
-import Header from '@storefront/components/layout/Header';
-import Footer from '@storefront/components/layout/Footer';
 import { getCatalog } from '@/server/catalog';
-import { cmsHomeSections, cmsPosts } from '@/server/cms';
-import CmsHome from './_components/CmsHome';
+import { cmsHomeConfig, cmsHomePosts } from '@/server/cms';
 import LegacyHome from './_components/LegacyHome';
 
 export default async function HomePage() {
-  const [sections, catalog, posts] = await Promise.all([
-    cmsHomeSections(),
-    getCatalog(),
-    cmsPosts({ perPage: 3 }),
-  ]);
+  const [config, catalog] = await Promise.all([cmsHomeConfig(), getCatalog()]);
+  const count = config.featured.count;
 
-  if (!sections.length) {
-    return (
-      <>
-        <div className="bg-store-cream px-4 py-2 text-center text-xs text-store-muted">
-          Home sections are in demo mode until CMS content is published.
-        </div>
-        <LegacyHome />
-      </>
-    );
+  let featuredProducts = catalog.products.slice(0, count);
+  if (config.featured.mode === 'featured' && config.featured.productIds.length) {
+    const ids = new Set(config.featured.productIds);
+    const chosen = catalog.products.filter((p) => ids.has(p.productId ?? p.id));
+    if (chosen.length) featuredProducts = chosen.slice(0, count);
   }
 
+  const journalPosts = await cmsHomePosts(config.journal);
+
   return (
-    <div className="min-h-screen flex flex-col bg-store-canvas">
-      <Header />
-      <main id="main-content" tabIndex={-1} className="flex-1">
-        <CmsHome sections={sections} products={catalog.products} posts={posts.rows} />
-      </main>
-      <Footer />
-    </div>
+    <LegacyHome
+      products={featuredProducts}
+      journalPosts={journalPosts}
+      featuredCount={count}
+      journalCount={config.journal.count}
+    />
   );
 }

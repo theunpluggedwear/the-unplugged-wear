@@ -70,19 +70,19 @@ export async function adminDeleteMedia(id: string, actorId: string) {
   return media.deleteMedia(id, actorId);
 }
 
-export async function adminListSections(pageKey: string, actorId: string) {
+export async function adminGetHomeCms(actorId: string) {
   await requireContentManager(actorId);
-  return svc.listSections(pageKey);
+  return svc.getHomeCmsConfig();
 }
 
-export async function adminSaveSection(input: Parameters<typeof svc.saveSection>[0], actorId: string) {
+export async function adminSaveHomeFeatured(input: svc.HomeFeaturedConfig, actorId: string) {
   await requireContentManager(actorId);
-  return svc.saveSection(input, actorId);
+  return svc.saveHomeFeatured(input);
 }
 
-export async function adminDeleteSection(id: string, actorId: string) {
+export async function adminSaveHomeJournal(input: svc.HomeJournalConfig, actorId: string) {
   await requireContentManager(actorId);
-  return svc.deleteSection(id);
+  return svc.saveHomeJournal(input);
 }
 
 export async function adminListDesigns(input: Parameters<typeof designs.listDesigns>[0], actorId: string) {

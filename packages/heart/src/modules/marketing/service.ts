@@ -16,6 +16,7 @@ export interface PostSummary {
   updatedAt: string;
   categoryName: string | null;
   authorName: string;
+  coverImageUrl: string | null;
 }
 
 export interface PostDetail extends PostSummary {
@@ -53,7 +54,7 @@ function mediaIdsFromContent(content: Record<string, unknown>[]): string[] {
 }
 
 const POST_COLUMNS = sql`b.id, b.slug, b.title, b.excerpt, b.status, b.published_at, b.updated_at,
-       bc.name AS category_name, ba.name AS author_name`;
+       bc.name AS category_name, ba.name AS author_name, m.url AS cover_image_url`;
 
 type Row = Record<string, unknown>;
 
@@ -64,6 +65,7 @@ function toSummary(r: Row): PostSummary {
     updatedAt: new Date(String(r.updated_at)).toISOString(),
     categoryName: r.category_name ? String(r.category_name) : null,
     authorName: String(r.author_name),
+    coverImageUrl: r.cover_image_url ? String(r.cover_image_url) : null,
   };
 }
 
@@ -77,6 +79,7 @@ export async function listPosts(input: { status?: string; q?: string; page?: num
     FROM blogs b
     LEFT JOIN blog_categories bc ON bc.id = b.category_id
     JOIN blog_authors ba ON ba.id = b.author_id
+    LEFT JOIN media m ON m.id = b.cover_media_id
     WHERE (${status}::text IS NULL OR b.status = ${status}) AND (${q}::text IS NULL OR b.title ILIKE ${q})
     ORDER BY b.updated_at DESC
     LIMIT ${perPage} OFFSET ${(page - 1) * perPage}`);
@@ -92,11 +95,27 @@ export async function listPublished(input: { category?: string; page?: number; p
     FROM blogs b
     LEFT JOIN blog_categories bc ON bc.id = b.category_id
     JOIN blog_authors ba ON ba.id = b.author_id
+    LEFT JOIN media m ON m.id = b.cover_media_id
     WHERE b.status = 'published' AND b.published_at <= now()
       AND (${category}::text IS NULL OR bc.slug = ${category})
     ORDER BY b.published_at DESC, b.id DESC
     LIMIT ${perPage} OFFSET ${(page - 1) * perPage}`);
   return { rows: rows.map(toSummary), total: rows[0] ? Number(rows[0].total) : 0 };
+}
+
+export async function listPublishedByIds(ids: string[]): Promise<PostSummary[]> {
+  const clean = [...new Set(ids)].filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+  if (!clean.length) return [];
+  const { rows } = await getDb().execute<Row & { ord: number }>(sql`
+    SELECT ${POST_COLUMNS}, x.ord
+    FROM unnest(${clean}::uuid[]) WITH ORDINALITY AS x(id, ord)
+    JOIN blogs b ON b.id = x.id
+    LEFT JOIN blog_categories bc ON bc.id = b.category_id
+    JOIN blog_authors ba ON ba.id = b.author_id
+    LEFT JOIN media m ON m.id = b.cover_media_id
+    WHERE b.status = 'published' AND b.published_at <= now()
+    ORDER BY x.ord`);
+  return rows.map(toSummary);
 }
 
 export async function getPostBySlug(slug: string, publishedOnly = true): Promise<{ post: PostDetail | null; redirectTo: string | null }> {

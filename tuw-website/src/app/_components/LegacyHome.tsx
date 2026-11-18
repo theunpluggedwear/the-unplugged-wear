@@ -17,9 +17,8 @@ import Footer from '@storefront/components/layout/Footer';
 import VirtualFittingRoom from '@storefront/components/commerce/VirtualFittingRoom';
 import OurPhilosophy from '@storefront/components/commerce/OurPhilosophy';
 import ProductCard from '@storefront/components/commerce/ProductCard';
-import { JOURNAL_ARTICLES } from '@storefront/mocks/fixtures';
-import { useStore } from '@storefront/mocks/store';
 import type { Product } from '@storefront/lib/types';
+import type { PostSummary } from '@tuw/heart/modules/marketing';
 
 
 
@@ -39,16 +38,6 @@ const CATEGORY_LABELS: Record<Product['category'], string> = {
 const CATEGORY_PILLS = ['All Collection', 'Hoodies & Sweats', 'T-shirts', 'Kids', 'Accessories'];
 
 // 3. Virtual fitting room data + interaction live in @storefront/components/commerce/VirtualFittingRoom.tsx
-
-// 4. From the Journal: real articles, so every card links somewhere that exists
-const RECOMMENDATION_STORIES = JOURNAL_ARTICLES.slice(0, 3).map((article) => ({
-  id: article.id,
-  title: article.title,
-  subtitle: article.excerpt,
-  image: article.coverImage,
-  imagePosition: article.coverPosition,
-  slug: article.slug,
-}));
 
 // 5. Customer Experience feature pillars (Section 3)
 interface ExperienceFeature {
@@ -88,11 +77,24 @@ const EXPERIENCE_FEATURES: ExperienceFeature[] = [
 
 const HERO_VIDEO_SRC = '/videos/hero-video.mp4';
 
-export default function LegacyHome() {
+type LegacyHomeProps = {
+  products: Product[];
+  journalPosts: PostSummary[];
+  featuredCount: number;
+  journalCount: number;
+};
+
+export default function LegacyHome({ products, journalPosts, featuredCount, journalCount }: LegacyHomeProps) {
   const [activeCategory, setActiveCategory] = useState('All Collection');
-  // Derived from the catalog (database) so the homepage can never drift from /shop.
-  const { products } = useStore();
   const HOME_PRODUCTS = products.filter((p) => p.images.length > 0);
+  const journalStories = journalPosts.slice(0, journalCount).map((post) => ({
+    id: post.id,
+    title: post.title,
+    subtitle: post.excerpt ?? '',
+    image: post.coverImageUrl ?? '/images/editorial/products-made-with-love.png',
+    imagePosition: 'center',
+    slug: post.slug,
+  }));
 
   // Hero background video: swap HERO_VIDEO_SRC for the final 30s hero cut.
   // It autoplays with no on-screen control (owner's choice); reduced-motion
@@ -105,12 +107,11 @@ export default function LegacyHome() {
     }
   }, []);
 
-  // Filter best sellers: capped to 10 cards for the homepage carousel
   const filteredProducts = (
     activeCategory === 'All Collection'
       ? HOME_PRODUCTS
       : HOME_PRODUCTS.filter((p) => CATEGORY_LABELS[p.category]?.toLowerCase() === activeCategory.toLowerCase())
-  ).slice(0, 10);
+  ).slice(0, featuredCount);
 
   // Collection carousel: native scroll-snap track with prev/next controls
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -358,6 +359,7 @@ export default function LegacyHome() {
         {/* =========================================================================
             SECTION 5: FROM THE JOURNAL (Figma Editorial Cards)
             ========================================================================= */}
+        {journalStories.length > 0 && (
         <section className="py-20 sm:py-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-b border-store-border">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12">
             <div>
@@ -379,7 +381,7 @@ export default function LegacyHome() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-            {RECOMMENDATION_STORIES.map((story) => (
+            {journalStories.map((story) => (
               <div
                 key={story.id}
                 className="group bg-store-surface rounded-2xl border border-store-border overflow-hidden hover:shadow-md transition-shadow"
@@ -414,6 +416,7 @@ export default function LegacyHome() {
             ))}
           </div>
         </section>
+        )}
 
         {/* =========================================================================
             SECTION 6: STRATOSPHERE LIFESTYLE BANNER (4th Atelier Video Integration)

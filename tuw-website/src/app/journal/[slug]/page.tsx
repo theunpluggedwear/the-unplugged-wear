@@ -4,6 +4,8 @@ import Header from '@storefront/components/layout/Header';
 import Footer from '@storefront/components/layout/Footer';
 import { cmsPost } from '@/server/cms';
 
+export const instant = false;
+
 export default async function JournalPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const { post, redirectTo } = await cmsPost(slug);

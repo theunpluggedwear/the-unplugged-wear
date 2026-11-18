@@ -2860,7 +2860,7 @@
       "owner": "unassigned",
       "parent": "TL-WEB-BE",
       "started": null,
-      "finished": "2026-11-17",
+      "finished": "2026-11-18",
       "verified": true,
       "design_match": null,
       "pushed": false,
@@ -2874,7 +2874,7 @@
       "description": "cacheTag('cms:home').",
       "key_decisions": [],
       "follow_ups": [],
-      "log": "Home page renders ordered cms_sections with cacheTag(cms:home); legacy layout used as demo fallback."
+      "log": "Minimal homepage CMS: default homepage kept; only featured/latest products and featured/latest journal cards configurable with counts 3/6/9/12/15."
     },
     {
       "id": "TL-WEB-BE-31",

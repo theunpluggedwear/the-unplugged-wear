@@ -13,25 +13,6 @@ export const CMS_TAGS = {
 
 export const FAQ_TAG = 'faqs';
 
-export interface CmsSection {
-  id: string;
-  key: string;
-  pageKey: string;
-  type: string;
-  title: string | null;
-  content: Record<string, unknown>;
-  settings: Record<string, unknown>;
-  sortOrder: number;
-}
-
-export async function getHomeSections(): Promise<CmsSection[]> {
-  const { rows } = await getDb().execute<{
-    id: string; key: string; page_key: string; type: string; title: string | null;
-    content: Record<string, unknown>; settings: Record<string, unknown>; sort_order: number;
-  }>(sql`SELECT id, key, page_key, type, title, content, settings, sort_order FROM cms_sections WHERE page_key = 'home' AND is_active ORDER BY sort_order, key`);
-  return rows.map((r) => ({ id: r.id, key: r.key, pageKey: r.page_key, type: r.type, title: r.title, content: r.content, settings: r.settings, sortOrder: r.sort_order }));
-}
-
 export interface CmsPage {
   id: string;
   slug: string;
@@ -197,41 +178,78 @@ export async function deleteFaq(id: string): Promise<void> {
   });
 }
 
-export async function listSections(pageKey: string): Promise<CmsSection[]> {
-  const { rows } = await getDb().execute<{
-    id: string; key: string; page_key: string; type: string; title: string | null;
-    content: Record<string, unknown>; settings: Record<string, unknown>; sort_order: number;
-  }>(sql`SELECT id, key, page_key, type, title, content, settings, sort_order FROM cms_sections WHERE page_key = ${pageKey} ORDER BY sort_order, key`);
-  return rows.map((r) => ({ id: r.id, key: r.key, pageKey: r.page_key, type: r.type, title: r.title, content: r.content, settings: r.settings, sortOrder: r.sort_order }));
+export interface HomeFeaturedConfig {
+  mode: 'featured' | 'latest';
+  count: number;
+  productIds: string[];
 }
 
-export async function saveSection(input: {
-  id?: string; key: string; pageKey: string; type: string; title?: string | null;
-  content: Record<string, unknown>; settings?: Record<string, unknown>; sortOrder?: number; isActive?: boolean;
-}, actorId: string): Promise<CmsSection> {
-  return withTransaction(async (tx) => {
-    const id = input.id ?? uuidv7();
-    if (input.id) {
-      const { rowCount } = await tx.execute(sql`SELECT 1 FROM cms_sections WHERE id = ${input.id}::uuid`);
-      if (!rowCount) throw new AppError('NOT_FOUND', 'Section not found.');
-      await tx.execute(sql`UPDATE cms_sections SET key=${input.key}, page_key=${input.pageKey}, type=${input.type}, title=${input.title ?? null},
-        content=${JSON.stringify(input.content)}::jsonb, settings=${JSON.stringify(input.settings ?? {})}::jsonb,
-        sort_order=${input.sortOrder ?? 0}, is_active=${input.isActive ?? true}, updated_at=now() WHERE id=${id}::uuid`);
-    } else {
-      await tx.execute(sql`INSERT INTO cms_sections (id, key, page_key, type, title, content, settings, sort_order, is_active)
-        VALUES (${id}::uuid, ${input.key}, ${input.pageKey}, ${input.type}, ${input.title ?? null}, ${JSON.stringify(input.content)}::jsonb,
-          ${JSON.stringify(input.settings ?? {})}::jsonb, ${input.sortOrder ?? 0}, ${input.isActive ?? true})`);
-    }
-    const { rows } = await tx.execute<{ id: string; key: string; page_key: string; type: string; title: string | null; content: Record<string, unknown>; settings: Record<string, unknown>; sort_order: number }>(sql`
-      SELECT id, key, page_key, type, title, content, settings, sort_order FROM cms_sections WHERE id=${id}::uuid`);
-    const r = rows[0]!;
-    return { id: r.id, key: r.key, pageKey: r.page_key, type: r.type, title: r.title, content: r.content, settings: r.settings, sortOrder: r.sort_order };
-  });
+export interface HomeJournalConfig {
+  mode: 'featured' | 'latest';
+  count: number;
+  postIds: string[];
+  categorySlug: string | null;
 }
 
-export async function deleteSection(id: string): Promise<void> {
+export interface HomeCmsConfig {
+  featured: HomeFeaturedConfig;
+  journal: HomeJournalConfig;
+}
+
+const DEFAULT_HOME_CMS: HomeCmsConfig = {
+  featured: { mode: 'latest', count: 3, productIds: [] },
+  journal: { mode: 'latest', count: 3, postIds: [], categorySlug: null },
+};
+
+export async function getHomeCmsConfig(): Promise<HomeCmsConfig> {
+  const { rows } = await getDb().execute<{ key: string; content: Record<string, unknown> }>(sql`
+    SELECT key, content FROM cms_sections WHERE page_key='home' AND is_active`);
+  const featuredRow = rows.find((r) => r.key === 'home-featured');
+  const journalRow = rows.find((r) => r.key === 'home-journal');
+  const featured = (featuredRow?.content ?? {}) as Partial<HomeFeaturedConfig>;
+  const journal = (journalRow?.content ?? {}) as Partial<HomeJournalConfig>;
+  return {
+    featured: {
+      mode: featured.mode === 'featured' ? 'featured' : 'latest',
+      count: [3, 6, 9, 12, 15].includes(Number(featured.count)) ? Number(featured.count) : 3,
+      productIds: Array.isArray(featured.productIds) ? featured.productIds.map(String).slice(0, 15) : [],
+    },
+    journal: {
+      mode: journal.mode === 'featured' ? 'featured' : 'latest',
+      count: [3, 6, 9, 12, 15].includes(Number(journal.count)) ? Number(journal.count) : 3,
+      postIds: Array.isArray(journal.postIds) ? journal.postIds.filter((id): id is string => typeof id === 'string').slice(0, 15) : [],
+      categorySlug: typeof journal.categorySlug === 'string' ? journal.categorySlug : null,
+    },
+  };
+}
+
+async function saveHomeSection(key: string, content: Record<string, unknown>): Promise<void> {
   await withTransaction(async (tx) => {
-    const { rowCount } = await tx.execute(sql`DELETE FROM cms_sections WHERE id = ${id}::uuid`);
-    if (!rowCount) throw new AppError('NOT_FOUND', 'Section not found.');
+    await tx.execute(sql`
+      UPDATE cms_sections SET content=${JSON.stringify(content)}::jsonb, updated_at=now()
+      WHERE key=${key}`);
   });
+}
+
+export async function saveHomeFeatured(input: HomeFeaturedConfig): Promise<HomeCmsConfig> {
+  await saveHomeSection('home-featured', {
+    mode: input.mode,
+    count: input.count,
+    productIds: input.productIds.slice(0, input.count),
+  });
+  return getHomeCmsConfig();
+}
+
+export async function saveHomeJournal(input: HomeJournalConfig): Promise<HomeCmsConfig> {
+  await saveHomeSection('home-journal', {
+    mode: input.mode,
+    count: input.count,
+    postIds: input.postIds.slice(0, input.count),
+    categorySlug: input.categorySlug ?? null,
+  });
+  return getHomeCmsConfig();
+}
+
+export function defaultHomeCmsConfig(): HomeCmsConfig {
+  return structuredClone(DEFAULT_HOME_CMS);
 }
