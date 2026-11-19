@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@storefront/components/layout/Header';
 import Footer from '@storefront/components/layout/Footer';
 import PaymentSimulationPanel from '@storefront/components/commerce/PaymentSimulationPanel';
+import LivePaymentPanel from '@storefront/components/commerce/LivePaymentPanel';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
 import Listbox from '@storefront/components/ui/Listbox';
 import { useStore } from '@storefront/mocks/store';
@@ -64,7 +65,9 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     let active = true;
-    getPaymentConfigAction({}).then((r) => { if (active && r.ok) setPaymentConfig(r.data); });
+    getPaymentConfigAction({})
+      .then((r) => { if (active) setPaymentConfig(r.ok ? r.data : { provider: 'mock', live: false, keyId: null }); })
+      .catch(() => { if (active) setPaymentConfig({ provider: 'mock', live: false, keyId: null }); });
     return () => { active = false; };
   }, []);
 
@@ -301,8 +304,8 @@ export default function CheckoutPage() {
       <Header />
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full">
-        {/* Truthful demo feedback (project rule): stated before any input */}
-        <div
+        {/* Truthful demo feedback (project rule): shown only while the demo gateway is active */}
+        {paymentConfig && !paymentConfig.live && <div
           role="note"
           className="mb-6 flex items-start gap-2.5 rounded-xl border border-store-gold/40 bg-store-cream px-4 py-3 text-sm text-store-text-primary"
         >
@@ -311,7 +314,7 @@ export default function CheckoutPage() {
             <span className="font-semibold">Demo checkout sandbox</span> — no payment will be
             collected and no order will be printed or shipped.
           </p>
-        </div>
+        </div>}
 
         {/* ======================================================== */}
         {/* TOP ROW: Header Title (L) + Floating 3-Step Indicator (R)*/}
@@ -909,7 +912,7 @@ export default function CheckoutPage() {
               <div className="space-y-6">
                 <div className="border-b border-store-card-border pb-4">
                   <span className="text-xs font-bold uppercase tracking-wider text-store-muted">
-                    Payment Authorization Sandbox
+                    {paymentConfig?.live ? 'Payment' : 'Payment Authorization Sandbox'}
                   </span>
                 </div>
 
@@ -922,12 +925,23 @@ export default function CheckoutPage() {
                   <p role="status" className="text-sm text-store-text-secondary">Placing your order…</p>
                 )}
 
-                <PaymentSimulationPanel
-                  totalAmount={payableTotal}
-                  onPaymentSuccess={handlePaymentSuccess}
-                  onPaymentFail={(reason) => console.log('Payment declined:', reason)}
-                  onCancel={() => setStep(2)}
-                />
+                {!paymentConfig ? (
+                  <p role="status" className="text-sm text-store-text-secondary">Loading payment options…</p>
+                ) : paymentConfig.live ? (
+                  <LivePaymentPanel
+                    totalAmount={payableTotal}
+                    placing={placing}
+                    onPay={handlePaymentSuccess}
+                    onCancel={() => setStep(2)}
+                  />
+                ) : (
+                  <PaymentSimulationPanel
+                    totalAmount={payableTotal}
+                    onPaymentSuccess={handlePaymentSuccess}
+                    onPaymentFail={(reason) => console.log('Payment declined:', reason)}
+                    onCancel={() => setStep(2)}
+                  />
+                )}
               </div>
             )}
           </div>

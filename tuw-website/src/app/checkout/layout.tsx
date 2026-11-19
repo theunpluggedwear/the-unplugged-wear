@@ -6,7 +6,7 @@ import { getMyAccount } from '@/server/account';
 // Private page: kept out of search results.
 export const metadata: Metadata = {
   title: 'Checkout | The Unplugged Wear',
-  description: 'Demo checkout sandbox: no payment will be collected.',
+  description: 'Secure checkout for The Unplugged Wear.',
   robots: { index: false, follow: true },
 };
 
