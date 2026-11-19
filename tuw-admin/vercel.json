@@ -29,6 +29,10 @@
     {
       "path": "/api/cron/webhooks.retryFailed",
       "schedule": "30 4 * * *"
+    },
+    {
+      "path": "/api/cron/payments.reconcileRazorpay",
+      "schedule": "45 4 * * *"
     }
   ]
 }

@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { getDb, withTransaction } from '../../platform/db/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import { getWebhookProvider, type NormalizedWebhookEvent } from '../../integrations/webhooks/index.ts';
+import { confirmPaidOrder, markPaymentFailed as markPaymentFailedOrder } from '../orders/payment-confirmation.ts';
 
 export interface IngestResult {
   status: 200 | 401 | 400 | 500;
@@ -52,24 +53,27 @@ export async function ingestWebhook(provider: string, rawBody: string, headers: 
 
 /** Apply a normalized event to business state. Idempotent by provider ids. */
 export async function processWebhookEvent(event: NormalizedWebhookEvent): Promise<void> {
-  await withTransaction(async (tx) => {
-    switch (event.kind) {
-      case 'payment_captured':
-        await markIntentCaptured(tx, event);
-        break;
-      case 'payment_failed':
-        await markIntentFailed(tx, event);
-        break;
-      case 'refund_created':
-      case 'refund_processed':
-      case 'refund_failed':
-        await reconcileRefund(tx, event);
-        break;
-      default:
-        // Audit-only events: stored in webhook_events, no state change.
-        break;
-    }
-  });
+  switch (event.kind) {
+    case 'payment_captured':
+      if (event.status !== 'captured' || !event.providerOrderId || !event.providerPaymentId || event.amountPaise === undefined) break;
+      await confirmPaidOrder({
+        providerOrderId: event.providerOrderId,
+        providerPaymentId: event.providerPaymentId,
+        amountPaise: event.amountPaise,
+        currency: event.currency,
+      });
+      break;
+    case 'payment_failed':
+      if (event.providerOrderId) await markPaymentFailedOrder(event.providerOrderId, event.status ?? 'failed');
+      break;
+    case 'refund_created':
+    case 'refund_processed':
+    case 'refund_failed':
+      await withTransaction(async (tx) => reconcileRefund(tx, event));
+      break;
+    default:
+      break;
+  }
 }
 
 async function markIntentCaptured(tx: Parameters<Parameters<typeof withTransaction>[0]>[0], event: NormalizedWebhookEvent): Promise<void> {

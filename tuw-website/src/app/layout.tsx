@@ -53,7 +53,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // shell, not dynamic holes. Shop and PDP now read the catalog on the server;
   // the provider keeps it for Header (mega-menu counts, suggestions) and the
   // per-browser bag/wishlist. Narrowing it to a nav-sized read is the next win.
-  const [settings, catalog, nav] = await Promise.all([getStorefrontSettings(), getCatalog(), getNavigation()]);
+  const settings = await getStorefrontSettings();
+  const catalog = await getCatalog();
+  const nav = await getNavigation();
   return (
     <html lang="en" className={outfit.variable} suppressHydrationWarning>
       <head>

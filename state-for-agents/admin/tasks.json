@@ -5130,7 +5130,7 @@
       "parent": "TL-INT-PHASE",
       "started": "2026-11-17",
       "finished": null,
-      "log": "Live Razorpay adapter, provider-agnostic webhook inbox, two-phase checkout and refunds implemented. Pending live Rs1 payment/refund test.",
+      "log": "Pending-order-first checkout, idempotent webhook confirmation, reconciliation polling, local test mode with Rs1 SKU. Pending final browser payment completion and live verification.",
       "design_match": "n/a",
       "key_decisions": [],
       "verified": false,

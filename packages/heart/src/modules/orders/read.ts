@@ -134,10 +134,21 @@ export async function quoteCheckout(
   const settings = await getSettings(db);
   const subtotal = lines.reduce((n, l) => n + l.unitPaise * l.qty, 0);
   const discount = input.discountCode ? await findDiscount(db, input.discountCode, subtotal) : null;
+  const rates = {
+    freeThresholdPaise: settings['shipping.free_threshold'], standardFeePaise: settings['shipping.standard_fee'],
+    expressFeePaise: settings['shipping.express_fee'], codFeePaise: settings['shipping.cod_fee'],
+  };
+  const testSku = (process.env.CHECKOUT_TEST_SKU ?? '').trim();
+  if (process.env.CHECKOUT_TEST_MODE === 'true' && testSku && [...facts.values()].some((f) => f.sku === testSku || f.sku.startsWith(testSku + '-'))) {
+    rates.freeThresholdPaise = 0;
+    rates.standardFeePaise = 0;
+    rates.expressFeePaise = 0;
+    rates.codFeePaise = 0;
+  }
   const totals = priceOrder({
     lines: lines.map((l) => ({ unitPaise: l.unitPaise, qty: l.qty, taxRate: facts.get(l.variantId!)?.taxRate ?? null })),
     discount: discount?.rule ?? null,
-    rates: { freeThresholdPaise: settings['shipping.free_threshold'], standardFeePaise: settings['shipping.standard_fee'], expressFeePaise: settings['shipping.express_fee'], codFeePaise: settings['shipping.cod_fee'] },
+    rates,
     speed: input.speed, cashOnDelivery: input.method === 'cod', taxIncluded: settings['tax.included'],
   });
   let giftCardPaise = 0;

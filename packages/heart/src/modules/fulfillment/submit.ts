@@ -80,6 +80,10 @@ async function lease(planned: { orderId: string; orderNumber: string; gateway: '
  * so a batch keeps going.
  */
 export async function sendPlanned(orderId: string, force = false): Promise<SubmitOutcome> {
+  if (process.env.FULFILLMENT_SUBMIT_ENABLED === 'false') {
+    const planned = await planOrder(orderId);
+    return { orderNumber: planned.orderNumber, groups: [], skipped: [{ slug: '*', reason: 'Fulfilment submission is disabled in this environment.' }] };
+  }
   const planned = await planOrder(orderId);
   if (!force) {
     const { rows: [cap] } = await getDb().execute<{ n: number }>(sql`

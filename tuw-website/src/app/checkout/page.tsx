@@ -13,7 +13,7 @@ import { useStore } from '@storefront/mocks/store';
 import { useSiteSettings } from '@storefront/lib/site-settings';
 import { placeOrderAction } from '@/server/order-actions';
 import { previewGiftCardAction } from '@/server/gift-card-actions';
-import { createPaymentIntentAction, confirmPaymentAction, getPaymentConfigAction } from '@/server/payment-actions';
+import { createPaymentIntentAction, confirmPaymentAction, getPaymentConfigAction, getCheckoutStatusAction } from '@/server/payment-actions';
 import { openRazorpayCheckout } from '@storefront/lib/razorpay-checkout';
 import { useSession } from '@storefront/lib/session';
 import { useAccount } from '@storefront/lib/account';
@@ -61,13 +61,13 @@ export default function CheckoutPage() {
   const [checkoutKey] = useState(() => crypto.randomUUID());
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
-  const [paymentConfig, setPaymentConfig] = useState<{ provider: string; live: boolean; keyId: string | null } | null>(null);
+  const [paymentConfig, setPaymentConfig] = useState<{ provider: string; available: boolean; live: boolean; testMode: boolean; keyId: string | null } | null>(null);
 
   useEffect(() => {
     let active = true;
     getPaymentConfigAction({})
-      .then((r) => { if (active) setPaymentConfig(r.ok ? r.data : { provider: 'mock', live: false, keyId: null }); })
-      .catch(() => { if (active) setPaymentConfig({ provider: 'mock', live: false, keyId: null }); });
+      .then((r) => { if (active) setPaymentConfig(r.ok ? r.data : { provider: 'mock', available: false, live: false, testMode: true, keyId: null }); })
+      .catch(() => { if (active) setPaymentConfig({ provider: 'mock', available: false, live: false, testMode: true, keyId: null }); });
     return () => { active = false; };
   }, []);
 
@@ -205,20 +205,28 @@ export default function CheckoutPage() {
     }
   };
 
-  // The server reads the bag, prices it, takes the stock and the payment in
-  // one step. Live gateway payments are captured before the order is placed.
   const handlePaymentSuccess = async (paymentMethod: 'UPI' | 'Card' | 'COD (Demo)') => {
     if (placing) return;
     setPlacing(true);
     setPlaceError(null);
     try {
       const method = paymentMethod === 'Card' ? 'card' : paymentMethod === 'UPI' ? 'upi' : 'cod';
-      let prepaid: { providerOrderId: string; providerPaymentId: string } | undefined;
+      const orderInput = {
+        checkoutKey,
+        email: email.trim() || undefined,
+        shippingAddress: {
+          fullName: `${firstName} ${lastName}`.trim(),
+          line1: addressLine1, line2: addressLine2 || undefined, city, state,
+          postalCode, country: 'India' as const, phone,
+        },
+        speed: deliverySpeed,
+        method,
+        discountCode: promoCode || undefined,
+        giftCardCode: giftCard?.code,
+      };
 
-      if (paymentConfig?.live && paymentConfig.keyId && method !== 'cod') {
-        const intent = await createPaymentIntentAction({
-          checkoutKey, discountCode: promoCode || undefined, giftCardCode: giftCard?.code, speed: deliverySpeed, method,
-        });
+      if (paymentConfig?.provider === 'razorpay' && paymentConfig.keyId && method !== 'cod') {
+        const intent = await createPaymentIntentAction(orderInput);
         if (!intent.ok) throw new Error(intent.error.message);
         const paid = await openRazorpayCheckout({
           keyId: intent.data.keyId,
@@ -233,29 +241,24 @@ export default function CheckoutPage() {
           providerPaymentId: paid.razorpay_payment_id,
           signature: paid.razorpay_signature,
         });
-        if (!confirmed.ok) throw new Error(confirmed.error.message);
-        prepaid = confirmed.data;
+        if (!confirmed.ok) {
+          let status = null;
+          for (let i = 0; i < 8 && !status; i += 1) {
+            const polled = await getCheckoutStatusAction({ orderNumber: intent.data.orderNumber });
+            if (polled.ok && polled.data.paymentStatus === 'paid') status = polled.data;
+            else await new Promise((r) => setTimeout(r, 1000));
+          }
+          if (!status) throw new Error(confirmed.error.message);
+        }
+        removePromoCode();
+        setGiftCard(null);
+        setGiftCardMessage(null);
+        router.push(`/checkout/success?order=${encodeURIComponent(intent.data.orderNumber)}&t=${encodeURIComponent(intent.data.receipt)}`);
+        setTimeout(() => void refreshBag(), 500);
+        return;
       }
 
-      const result = await placeOrderAction({
-        checkoutKey,
-        email: email.trim() || undefined,
-        shippingAddress: {
-          fullName: `${firstName} ${lastName}`.trim(),
-          line1: addressLine1,
-          line2: addressLine2 || undefined,
-          city,
-          state,
-          postalCode,
-          country: 'India',
-          phone,
-        },
-        speed: deliverySpeed,
-        method,
-        discountCode: promoCode || undefined,
-        giftCardCode: giftCard?.code,
-        ...(prepaid ? { prepaid } : {}),
-      });
+      const result = await placeOrderAction(orderInput);
       if (!result.ok) {
         setPlaceError(result.error.details[0]?.message && result.error.code === 'VALIDATION_FAILED' ? `${result.error.message} ${result.error.details[0].message}` : result.error.message);
         return;
@@ -304,17 +307,15 @@ export default function CheckoutPage() {
       <Header />
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full">
-        {/* Truthful demo feedback (project rule): shown only while the demo gateway is active */}
-        {paymentConfig && !paymentConfig.live && <div
-          role="note"
-          className="mb-6 flex items-start gap-2.5 rounded-xl border border-store-gold/40 bg-store-cream px-4 py-3 text-sm text-store-text-primary"
-        >
-          <ShieldCheck size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-store-gold" />
-          <p>
-            <span className="font-semibold">Demo checkout sandbox</span> — no payment will be
-            collected and no order will be printed or shipped.
-          </p>
-        </div>}
+        {paymentConfig?.available ? (
+          <div role="note" className="mb-6 rounded-xl border border-store-gold/40 bg-store-cream px-4 py-3 text-sm text-store-text-primary">
+            {paymentConfig.testMode ? 'Razorpay test mode — no real money will be collected.' : 'Secure payment by Razorpay.'}
+          </div>
+        ) : paymentConfig ? (
+          <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            Online payments are not available right now. Please try again later or contact support.
+          </div>
+        ) : null}
 
         {/* ======================================================== */}
         {/* TOP ROW: Header Title (L) + Floating 3-Step Indicator (R)*/}
@@ -912,7 +913,7 @@ export default function CheckoutPage() {
               <div className="space-y-6">
                 <div className="border-b border-store-card-border pb-4">
                   <span className="text-xs font-bold uppercase tracking-wider text-store-muted">
-                    {paymentConfig?.live ? 'Payment' : 'Payment Authorization Sandbox'}
+                    {paymentConfig?.available ? 'Secure Payment' : 'Payment Authorization Sandbox'}
                   </span>
                 </div>
 
@@ -927,7 +928,7 @@ export default function CheckoutPage() {
 
                 {!paymentConfig ? (
                   <p role="status" className="text-sm text-store-text-secondary">Loading payment options…</p>
-                ) : paymentConfig.live ? (
+                ) : paymentConfig.available ? (
                   <LivePaymentPanel
                     totalAmount={payableTotal}
                     placing={placing}
@@ -935,12 +936,9 @@ export default function CheckoutPage() {
                     onCancel={() => setStep(2)}
                   />
                 ) : (
-                  <PaymentSimulationPanel
-                    totalAmount={payableTotal}
-                    onPaymentSuccess={handlePaymentSuccess}
-                    onPaymentFail={(reason) => console.log('Payment declined:', reason)}
-                    onCancel={() => setStep(2)}
-                  />
+                  <p role="status" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    Online payments are unavailable. Please try again later or contact support.
+                  </p>
                 )}
               </div>
             )}
@@ -1205,7 +1203,9 @@ export default function CheckoutPage() {
               </li>
               <li className="flex items-center gap-2.5 pt-2.5 border-t border-store-card-border/60 text-store-charcoal">
                 <ShieldCheck size={16} aria-hidden="true" className="shrink-0" />
-                Demo checkout — no payment is collected
+                {paymentConfig?.available
+                  ? paymentConfig.testMode ? 'Razorpay test mode — no real payment' : 'Secure payment by Razorpay'
+                  : 'Online payments are currently unavailable'}
               </li>
             </ul>
           </div>

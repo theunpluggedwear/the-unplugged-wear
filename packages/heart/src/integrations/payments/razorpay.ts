@@ -45,6 +45,7 @@ export const razorpayGateway: PaymentGateway = {
     }
     const order = await call<{ id: string; status: string }>('/orders', {
       method: 'POST',
+      headers: { 'Idempotency-Key': input.reference },
       body: JSON.stringify({
         amount: input.amountPaise,
         currency: input.currency,
@@ -53,6 +54,18 @@ export const razorpayGateway: PaymentGateway = {
       }),
     });
     return { providerRef: order.id, status: 'pending', providerStatus: order.status };
+  },
+
+  async getPayment(providerPaymentId) {
+    const payment = await call<{ id: string; status: string; amount?: number; currency?: string; error_code?: string | null }>(
+      `/payments/${encodeURIComponent(providerPaymentId)}`, { method: 'GET' });
+    return { status: payment.status, amountPaise: payment.amount, currency: payment.currency };
+  },
+
+  async getOrderPayments(providerOrderId) {
+    const result = await call<{ items?: { id: string; status: string; amount?: number; currency?: string }[] }>(
+      `/orders/${encodeURIComponent(providerOrderId)}/payments`, { method: 'GET' });
+    return (result.items ?? []).map((p) => ({ id: p.id, status: p.status, amountPaise: p.amount, currency: p.currency }));
   },
 
   async refund(input: { providerRef: string; amountPaise: number; reference: string }): Promise<PaymentResult> {

@@ -214,6 +214,120 @@ export async function placeOrder(buyer: Buyer, input: PlaceOrderInput): Promise<
   }
 }
 
+export interface PendingOrder {
+  orderId: string;
+  orderNumber: string;
+  receipt: string;
+  amountPaise: number;
+  totals: Totals;
+  cancellableUntil: string;
+  intentId: string;
+  replayed: boolean;
+}
+
+function testCheckoutRates(settings: Awaited<ReturnType<typeof getSettings>>, facts: Awaited<ReturnType<typeof orderLineFacts>>) {
+  const rates = {
+    freeThresholdPaise: settings['shipping.free_threshold'],
+    standardFeePaise: settings['shipping.standard_fee'],
+    expressFeePaise: settings['shipping.express_fee'],
+    codFeePaise: settings['shipping.cod_fee'],
+  };
+  const testMode = process.env.CHECKOUT_TEST_MODE === 'true';
+  const testSku = (process.env.CHECKOUT_TEST_SKU ?? '').trim();
+  if (testMode && testSku && [...facts.values()].some((f) => f.sku === testSku || f.sku.startsWith(testSku + '-'))) {
+    return { freeThresholdPaise: 0, standardFeePaise: 0, expressFeePaise: 0, codFeePaise: 0 };
+  }
+  return rates;
+}
+
+/** Create the order before any provider call. Payment stays pending until confirmed. */
+export async function createPendingOrder(buyer: Buyer, input: PlaceOrderInput): Promise<PendingOrder> {
+  const isGuest = 'sessionId' in buyer;
+  const userId = 'userId' in buyer ? buyer.userId : null;
+  if (isGuest && !input.email) throw new AppError('VALIDATION_FAILED', 'Enter your email so we can send the receipt.', [{ field: 'email', message: 'Email required.' }]);
+  const guestEmail = isGuest ? input.email!.toLowerCase() : undefined;
+  const ref = buyerRef(buyer, guestEmail);
+  const owner: CartOwner = isGuest ? { sessionId: buyer.sessionId } : { userId: buyer.userId };
+  const gateway = await getPaymentGateway();
+
+  const placed = await withTransaction(async (tx) => {
+    const bag = await lockForCheckout(tx, owner);
+    const earlier = await findByKey(tx, ref, input.checkoutKey);
+    if (earlier) {
+      const { rows: ints } = await tx.execute<{ id: string }>(sql`SELECT id FROM payment_intents WHERE checkout_key=${input.checkoutKey}::uuid`);
+      return {
+        order: { ...placedFrom(earlier, true), amountPaise: paise(earlier.grand_total) - paise(earlier.gift_card_amount) },
+        intentId: ints[0]?.id ?? '', replayed: true,
+      };
+    }
+    if (!bag.id || !bag.lines.length) throw new AppError('RULE_VIOLATION', 'Your bag is empty.');
+    const blockers = checkoutBlockers(bag);
+    if (blockers.length) throw new AppError('STOCK_INSUFFICIENT', blockers[0]!.reason, blockers.map((b) => ({ field: b.lineId, message: b.reason })));
+
+    const facts = await orderLineFacts(tx, bag.lines.map((l) => l.variantId!));
+    const subtotal = bag.lines.reduce((n, l) => n + l.unitPaise * l.qty, 0);
+    const discount = input.discountCode ? await findDiscount(tx, input.discountCode, subtotal) : null;
+    const settings = await getSettings(tx);
+    const totals = priceOrder({
+      lines: bag.lines.map((l) => ({ unitPaise: l.unitPaise, qty: l.qty, taxRate: facts.get(l.variantId!)?.taxRate ?? null })),
+      discount: discount?.rule ?? null,
+      rates: testCheckoutRates(settings, facts),
+      speed: input.speed, cashOnDelivery: input.method === 'cod', taxIncluded: settings['tax.included'],
+    });
+
+    const orderId = uuidv7();
+    const orderNumber = await nextOrderNumber(tx);
+    const address = JSON.stringify(input.shippingAddress);
+    let account: { profileId: string; householdId: string } | null = null;
+    if (userId) {
+      const profileId = await profileIdForUser(userId, tx);
+      account = { profileId, householdId: (await getMyHousehold(profileId, tx)).householdId };
+    }
+    const cancellableUntil = new Date(Date.now() + settings['orders.cancel_window_minutes'] * 60_000).toISOString();
+    await tx.execute(sql`INSERT INTO orders (id, placed_by_user_id, for_profile_id, for_household_id, guest_email, guest_name, guest_phone, order_number, status,
+        subtotal, shipping_fee, tax, discount, gift_card_amount, grand_total, payment_status, shipping_address, billing_address, discount_code_id, idempotency_key, cancellable_until)
+      VALUES (${orderId}, ${account ? userId : null}, ${account?.profileId ?? null}, ${account?.householdId ?? null},
+        ${guestEmail ?? null}, ${isGuest ? input.shippingAddress.fullName : null}, ${isGuest ? input.shippingAddress.phone : null}, ${orderNumber}, 'pending',
+        ${toRupees(totals.subtotalPaise)}, ${toRupees(totals.shippingPaise)}, ${toRupees(totals.taxPaise)}, ${toRupees(totals.discountPaise)}, 0,
+        ${toRupees(totals.grandTotalPaise)}, 'pending', ${address}::jsonb, ${address}::jsonb, ${discount?.id ?? null}, ${input.checkoutKey}, ${cancellableUntil})`);
+
+    const items = bag.lines.map((l) => ({ id: uuidv7(), line: l, facts: facts.get(l.variantId!)! }));
+    await tx.execute(sql`INSERT INTO order_items (id, order_id, product_id, variant_id, product_name, sku, unit_price, qty, line_total, options, exchange_policy, personalization, preview_image_url, preview_approved_at)
+      SELECT x.id, ${orderId}, x.product_id, x.variant_id, x.name, x.sku, x.unit_price, x.qty, x.line_total, x.options, x.policy, x.personalization, x.preview, CASE WHEN x.personalization IS NULL THEN NULL ELSE now() END
+      FROM jsonb_to_recordset(${JSON.stringify(items.map(({ id, line, facts: f }) => ({
+        id, product_id: line.productUuid, variant_id: line.variantId, name: line.title, sku: f.sku, unit_price: toRupees(line.unitPaise), qty: line.qty,
+        line_total: toRupees(line.unitPaise * line.qty), options: { ...(line.color ? { Color: line.color } : {}), ...(line.size ? { Size: line.size } : {}) },
+        policy: f.exchangePolicy, personalization: line.personalization, preview: line.previewImageUrl,
+      })))}::jsonb) AS x(id uuid, product_id uuid, variant_id uuid, name text, sku text, unit_price numeric, qty int, line_total numeric, options jsonb, policy text, personalization jsonb, preview text)`);
+
+    await reserve(tx, { orderId, lines: items.map((i) => ({ orderItemId: i.id, variantId: i.line.variantId!, qty: i.line.qty })) });
+    if (discount) await redeemDiscount(tx, discount.id);
+    let giftCardPaise = 0;
+    if (input.giftCardCode) {
+      const redeemed = await giftCards.redeem(tx, { code: input.giftCardCode, amountPaise: totals.grandTotalPaise, orderId });
+      giftCardPaise = redeemed.appliedPaise;
+    }
+    const payablePaise = totals.grandTotalPaise - giftCardPaise;
+    await tx.execute(sql`INSERT INTO payments (id, order_id, provider, method, amount, status, transaction_id)
+      VALUES (${uuidv7()}, ${orderId}::uuid, ${gateway.slug}, ${input.method}, ${toRupees(payablePaise)}, 'pending', NULL)`);
+    const { rows: intents } = await tx.execute<{ id: string }>(sql`
+      INSERT INTO payment_intents (id, checkout_key, provider, order_id, amount_paise, currency, status, payload, created_at, updated_at)
+      VALUES (${uuidv7()}, ${input.checkoutKey}::uuid, ${gateway.slug}, ${orderId}::uuid, ${payablePaise}, 'INR', 'created',
+        ${JSON.stringify({ buyer, input })}::jsonb, now(), now())
+      ON CONFLICT (checkout_key) DO UPDATE SET updated_at=now()
+      RETURNING id`);
+    await tx.execute(sql`INSERT INTO order_status_history (id, order_id, from_status, to_status, note, actor)
+      VALUES (${uuidv7()}, ${orderId}::uuid, NULL, 'pending', 'Order placed; awaiting payment', ${userId ?? 'guest'})`);
+    await markConverted(tx, bag.id);
+    return {
+      order: { orderId, orderNumber, receipt: signReceipt(orderId), amountPaise: payablePaise, totals: { ...totals, giftCardPaise }, cancellableUntil, replayed: false },
+      intentId: intents[0]!.id,
+      replayed: false,
+    };
+  });
+  return { ...placed.order, intentId: placed.intentId, replayed: placed.replayed };
+}
+
 /** What every cancel does once the status has flipped: stock back, payment refunded, history written. */
 export async function afterCancel(tx: Transaction, gateway: Awaited<ReturnType<typeof getPaymentGateway>>, input: { orderId: string; actorId: string; from: string; note: string }): Promise<{ refunded: boolean }> {
   await release(tx, { orderId: input.orderId });

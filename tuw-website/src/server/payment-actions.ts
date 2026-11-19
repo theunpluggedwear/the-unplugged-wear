@@ -1,11 +1,12 @@
 'use server';
 
 import { z } from 'zod';
-import * as cart from '@tuw/heart/modules/cart';
 import * as orders from '@tuw/heart/modules/orders';
 import * as payments from '@tuw/heart/modules/payments';
+import { confirmPaidOrder } from '@tuw/heart/modules/orders';
 import { activeProviderSlug } from '@tuw/heart/integrations/registry';
-import { paymentAdapters } from '@tuw/heart/integrations/payments';
+import { paymentAdapters, getPaymentGateway } from '@tuw/heart/integrations/payments';
+import { verifyRazorpayPaymentSignature } from '@tuw/heart/integrations/webhooks';
 import { guards } from './session';
 
 const quoteInput = z.object({
@@ -16,24 +17,44 @@ const quoteInput = z.object({
   method: z.enum(['card', 'upi']).default('card'),
 });
 
-/** Public config for the browser: active provider and its public key (never secrets). */
 export const getPaymentConfigAction = guards.action({ access: 'public', input: z.object({}) }, async () => {
-  const slug = await activeProviderSlug('payment');
+  const slug = (process.env.PAYMENT_PROVIDER || '').trim() || await activeProviderSlug('payment');
   const adapter = paymentAdapters.find((a) => a.slug === slug);
-  if (!adapter || adapter.slug === 'mock') return { provider: slug ?? 'mock', live: false, keyId: null as string | null };
-  const cfg = adapter.clientConfig?.() ?? null;
-  return { provider: adapter.slug, live: Boolean(cfg), keyId: cfg?.keyId ?? null };
+  if (!adapter || !adapter.clientConfig?.()) {
+    return { provider: slug ?? 'unavailable', available: false, live: false, testMode: true, keyId: null as string | null };
+  }
+  const cfg = adapter.clientConfig();
+  return {
+    provider: adapter.slug,
+    available: true,
+    live: (process.env.RAZORPAY_KEY_ID ?? '').startsWith('rzp_live_'),
+    testMode: (process.env.RAZORPAY_KEY_ID ?? '').startsWith('rzp_test_'),
+    keyId: cfg?.keyId ?? null,
+  };
 });
 
-export const createPaymentIntentAction = guards.action({ access: 'guestOrCustomer', input: quoteInput }, async ({ input, ctx }) => {
-  const owner: cart.CartOwner = ctx.user ? { userId: ctx.user.id } : { sessionId: ctx.guestSessionId! };
-  const bag = await cart.getCart(owner);
-  if (!bag.lines.length) throw new Error('Your bag is empty.');
-  const quote = await orders.quoteCheckout(bag.lines.map((l) => ({
-    productUuid: l.productUuid, variantId: l.variantId, unitPaise: l.unitPaise, qty: l.qty,
-  })), input);
-  return payments.createPaymentIntent({ checkoutKey: input.checkoutKey, amountPaise: quote.payablePaise });
+/** Validate input, create the pending order, then create the provider order outside the DB transaction. */
+export const createPaymentIntentAction = guards.action({ access: 'guestOrCustomer', input: orders.orderSchemas.placeOrder }, async ({ input, ctx }) => {
+  const buyer: orders.Buyer = ctx.user ? { userId: ctx.user.id, email: input.email ?? '' } : { sessionId: ctx.guestSessionId! };
+  const pending = await orders.createPendingOrder(buyer, input);
+  if (pending.replayed) {
+    const intent = await payments.getIntentByCheckoutKey(input.checkoutKey);
+    if (!intent?.providerOrderId) throw new Error('This checkout is still being prepared. Please wait and try again.');
+    return { ...pending, providerOrderId: intent.providerOrderId, keyId: getPaymentGatewayKeyId() };
+  }
+  const gateway = await getPaymentGateway();
+  const result = await gateway.createPayment({
+    reference: pending.orderNumber,
+    amountPaise: pending.amountPaise,
+    currency: 'INR',
+  });
+  await payments.attachProviderOrder({ intentId: pending.intentId, provider: gateway.slug, providerOrderId: result.providerRef });
+  return { ...pending, providerOrderId: result.providerRef, keyId: gateway.clientConfig?.()?.keyId ?? '' };
 });
+
+function getPaymentGatewayKeyId(): string {
+  return (process.env.RAZORPAY_KEY_ID ?? '').trim();
+}
 
 export const confirmPaymentAction = guards.action({
   access: 'guestOrCustomer',
@@ -42,4 +63,24 @@ export const confirmPaymentAction = guards.action({
     providerPaymentId: z.string().trim().min(1).max(150),
     signature: z.string().trim().min(1).max(500),
   }),
-}, async ({ input }) => payments.confirmPaymentIntent(input));
+}, async ({ input }) => {
+  const intent = await payments.getIntentByCheckoutKey(input.checkoutKey);
+  if (!intent?.providerOrderId) throw new Error('This checkout was not found.');
+  if (!verifyRazorpayPaymentSignature(intent.providerOrderId, input.providerPaymentId, input.signature)) {
+    throw new Error('Payment signature verification failed.');
+  }
+  const adapter = paymentAdapters.find((a) => a.slug === 'razorpay');
+  const status = await adapter?.getPayment?.(input.providerPaymentId);
+  if (status?.status !== 'captured') throw new Error('Payment is not captured yet. It will confirm shortly.');
+  return confirmPaidOrder({
+    providerOrderId: intent.providerOrderId,
+    providerPaymentId: input.providerPaymentId,
+    amountPaise: intent.amountPaise,
+    currency: 'INR',
+  });
+});
+
+export const getCheckoutStatusAction = guards.action({
+  access: 'guestOrCustomer',
+  input: z.object({ orderNumber: z.string().trim().max(30) }),
+}, ({ input, ctx }) => orders.getOrderForViewer(input.orderNumber, { userId: ctx.user?.id ?? null }));
