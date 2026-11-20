@@ -80,11 +80,22 @@ async function lease(planned: { orderId: string; orderNumber: string; gateway: '
  * so a batch keeps going.
  */
 export async function sendPlanned(orderId: string, force = false): Promise<SubmitOutcome> {
+  // The Rs1 QA product is never manufactured, even if a deployed cron has a
+  // different env from local dev. Check before planning so a missing partner
+  // SKU mapping cannot get in the way. Covers automatic and manual sends.
+  const testSkus = new Set(['TUW-TEST-PRODUCT-49F1AA', (process.env.CHECKOUT_TEST_SKU ?? '').trim()].filter(Boolean));
+  const { rows: orderSkus } = await getDb().execute<{ order_number: string; sku: string }>(sql`
+    SELECT o.order_number, oi.sku FROM orders o JOIN order_items oi ON oi.order_id = o.id WHERE o.id = ${orderId}`);
+  if (orderSkus.some((r) => testSkus.has(r.sku) || [...testSkus].some((s) => r.sku.startsWith(`${s}-`)))) {
+    return { orderNumber: orderSkus[0]?.order_number ?? '', groups: [], skipped: [{ slug: '*', reason: 'Test product — fulfilment submission is blocked.' }] };
+  }
+
   if (process.env.FULFILLMENT_SUBMIT_ENABLED === 'false') {
     const planned = await planOrder(orderId);
     return { orderNumber: planned.orderNumber, groups: [], skipped: [{ slug: '*', reason: 'Fulfilment submission is disabled in this environment.' }] };
   }
   const planned = await planOrder(orderId);
+
   if (!force) {
     const { rows: [cap] } = await getDb().execute<{ n: number }>(sql`
       SELECT count(*)::int AS n FROM fulfillment_orders WHERE order_id = ${orderId} AND submit_attempts >= ${MAX_AUTO_ATTEMPTS}`);
