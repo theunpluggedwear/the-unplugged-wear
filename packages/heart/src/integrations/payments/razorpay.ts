@@ -27,6 +27,9 @@ async function call<T>(path: string, init: RequestInit): Promise<T> {
       : text.slice(0, 300);
     throw new Error(`Razorpay ${path} failed (${res.status}): ${message}`);
   }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new Error(`Razorpay ${path} returned a malformed JSON response`);
+  }
   return body as T;
 }
 

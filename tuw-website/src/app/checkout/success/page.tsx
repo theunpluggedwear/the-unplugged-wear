@@ -8,6 +8,7 @@ import Footer from '@storefront/components/layout/Footer';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
 import { useStore } from '@storefront/mocks/store';
 import { getOrderAction } from '@/server/order-actions';
+import { getPaymentConfigAction } from '@/server/payment-actions';
 import { toStoreOrder } from '@storefront/lib/orders';
 import { useSession } from '@storefront/lib/session';
 import type { Order } from '@storefront/lib/types';
@@ -35,6 +36,13 @@ function OrderSuccessContent() {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [testMode, setTestMode] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    void getPaymentConfigAction({}).then((r) => { if (live && r.ok) setTestMode(r.data.testMode); });
+    return () => { live = false; };
+  }, []);
 
   useEffect(() => {
     if (!orderNumber) {
@@ -94,10 +102,16 @@ function OrderSuccessContent() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 w-full">
-      {/* Demo notice (required for simulated checkouts) */}
+      {/* Truthful payment notice: simulated checkouts stay clearly labelled. */}
       <p className="flex items-start gap-2 text-sm text-store-text-secondary border-l-2 border-store-gold pl-3 mb-10">
         <Info size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
-        Demo order — no payment was collected and nothing will be printed or shipped.
+        {order.paymentMethod === 'COD (Demo)'
+          ? 'Demo checkout — payment is collected on delivery and nothing is printed or shipped in this environment.'
+          : isPaid && testMode
+            ? 'Razorpay test payment captured — no real money was collected. Fulfilment submission is disabled in local dev.'
+            : isPaid
+              ? 'Payment captured. We’ll send tracking as soon as it ships.'
+              : 'Awaiting payment confirmation. This page updates once the payment is captured.'}
       </p>
 
       <header className="text-center max-w-2xl mx-auto">

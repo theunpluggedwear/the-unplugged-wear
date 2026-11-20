@@ -242,7 +242,7 @@ export default function CartDrawer() {
 
             <div className="flex items-center justify-center gap-1.5 text-xs text-[#8A8A8A] pt-1">
               <ShieldCheck size={14} className="text-[#10B981]" />
-              <span>Demo Checkout • No actual card charges</span>
+              <span>Secure checkout — you confirm the payment</span>
             </div>
           </div>
         </div>

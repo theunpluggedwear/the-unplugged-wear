@@ -250,7 +250,9 @@ export async function createPendingOrder(buyer: Buyer, input: PlaceOrderInput): 
   const owner: CartOwner = isGuest ? { sessionId: buyer.sessionId } : { userId: buyer.userId };
   const gateway = await getPaymentGateway();
 
-  const placed = await withTransaction(async (tx) => {
+  let placed: { order: Omit<PendingOrder, 'intentId' | 'replayed'>; intentId: string; replayed: boolean };
+  try {
+  placed = await withTransaction(async (tx) => {
     const bag = await lockForCheckout(tx, owner);
     const earlier = await findByKey(tx, ref, input.checkoutKey);
     if (earlier) {
@@ -313,7 +315,7 @@ export async function createPendingOrder(buyer: Buyer, input: PlaceOrderInput): 
     const { rows: intents } = await tx.execute<{ id: string }>(sql`
       INSERT INTO payment_intents (id, checkout_key, provider, order_id, amount_paise, currency, status, payload, created_at, updated_at)
       VALUES (${uuidv7()}, ${input.checkoutKey}::uuid, ${gateway.slug}, ${orderId}::uuid, ${payablePaise}, 'INR', 'created',
-        ${JSON.stringify({ buyer, input })}::jsonb, now(), now())
+        ${JSON.stringify({ buyer, input, cartId: bag.id })}::jsonb, now(), now())
       ON CONFLICT (checkout_key) DO UPDATE SET updated_at=now()
       RETURNING id`);
     await tx.execute(sql`INSERT INTO order_status_history (id, order_id, from_status, to_status, note, actor)
@@ -325,6 +327,26 @@ export async function createPendingOrder(buyer: Buyer, input: PlaceOrderInput): 
       replayed: false,
     };
   });
+  } catch (error) {
+    // Two submits raced past the bag lock: the checkout key still names one order.
+    if (isKeyClash(error)) {
+      const earlier = await findByKey((await import('../../platform/db/index.ts')).getDb(), ref, input.checkoutKey);
+      if (earlier) {
+        const { rows: ints } = await (await import('../../platform/db/index.ts')).getDb().execute<{ id: string }>(sql`
+          SELECT id FROM payment_intents WHERE checkout_key=${input.checkoutKey}::uuid`);
+        return {
+          orderId: earlier.id, orderNumber: earlier.order_number, receipt: signReceipt(earlier.id),
+          amountPaise: paise(earlier.grand_total) - paise(earlier.gift_card_amount),
+          totals: { subtotalPaise: paise(earlier.subtotal), discountPaise: paise(earlier.discount),
+            shippingPaise: paise(earlier.shipping_fee), taxPaise: paise(earlier.tax),
+            giftCardPaise: paise(earlier.gift_card_amount), grandTotalPaise: paise(earlier.grand_total) - paise(earlier.gift_card_amount) },
+          cancellableUntil: earlier.cancellable_until,
+          intentId: ints[0]?.id ?? '', replayed: true,
+        };
+      }
+    }
+    throw error;
+  }
   return { ...placed.order, intentId: placed.intentId, replayed: placed.replayed };
 }
 

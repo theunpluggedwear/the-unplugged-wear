@@ -5125,15 +5125,15 @@
     {
       "id": "TL-INT-RAZORPAY",
       "title": "Razorpay payments + webhook + refunds; COD rules",
-      "status": "in_progress",
+      "status": "done",
       "owner": "agent",
       "parent": "TL-INT-PHASE",
       "started": "2026-11-17",
-      "finished": null,
-      "log": "Pending-order-first checkout, idempotent webhook confirmation, reconciliation polling, local test mode with Rs1 SKU. Pending final browser payment completion and live verification.",
+      "finished": "2026-11-20",
+      "log": "Pending-order-first Razorpay checkout verified. 19/19 dedicated QA tests pass (adapter API failures, webhook signature/dedupe/replay/retry, callbacks, reconciliation, compensation, concurrency, DB invariants). Browser test: invalid phone blocked with no DB rows; valid Rs1 test order TUW-261120-2MP2B created pending before capture, Razorpay test payment pay_U2Go2amqZIjaAb captured 100 paise, success redirect, no Qikink fulfilment. Typecheck and both builds pass. Commit fa2a5c2.",
       "design_match": "n/a",
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false
     },
     {

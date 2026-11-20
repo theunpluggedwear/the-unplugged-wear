@@ -20,8 +20,17 @@ export async function reconcilePendingPayments(limit = 20): Promise<{ processed:
   let expired = 0;
   for (const intent of rows) {
     const adapter = paymentAdapters.find((a) => a.slug === intent.provider);
-    if (!adapter?.getPayment || !intent.provider_order_id) continue;
+    if (!adapter?.getPayment) continue;
     try {
+      // The provider call may have succeeded but the attach write failed (or
+      // the process died between them). Never leave that order reserved forever.
+      if (!intent.provider_order_id) {
+        if (Date.now() - new Date(intent.created_at).getTime() > 30 * 60_000 && intent.order_id) {
+          await expirePendingPayment(intent.order_id);
+          expired += 1;
+        }
+        continue;
+      }
       if (!intent.provider_payment_id && adapter.getOrderPayments) {
         const payments = await adapter.getOrderPayments(intent.provider_order_id);
         const paid = payments.find((p) => p.status === 'captured' || p.status === 'authorized');

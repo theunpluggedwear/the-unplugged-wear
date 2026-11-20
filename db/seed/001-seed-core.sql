@@ -273,37 +273,23 @@ ON CONFLICT DO NOTHING;
 -- Registry rows only — no secrets (env only). Every provider starts
 -- inactive in sandbox except the demo 'mock' gateway; staff switch a
 -- provider live from admin settings once its keys are configured.
-INSERT INTO integration_providers (id, slug, name, category, environment, is_active, capabilities) VALUES
+INSERT INTO integration_providers (id, slug, name, category, environment, is_active, capabilities, settings) VALUES
   ('00000000-0000-4000-8000-000000100101', 'mock',           'Demo payments',  'payment',     'sandbox', true,
-   '{"refunds":true}'),
+   '{"refunds":true}', '{}'),
   ('00000000-0000-4000-8000-000000100102', 'razorpay',       'Razorpay',       'payment',     'sandbox', false,
-   '{"refunds":true,"webhooks":true}'),
+   '{"refunds":true,"webhooks":true}', '{}'),
   ('00000000-0000-4000-8000-000000100103', 'stripe',         'Stripe',         'payment',     'sandbox', false,
-   '{"refunds":true,"webhooks":true}'),
-  ('00000000-0000-4000-8000-000000100104', 'qikink',         'Qikink',         'fulfillment', 'sandbox', false,
-   '{"cod":true,"cancel":true,"cancelUntil":"Live","webhooks":false,"tracking":"poll","claimWindowDays":7,"rtoStorageDays":100,"wallet":true}'),
+   '{"refunds":true,"webhooks":true}', '{}'),
+  ('00000000-0000-4000-8000-000000100104', 'qikink',         'Qikink',         'fulfillment', 'sandbox', true,
+   '{"cod":true,"cancel":true,"cancelUntil":"Live","webhooks":false,"tracking":"poll","claimWindowDays":7,"rtoStorageDays":100,"wallet":true}',
+   '{"baseUrl":"https://sandbox.qikink.com","defaultPrintTypeId":1,"liveKeysPending":true}'),
   ('00000000-0000-4000-8000-000000100105', 'printrove',      'Printrove',      'fulfillment', 'sandbox', false,
-   '{}'),
-  ('00000000-0000-4000-8000-000000100106', 'custom_atelier', 'Custom Atelier', 'fulfillment', 'live',    false,
-   '{"inHouse":true}'),
+   '{}', '{}'),
+  ('00000000-0000-4000-8000-000000100106', 'custom_atelier', 'Custom Atelier', 'fulfillment', 'live',    true,
+   '{"inHouse":true}', '{}'),
   ('00000000-0000-4000-8000-000000100107', 'shiprocket',     'Shiprocket',     'shipping',    'sandbox', false,
-   '{"webhooks":true}'),
+   '{"webhooks":true}', '{}'),
   -- Dev/demo email sender: writes email_logs only, sends nothing (until TL-INT-EMAIL).
   ('00000000-0000-4000-8000-000000100108', 'mock_email',     'Demo email (log only)', 'email', 'sandbox', true,
-   '{}')
+   '{}', '{}')
 ON CONFLICT DO NOTHING;
-
--- Fulfilment is switched on from the start (TL-BE-11, migrations 026/027).
--- Qikink runs with the simulator until QIKINK_CLIENT_ID / QIKINK_CLIENT_SECRET
--- exist, then with the real API at QIKINK_BASE_URL (DOC/backend/16 §7). The
--- store was issued sandbox keys first, so the row stays 'sandbox' until live
--- keys arrive. Custom Atelier is in-house fulfilment, so it is active too.
-UPDATE integration_providers
-SET is_active = true,
-    settings = settings || '{
-      "baseUrl": "https://sandbox.qikink.com",
-      "defaultPrintTypeId": 1,
-      "liveKeysPending": true
-    }'::jsonb
-WHERE slug = 'qikink';
-UPDATE integration_providers SET is_active = true WHERE slug = 'custom_atelier';

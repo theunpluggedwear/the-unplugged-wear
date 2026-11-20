@@ -1,11 +1,12 @@
 'use server';
 
 import { z } from 'zod';
+import * as cart from '@tuw/heart/modules/cart';
 import * as orders from '@tuw/heart/modules/orders';
 import * as payments from '@tuw/heart/modules/payments';
 import { confirmPaidOrder } from '@tuw/heart/modules/orders';
 import { activeProviderSlug } from '@tuw/heart/integrations/registry';
-import { paymentAdapters, getPaymentGateway } from '@tuw/heart/integrations/payments';
+import { paymentAdapters } from '@tuw/heart/integrations/payments';
 import { verifyRazorpayPaymentSignature } from '@tuw/heart/integrations/webhooks';
 import { guards } from './session';
 
@@ -33,28 +34,24 @@ export const getPaymentConfigAction = guards.action({ access: 'public', input: z
   };
 });
 
+/** Server quote for the current bag, so the UI shows exactly what the provider will charge. */
+export const getCheckoutQuoteAction = guards.action({ access: 'guestOrCustomer', input: quoteInput }, async ({ input, ctx }) => {
+  const owner: cart.CartOwner = ctx.user
+    ? { userId: ctx.user.id }
+    : ctx.guestSessionId ? { sessionId: ctx.guestSessionId } : { sessionId: '' };
+  const bag = await cart.getCart(owner);
+  if (!bag.lines.length) return { payablePaise: 0, totalPaise: 0, discountPaise: 0, giftCardPaise: 0 };
+  return orders.quoteCheckout(
+    bag.lines.map((l) => ({ productUuid: l.productUuid, variantId: l.variantId, unitPaise: l.unitPaise, qty: l.qty })),
+    { discountCode: input.discountCode, giftCardCode: input.giftCardCode, speed: input.speed, method: input.method },
+  );
+});
+
 /** Validate input, create the pending order, then create the provider order outside the DB transaction. */
 export const createPaymentIntentAction = guards.action({ access: 'guestOrCustomer', input: orders.orderSchemas.placeOrder }, async ({ input, ctx }) => {
   const buyer: orders.Buyer = ctx.user ? { userId: ctx.user.id, email: input.email ?? '' } : { sessionId: ctx.guestSessionId! };
-  const pending = await orders.createPendingOrder(buyer, input);
-  if (pending.replayed) {
-    const intent = await payments.getIntentByCheckoutKey(input.checkoutKey);
-    if (!intent?.providerOrderId) throw new Error('This checkout is still being prepared. Please wait and try again.');
-    return { ...pending, providerOrderId: intent.providerOrderId, keyId: getPaymentGatewayKeyId() };
-  }
-  const gateway = await getPaymentGateway();
-  const result = await gateway.createPayment({
-    reference: pending.orderNumber,
-    amountPaise: pending.amountPaise,
-    currency: 'INR',
-  });
-  await payments.attachProviderOrder({ intentId: pending.intentId, provider: gateway.slug, providerOrderId: result.providerRef });
-  return { ...pending, providerOrderId: result.providerRef, keyId: gateway.clientConfig?.()?.keyId ?? '' };
+  return payments.prepareCheckout(buyer, input);
 });
-
-function getPaymentGatewayKeyId(): string {
-  return (process.env.RAZORPAY_KEY_ID ?? '').trim();
-}
 
 export const confirmPaymentAction = guards.action({
   access: 'guestOrCustomer',

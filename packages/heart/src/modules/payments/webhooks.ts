@@ -21,34 +21,44 @@ export async function ingestWebhook(provider: string, rawBody: string, headers: 
   const event = adapter.normalize(rawBody, headers);
   if (!event) return { status: 400, body: { error: 'Unusable webhook payload' } };
 
+  const apply = async (eventRowId: string): Promise<IngestResult> => {
+    try {
+      await processWebhookEvent(event);
+      await getDb().execute(sql`
+        UPDATE webhook_events SET status='processed', processed_at=now(), error=NULL WHERE id=${eventRowId}::uuid`);
+      return { status: 200, body: { received: true } };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await getDb().execute(sql`
+        UPDATE webhook_events SET status='failed', attempts=attempts+1, error=${message.slice(0, 2000)},
+          next_attempt_at=now() + make_interval(mins => 5) WHERE id=${eventRowId}::uuid`);
+      return { status: 500, body: { error: message } };
+    }
+  };
+
   // 2. Durable inbox. ON CONFLICT gives us provider-level dedupe.
   const inserted = await withTransaction(async (tx) => {
     const { rows } = await tx.execute<{ id: string; status: string; attempts: number }>(sql`
-      INSERT INTO webhook_events (id, provider, provider_event_id, event_type, signature_verified, payload,
+      INSERT INTO webhook_events (id, provider, provider_event_id, event_type, signature_verified, payload, raw_payload,
         status, business_ref, amount_paise, currency, received_at)
       VALUES (${uuidv7()}, ${event.provider}, ${event.providerEventId}, ${event.eventType}, true,
-        ${JSON.stringify(event.raw)}::jsonb, 'received', ${event.providerOrderId ?? event.providerRefundId ?? null},
+        ${JSON.stringify(event)}::jsonb, ${JSON.stringify(event.raw)}::jsonb, 'received', ${event.providerOrderId ?? event.providerRefundId ?? null},
         ${event.amountPaise ?? null}, ${event.currency ?? null}, now())
       ON CONFLICT (provider, provider_event_id) DO NOTHING
       RETURNING id, status, attempts`);
     return rows[0] ?? null;
   });
 
-  // Duplicate delivery: already recorded (processed or failed) -> ack without re-applying.
-  if (!inserted) return { status: 200, body: { received: true, ignored: true } };
+  if (inserted) return apply(inserted.id);
 
-  try {
-    await processWebhookEvent(event);
-    await getDb().execute(sql`
-      UPDATE webhook_events SET status='processed', processed_at=now() WHERE id=${inserted.id}::uuid`);
-    return { status: 200, body: { received: true } };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    await getDb().execute(sql`
-      UPDATE webhook_events SET status='failed', attempts=attempts+1, error=${message.slice(0, 2000)},
-        next_attempt_at=now() + make_interval(mins => 5) WHERE id=${inserted.id}::uuid`);
-    return { status: 500, body: { error: message } };
-  }
+  // Duplicate delivery. A processed event is a pure ack. A failed one is worth
+  // retrying here too, so a provider retry heals without waiting for the cron.
+  const { rows: existing } = await getDb().execute<{ id: string; status: string; attempts: number }>(sql`
+    SELECT id, status, attempts FROM webhook_events
+    WHERE provider=${event.provider} AND provider_event_id=${event.providerEventId} FOR UPDATE`);
+  const row = existing[0];
+  if (!row || row.status !== 'failed' || row.attempts >= 8) return { status: 200, body: { received: true, ignored: true } };
+  return apply(row.id);
 }
 
 /** Apply a normalized event to business state. Idempotent by provider ids. */

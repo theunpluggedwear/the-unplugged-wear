@@ -55,7 +55,7 @@ export default function CartPage() {
             Your Shopping Bag
           </h1>
           <p className="text-sm text-[#666] mt-1">
-            Review your intentional selection before moving to demo checkout.
+            Review your intentional selection before moving to checkout.
           </p>
         </div>
 
@@ -242,7 +242,7 @@ export default function CartPage() {
                     icon={<ArrowRight size={16} />}
                     iconPosition="right"
                   >
-                    Proceed to Demo Checkout
+                    Proceed to Checkout
                   </Button>
                 </div>
 

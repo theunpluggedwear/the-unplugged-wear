@@ -13,7 +13,7 @@ import { useStore } from '@storefront/mocks/store';
 import { useSiteSettings } from '@storefront/lib/site-settings';
 import { placeOrderAction } from '@/server/order-actions';
 import { previewGiftCardAction } from '@/server/gift-card-actions';
-import { createPaymentIntentAction, confirmPaymentAction, getPaymentConfigAction, getCheckoutStatusAction } from '@/server/payment-actions';
+import { createPaymentIntentAction, confirmPaymentAction, getPaymentConfigAction, getCheckoutStatusAction, getCheckoutQuoteAction } from '@/server/payment-actions';
 import { openRazorpayCheckout } from '@storefront/lib/razorpay-checkout';
 import { useSession } from '@storefront/lib/session';
 import { useAccount } from '@storefront/lib/account';
@@ -141,7 +141,18 @@ export default function CheckoutPage() {
   const [giftCardMessage, setGiftCardMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const giftCardApplied = giftCard ? giftCard.appliedPaise / 100 : 0;
   const payableTotal = Math.max(0, total - giftCardApplied);
+  const [serverQuotePaise, setServerQuotePaise] = useState<number | null>(null);
+  const displayPayable = (serverQuotePaise ?? Math.round(payableTotal * 100)) / 100;
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let active = true;
+    getCheckoutQuoteAction({
+      checkoutKey, discountCode: promoCode || undefined, giftCardCode: giftCard?.code,
+      speed: deliverySpeed, method: 'card',
+    }).then((r) => { if (active && r.ok) setServerQuotePaise(r.data.payablePaise); });
+    return () => { active = false; };
+  }, [checkoutKey, promoCode, giftCard?.code, deliverySpeed, cartSubtotal]);
 
   const validateDetails = () => {
     const errs: Record<string, string> = {};
@@ -930,7 +941,7 @@ export default function CheckoutPage() {
                   <p role="status" className="text-sm text-store-text-secondary">Loading payment options…</p>
                 ) : paymentConfig.available ? (
                   <LivePaymentPanel
-                    totalAmount={payableTotal}
+                    totalAmount={displayPayable}
                     placing={placing}
                     onPay={handlePaymentSuccess}
                     onCancel={() => setStep(2)}
@@ -1151,7 +1162,7 @@ export default function CheckoutPage() {
               <div className="pt-4 border-t border-white/15 flex items-baseline justify-between">
                 <span className="text-sm font-medium text-white/90">Total</span>
                 <span className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-                  {formatRupees(payableTotal)}
+                  {formatRupees(displayPayable)}
                 </span>
               </div>
 
