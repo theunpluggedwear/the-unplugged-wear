@@ -6,6 +6,7 @@ import { AppError } from '../../platform/errors/index.ts';
 import { emit } from '../../platform/events/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import { toRupees, toPaise } from '../../platform/money/index.ts';
+import { isTestSku } from '../../platform/test-sku/index.ts';
 import { getPaymentGateway } from '../../integrations/payments/index.ts';
 import { signReceipt } from '../auth/tokens.ts';
 import { checkoutBlockers, lockForCheckout, markConverted, type CartOwner } from '../cart/index.ts';
@@ -232,9 +233,7 @@ function testCheckoutRates(settings: Awaited<ReturnType<typeof getSettings>>, fa
     expressFeePaise: settings['shipping.express_fee'],
     codFeePaise: settings['shipping.cod_fee'],
   };
-  const testMode = process.env.CHECKOUT_TEST_MODE === 'true';
-  const testSku = (process.env.CHECKOUT_TEST_SKU ?? '').trim();
-  if (testMode && testSku && [...facts.values()].some((f) => f.sku === testSku || f.sku.startsWith(testSku + '-'))) {
+  if (process.env.CHECKOUT_TEST_MODE === 'true' && [...facts.values()].some((f) => isTestSku(f.sku))) {
     return { freeThresholdPaise: 0, standardFeePaise: 0, expressFeePaise: 0, codFeePaise: 0 };
   }
   return rates;
@@ -335,12 +334,8 @@ export async function createPendingOrder(buyer: Buyer, input: PlaceOrderInput): 
         const { rows: ints } = await (await import('../../platform/db/index.ts')).getDb().execute<{ id: string }>(sql`
           SELECT id FROM payment_intents WHERE checkout_key=${input.checkoutKey}::uuid`);
         return {
-          orderId: earlier.id, orderNumber: earlier.order_number, receipt: signReceipt(earlier.id),
+          ...placedFrom(earlier, true),
           amountPaise: paise(earlier.grand_total) - paise(earlier.gift_card_amount),
-          totals: { subtotalPaise: paise(earlier.subtotal), discountPaise: paise(earlier.discount),
-            shippingPaise: paise(earlier.shipping_fee), taxPaise: paise(earlier.tax),
-            giftCardPaise: paise(earlier.gift_card_amount), grandTotalPaise: paise(earlier.grand_total) - paise(earlier.gift_card_amount) },
-          cancellableUntil: earlier.cancellable_until,
           intentId: ints[0]?.id ?? '', replayed: true,
         };
       }

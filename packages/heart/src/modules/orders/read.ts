@@ -2,6 +2,7 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 import { getDb } from '../../platform/db/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
+import { isTestSku } from '../../platform/test-sku/index.ts';
 import { verifyReceipt } from '../auth/tokens.ts';
 import { findDiscount } from './discounts.ts';
 import { orderLineFacts } from '../catalog/index.ts';
@@ -138,8 +139,7 @@ export async function quoteCheckout(
     freeThresholdPaise: settings['shipping.free_threshold'], standardFeePaise: settings['shipping.standard_fee'],
     expressFeePaise: settings['shipping.express_fee'], codFeePaise: settings['shipping.cod_fee'],
   };
-  const testSku = (process.env.CHECKOUT_TEST_SKU ?? '').trim();
-  if (process.env.CHECKOUT_TEST_MODE === 'true' && testSku && [...facts.values()].some((f) => f.sku === testSku || f.sku.startsWith(testSku + '-'))) {
+  if (process.env.CHECKOUT_TEST_MODE === 'true' && [...facts.values()].some((f) => isTestSku(f.sku))) {
     rates.freeThresholdPaise = 0;
     rates.standardFeePaise = 0;
     rates.expressFeePaise = 0;

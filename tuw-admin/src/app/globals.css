@@ -361,14 +361,6 @@
 
   /* Spacing Grid: 4 · 8 · 12 · 16 · 24 · 32 · 48 · 64px (canonical set lives above; documented on the design-system page) */
 
-  /* Radii: 4 · 8 · 12 · 16 · 9999px */
-  --tuw-radius-sm: 4px;
-  --tuw-radius-control: 8px;
-  --tuw-radius-card: 12px;
-  --tuw-radius-modal: 16px;
-  --tuw-radius-modal-lg: 24px;
-  --tuw-radius-pill: 9999px;
-
   --radius-sm: 4px;
   --radius-card: 12px;
   --radius-modal: 16px;
@@ -380,78 +372,6 @@
   --shadow-spotlight: 0 25px 50px -12px rgba(18, 10, 36, 0.35), 0 0 0 1px rgba(117, 57, 255, 0.1), 0 0 44px rgba(117, 57, 255, 0.14); /* used by: spotlight search dialog (S2 demo source) */
 }
 
-
-.tuw-type-display {
-  font-family: var(--font-urbanist), sans-serif;
-  font-size: var(--tuw-type-display-size, 44px);
-  line-height: var(--tuw-type-display-line-height, 52px);
-  font-weight: var(--tuw-type-display-weight, 600);
-  letter-spacing: 0;
-}
-
-.tuw-type-heading-page {
-  font-family: var(--font-urbanist), sans-serif;
-  font-size: var(--tuw-type-heading-page-size, 32px);
-  line-height: var(--tuw-type-heading-page-line-height, 40px);
-  font-weight: var(--tuw-type-heading-page-weight, 600);
-  letter-spacing: 0;
-}
-
-.tuw-type-heading-section {
-  font-family: var(--font-urbanist), sans-serif;
-  font-size: var(--tuw-type-heading-section-size, 24px);
-  line-height: var(--tuw-type-heading-section-line-height, 32px);
-  font-weight: var(--tuw-type-heading-section-weight, 600);
-  letter-spacing: 0;
-}
-
-.tuw-type-heading-subsection {
-  font-family: var(--font-urbanist), sans-serif;
-  font-size: var(--tuw-type-heading-subsection-size, 20px);
-  line-height: var(--tuw-type-heading-subsection-line-height, 28px);
-  font-weight: var(--tuw-type-heading-subsection-weight, 600);
-  letter-spacing: 0;
-}
-
-.tuw-type-heading-card {
-  font-family: var(--font-urbanist), sans-serif;
-  font-size: var(--tuw-type-heading-card-size, 18px);
-  line-height: var(--tuw-type-heading-card-line-height, 26px);
-  font-weight: var(--tuw-type-heading-card-weight, 600);
-  letter-spacing: 0;
-}
-
-.tuw-type-body-large {
-  font-family: var(--font-urbanist), sans-serif;
-  font-size: var(--tuw-type-body-large-size, 16px);
-  line-height: var(--tuw-type-body-large-line-height, 24px);
-  font-weight: var(--tuw-type-body-large-weight, 400);
-  letter-spacing: 0;
-}
-
-.tuw-type-body-default {
-  font-family: var(--font-urbanist), sans-serif;
-  font-size: var(--tuw-type-body-default-size, 14px);
-  line-height: var(--tuw-type-body-default-line-height, 22px);
-  font-weight: var(--tuw-type-body-default-weight, 400);
-  letter-spacing: 0;
-}
-
-.tuw-type-label-control {
-  font-family: var(--font-urbanist), sans-serif;
-  font-size: var(--tuw-type-label-control-size, 14px);
-  line-height: var(--tuw-type-label-control-line-height, 20px);
-  font-weight: var(--tuw-type-label-control-weight, 500);
-  letter-spacing: 0;
-}
-
-.tuw-type-caption-default {
-  font-family: var(--font-urbanist), sans-serif;
-  font-size: var(--tuw-type-caption-default-size, 12px);
-  line-height: var(--tuw-type-caption-default-line-height, 18px);
-  font-weight: var(--tuw-type-caption-default-weight, 400);
-  letter-spacing: 0;
-}
 
 /* Tabular Numerals for Numerical Data and Currency */
 .tuw-tabular-nums {
@@ -494,10 +414,6 @@
     color: inherit;
     text-decoration: none;
   }
-}
-
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
 }
 
 /* ==========================================================================
@@ -572,10 +488,6 @@
   font-size: 12px;
   line-height: 18px;
   font-weight: 400;
-}
-
-.tuw-tabular-nums {
-  font-variant-numeric: tabular-nums;
 }
 
 /* Small helpers (new, non-visual) */
@@ -1303,18 +1215,6 @@
   align-items: center;
   gap: 8px;
   margin-top: 4px;
-}
-
-.home-trendBadgeGreen {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background-color: #EDF8E2;
-  color: #009E5C;
-  border-radius: 8px;
-  padding: 4px 8px;
-  font-size: 14px;
-  font-weight: 600;
 }
 
 .home-trendBadgeRed {

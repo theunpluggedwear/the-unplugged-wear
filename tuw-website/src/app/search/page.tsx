@@ -40,7 +40,7 @@ async function Results({ searchParams }: { searchParams: Params }) {
 
   if (!results.length) {
     return (
-      <div className="text-center py-16 bg-white rounded-3xl border border-[#E2DDCF] p-8 max-w-xl mx-auto shadow-xs">
+      <div className="text-center py-16 bg-white rounded-3xl border border-[#E2DDCF] px-8 max-w-xl mx-auto shadow-xs">
         <h2 className="text-lg font-bold text-[#1A1A1A]">No matches for &ldquo;{term}&rdquo;</h2>
         <p className="text-xs text-[#666] mt-2 leading-relaxed">Check your spelling or browse a category:</p>
         <div className="flex justify-center gap-3 mt-6 flex-wrap">

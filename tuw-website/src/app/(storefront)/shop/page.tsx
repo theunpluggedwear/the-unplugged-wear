@@ -2,8 +2,6 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ShieldCheck, Sparkles, Truck } from 'lucide-react';
-import Header from '@storefront/components/layout/Header';
-import Footer from '@storefront/components/layout/Footer';
 import type { ShopSearchParams } from '@storefront/lib/shop-query';
 import ShopResults from './_components/ShopResults';
 
@@ -37,8 +35,6 @@ function ResultsFallback() {
 
 export default function ShopPage({ searchParams }: { searchParams: Promise<ShopSearchParams> }) {
   return (
-    <div className="min-h-screen flex flex-col bg-store-canvas">
-      <Header />
       <main className="flex-1">
         <div className="w-full bg-store-cream/70 border-b border-store-card-border/60 py-2.5 px-4 text-center">
           <div className="flex items-center justify-center text-xs tracking-wider text-store-charcoal font-medium">
@@ -102,7 +98,5 @@ export default function ShopPage({ searchParams }: { searchParams: Promise<ShopS
           </div>
         </div>
       </main>
-      <Footer />
-    </div>
   );
 }

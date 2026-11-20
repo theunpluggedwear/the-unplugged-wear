@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { lockBodyScroll } from './scroll-lock';
 
 export interface DrawerProps {
   isOpen: boolean;
@@ -36,12 +37,11 @@ export default function Drawer({
         onClose();
       }
     };
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    }
+    if (!isOpen) return;
+    const unlock = lockBodyScroll();
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.body.style.overflow = '';
+      unlock();
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);

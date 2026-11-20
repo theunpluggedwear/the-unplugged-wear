@@ -144,7 +144,9 @@ export async function release(tx: Transaction, order: { orderId: string; orderIt
   const moves: Movement[] = [];
   for (const sale of sales) {
     if (already.has(sale.order_item_id)) continue;
-    const after = (balances.get(sale.variant_id) ?? locked.get(sale.variant_id)!.stock) - sale.qty_change;
+    const variant = locked.get(sale.variant_id);
+    if (!variant) throw new AppError('NOT_FOUND', 'That variant does not exist.');
+    const after = (balances.get(sale.variant_id) ?? variant.stock) - sale.qty_change;
     balances.set(sale.variant_id, after);
     moves.push({ product_id: sale.product_id, variant_id: sale.variant_id, qty_change: -sale.qty_change, reason: 'cancel', order_id: order.orderId, order_item_id: sale.order_item_id, qty_after: after });
   }

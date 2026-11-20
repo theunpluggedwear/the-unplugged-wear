@@ -2,8 +2,6 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import Header from '@storefront/components/layout/Header';
-import Footer from '@storefront/components/layout/Footer';
 import Button from '@storefront/components/ui/Button';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { verifyEmailAction } from '@/server/auth-actions';
@@ -30,8 +28,6 @@ export default function VerifyEmailPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-store-canvas">
-      <Header />
       <main id="main-content" className="flex-1 max-w-md mx-auto px-4 py-12 sm:py-20 w-full">
         <div className="bg-white rounded-3xl border border-store-border p-8 shadow-xs space-y-5 text-center">
           <h1 className="text-2xl font-medium tracking-tight text-store-text-primary">Confirm your email</h1>
@@ -60,7 +56,5 @@ export default function VerifyEmailPage() {
           )}
         </div>
       </main>
-      <Footer />
-    </div>
   );
 }

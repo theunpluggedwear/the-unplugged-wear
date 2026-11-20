@@ -4,6 +4,7 @@ import { getDb, withTransaction } from '../../platform/db/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import { toRupees } from '../../platform/money/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
+import { isTestSku } from '../../platform/test-sku/index.ts';
 import { getFulfillmentPartner } from '../../integrations/fulfillment/index.ts';
 import { notifyStaff } from '../notifications/index.ts';
 import { getSetting } from '../settings/index.ts';
@@ -80,13 +81,12 @@ async function lease(planned: { orderId: string; orderNumber: string; gateway: '
  * so a batch keeps going.
  */
 export async function sendPlanned(orderId: string, force = false): Promise<SubmitOutcome> {
-  // The Rs1 QA product is never manufactured, even if a deployed cron has a
-  // different env from local dev. Check before planning so a missing partner
-  // SKU mapping cannot get in the way. Covers automatic and manual sends.
-  const testSkus = new Set(['TUW-TEST-PRODUCT-49F1AA', (process.env.CHECKOUT_TEST_SKU ?? '').trim()].filter(Boolean));
+  // A configured test SKU is never manufactured. Check before planning so a
+  // missing partner SKU mapping cannot get in the way. Covers automatic and
+  // manual sends; the SKU comes from env, not a hard-coded QA fixture.
   const { rows: orderSkus } = await getDb().execute<{ order_number: string; sku: string }>(sql`
     SELECT o.order_number, oi.sku FROM orders o JOIN order_items oi ON oi.order_id = o.id WHERE o.id = ${orderId}`);
-  if (orderSkus.some((r) => testSkus.has(r.sku) || [...testSkus].some((s) => r.sku.startsWith(`${s}-`)))) {
+  if (orderSkus.some((r) => isTestSku(r.sku))) {
     return { orderNumber: orderSkus[0]?.order_number ?? '', groups: [], skipped: [{ slug: '*', reason: 'Test product — fulfilment submission is blocked.' }] };
   }
 

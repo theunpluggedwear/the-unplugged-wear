@@ -1,6 +1,6 @@
 import 'server-only';
 import { cacheLife, cacheTag } from 'next/cache';
-import { CMS_TAGS, FAQ_TAG, getHomeCmsConfig, getNavigation, getPage, listGeneralFaqs, listProductFaqs, type CmsPage, type Faq, type GeneralFaqGroup, type HomeCmsConfig } from '@tuw/heart/modules/content';
+import { CMS_TAGS, FAQ_TAG, getHomeCmsConfig, getPage, listGeneralFaqs, listProductFaqs, type CmsPage, type Faq, type GeneralFaqGroup, type HomeCmsConfig } from '@tuw/heart/modules/content';
 import { BLOG_TAG, listPublished, listPublishedByIds, getPostBySlug, type PostDetail, type PostSummary } from '@tuw/heart/modules/marketing';
 
 export type { CmsPage };
@@ -30,13 +30,6 @@ export async function cmsPage(slug: string): Promise<CmsPage | null> {
   cacheTag(CMS_TAGS.pages);
   cacheLife('hours');
   return getPage(slug);
-}
-
-export async function cmsNavigation(): Promise<Record<string, unknown>> {
-  'use cache';
-  cacheTag(CMS_TAGS.nav);
-  cacheLife('hours');
-  return getNavigation();
 }
 
 export async function cmsPosts(input: { category?: string; page?: number; perPage?: number } = {}): Promise<{ rows: PostSummary[]; total: number }> {

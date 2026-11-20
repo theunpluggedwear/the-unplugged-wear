@@ -1,7 +1,5 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import Header from '@storefront/components/layout/Header';
-import Footer from '@storefront/components/layout/Footer';
 import { cmsPost } from '@/server/cms';
 
 export const instant = false;
@@ -13,8 +11,6 @@ export default async function JournalPostPage({ params }: { params: Promise<{ sl
   if (!post) notFound();
 
   return (
-    <div className="min-h-screen flex flex-col bg-store-canvas">
-      <Header />
       <main className="flex-1 max-w-3xl mx-auto px-4 py-16">
         <Link href="/journal" className="text-sm text-store-muted hover:underline">← Journal</Link>
         <p className="mt-8 text-xs uppercase tracking-widest text-store-muted">{post.categoryName ?? 'Journal'}</p>
@@ -38,7 +34,5 @@ export default async function JournalPostPage({ params }: { params: Promise<{ sl
           </div>
         )}
       </main>
-      <Footer />
-    </div>
   );
 }

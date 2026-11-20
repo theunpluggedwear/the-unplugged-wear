@@ -1,13 +1,9 @@
 import Link from 'next/link';
-import Header from '@storefront/components/layout/Header';
-import Footer from '@storefront/components/layout/Footer';
 import { cmsPosts } from '@/server/cms';
 
 export default async function JournalPage() {
   const { rows } = await cmsPosts({ perPage: 50 });
   return (
-    <div className="min-h-screen flex flex-col bg-store-canvas">
-      <Header />
       <main className="flex-1 max-w-5xl mx-auto px-4 py-16">
         <p className="text-xs uppercase tracking-widest text-store-muted">Journal</p>
         <h1 className="mt-2 text-4xl font-semibold text-store-charcoal">Stories from the studio</h1>
@@ -23,7 +19,5 @@ export default async function JournalPage() {
           {rows.length === 0 && <p className="text-sm text-store-text-secondary">No published stories yet.</p>}
         </div>
       </main>
-      <Footer />
-    </div>
   );
 }

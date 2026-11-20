@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -20,7 +20,6 @@ export interface StaffInvite {
 
 interface SignUpPageProps {
   initialMode?: SignUpStateMode;
-  initialStep?: number;
   /** Staff join only by invitation (TL-BE-02); null = no valid invite in the URL. */
   invite?: StaffInvite | null;
 }
@@ -29,9 +28,8 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Active view: 'signup' or 'verify'
+  // Active view: 'signup' or the truthful 'verify' fallback (design preview only)
   const [view, setView] = useState<'signup' | 'verify'>('signup');
-  const [currentMode, setCurrentMode] = useState<SignUpStateMode>(initialMode || 'default');
 
   // Form Fields
   const [username, setUsername] = useState('');
@@ -44,13 +42,10 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
   const [notice, setNotice] = useState('');
   const [pending, setPending] = useState(false);
 
-  // OTP Fields (4 digits)
-  const [otp, setOtp] = useState<string[]>(['', '', '', '']);
-  const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
-
-  // Apply state based on Figma frames
+  // Apply state based on Figma frames (design preview only — never an auth bypass).
+  // A state transition always clears any stale notice from a previous view.
   const applyState = (mode: SignUpStateMode) => {
-    setCurrentMode(mode);
+    setNotice('');
 
     if (mode === 'default') {
       setView('signup');
@@ -61,23 +56,18 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
       setShowPassword(false);
       setShowConfirmPassword(false);
       setAgreeTerms(false);
-      setOtp(['', '', '', '']);
     } else if (mode === 'filled') {
       setView('signup');
       setUsername('Jessicha Smith');
-      setEmail('jessichasmith94@gmail.com');
+      setEmail('jessicha.smith@example.com');
       setPassword('••••••••••••');
       setConfirmPassword('••••••••••••');
       setShowPassword(false);
       setShowConfirmPassword(false);
       setAgreeTerms(true);
-      setOtp(['', '', '', '']);
-    } else if (mode === 'verify-empty') {
+    } else if (mode === 'verify-empty' || mode === 'verify-filled') {
+      // Verification is by invitation link, not a code — show the truthful fallback.
       setView('verify');
-      setOtp(['', '', '', '']);
-    } else if (mode === 'verify-filled') {
-      setView('verify');
-      setOtp(['3', '3', '4', '2']);
     }
   };
 
@@ -115,7 +105,6 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
       setPassword('');
       setConfirmPassword('');
       router.push(result.data.next);
-      router.refresh();
     });
   };
 
@@ -126,43 +115,6 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
 
   const socialUnavailable = (provider: string) => () =>
     setNotice(`${provider} sign-up is not available. Accept your invitation with a password.`);
-
-  // OTP Input Handlers
-  const handleOtpChange = (index: number, val: string) => {
-    const cleaned = val.replace(/\D/g, '');
-    const newOtp = [...otp];
-
-    if (cleaned.length > 1) {
-      // Pasting multiple digits
-      const digits = cleaned.slice(0, 4).split('');
-      for (let i = 0; i < 4; i++) {
-        newOtp[i] = digits[i] || '';
-      }
-      setOtp(newOtp);
-      const nextIndex = Math.min(digits.length, 3);
-      otpInputsRef.current[nextIndex]?.focus();
-      return;
-    }
-
-    newOtp[index] = cleaned;
-    setOtp(newOtp);
-
-    // Auto-advance
-    if (cleaned && index < 3) {
-      otpInputsRef.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      otpInputsRef.current[index - 1]?.focus();
-    }
-  };
-
-  const handleVerifySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    router.push('/dashboard');
-  };
 
   return (
     <main className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-white text-auth-ink relative max-[900px]:flex-col max-[900px]:overflow-y-auto">
@@ -424,7 +376,7 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
           )}
 
           {/* ==========================================================================
-              VIEW 2: EMAIL VERIFICATION (Figma 1:20890 & 1:20856)
+              VIEW 2: EMAIL VERIFICATION FALLBACK (design preview only)
               ========================================================================== */}
           {view === 'verify' && (
             <div className="flex w-full max-w-auth-verify flex-col items-center gap-[clamp(20px,3vh,32px)] m-auto">
@@ -439,62 +391,16 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
                     className="h-[25px] w-[25px] object-contain"
                   />
                 </div>
-                <h2 className="text-auth-verify-title font-semibold text-auth-ink tracking-auth-title m-0">Email verification code</h2>
-                <p className="text-auth-subrow font-normal text-auth-muted m-0">
-                  We have sent verification code to your email
+                <h2 className="text-auth-verify-title font-semibold text-auth-ink tracking-auth-title m-0">Email verification</h2>
+                <p className="text-auth-subrow font-normal text-auth-muted m-0 max-w-auth-form">
+                  The Unplugged Wear admin is invitation-only. Staff confirm their email by accepting an invitation link — there is no separate code-entry step.
                 </p>
               </header>
 
-              {/* 4-Digit OTP Code Inputs Form (Frame 135) */}
-                <form onSubmit={handleVerifySubmit} className="w-full">
-                {/* 4 OTP Input Boxes */}
-                <div className="flex items-center justify-center gap-3 w-[260px] mx-auto mb-8">
-                  {otp.map((digit, idx) => (
-                    <input
-                      key={idx}
-                      ref={(el) => {
-                        otpInputsRef.current[idx] = el;
-                      }}
-                      id={`otp-box-${idx}`}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => handleOtpChange(idx, e.target.value)}
-                      onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                      className={`h-14 w-14 border rounded-control bg-white outline-none text-[24px] font-bold text-auth-ink text-center transition-all duration-200 focus:border-auth-teal focus:shadow-auth-otp ${digit ? 'border-auth-teal shadow-auth-otp' : 'border-auth-otp-line'}`}
-                    />
-                  ))}
-                </div>
-
-                {/* Verify Actions: Button + Resend + Back to login */}
-                <div className="flex w-full flex-col items-center gap-5">
-                  <div className="flex w-full flex-col items-center gap-3">
-                    {/* Primary Button: Verify email */}
-                    <button type="submit" className="flex h-12 w-full items-center justify-center rounded-xl bg-auth-button text-auth-btn font-bold text-white cursor-pointer transition-all duration-200 hover:bg-auth-pure" id="verify-email-btn">
-                      Verify email
-                    </button>
-
-                    {/* Resend Code Prompt */}
-                    <div className="flex items-center justify-center gap-1 text-auth-resend text-auth-ink">
-                      <span>Don’t receive the email?</span>
-                      <button
-                        type="button"
-                        className="text-[14px] text-auth-teal font-semibold underline bg-transparent border-0 p-0 cursor-pointer transition-opacity duration-150 hover:opacity-80"
-                        onClick={() => alert('Verification code resent to your email.')}
-                        id="resend-code-btn"
-                      >
-                        Click to resend the code
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Secondary Button: Back to login */}
-                  <Link href="/login" className="flex h-12 w-full items-center justify-center rounded-xl border border-auth-line bg-white text-auth-btn font-bold text-auth-ink cursor-pointer no-underline transition-all duration-200 hover:bg-auth-hover-canvas hover:border-auth-hover-line" id="back-to-login-btn">
-                    Back to login
-                  </Link>
-                </div>
-              </form>
+              {/* Truthful fallback: no code-entry step exists in invitation-based auth. */}
+              <Link href="/login" className="flex h-12 w-full max-w-auth-form items-center justify-center rounded-xl bg-auth-button text-auth-btn font-bold text-white cursor-pointer no-underline transition-all duration-200 hover:bg-auth-pure" id="back-to-login-btn">
+                Back to login
+              </Link>
             </div>
           )}
         </div>

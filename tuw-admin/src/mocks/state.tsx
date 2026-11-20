@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   ProductItem,
   OrderItem,
@@ -89,15 +89,11 @@ export interface ToastMessage {
   description?: string;
 }
 
-export type DemoScenario = 'normal' | 'loading' | 'empty' | 'error' | 'long_content';
-
 interface AdminStateContextType {
   activeRole: StaffRole;
   setActiveRole: (role: StaffRole) => void;
   canPerformAction: (actionCategory: 'orders' | 'products' | 'refunds' | 'team' | 'settings' | 'fulfillment' | 'cms') => boolean;
 
-  scenario: DemoScenario;
-  setScenario: (scenario: DemoScenario) => void;
   simulatedError: string | null;
   retryConnection: () => void;
 
@@ -139,14 +135,6 @@ interface AdminStateContextType {
   deleteProduct: (id: string, silent?: boolean) => boolean;
 
   createOrder: (order: Omit<OrderItem, 'id' | 'date' | 'timeline' | 'paidAmount' | 'refundedAmount'>) => boolean;
-  updateOrderStatus: (orderId: string, paymentStatus?: OrderItem['paymentStatus'], fulfillmentStatus?: OrderItem['fulfillmentStatus'], silent?: boolean) => boolean;
-  retryFulfillment: (orderId: string, silent?: boolean) => Promise<boolean>;
-
-  createShipment: (shipment: Omit<ShipmentItem, 'dispatchDate' | 'events'>) => boolean;
-
-  issueRefund: (params: { orderId: string; amount: number; reason: string; method: string }) => { success: boolean; error?: string };
-
-  updateReturnStatus: (returnId: string, stage: ReturnItem['stage'], silent?: boolean) => boolean;
 
   addCustomerNote: (customerId: string, note: string) => boolean;
   createCustomer: (customer: {
@@ -194,7 +182,6 @@ const AdminStateContext = createContext<AdminStateContextType | null>(null);
 
 export function AdminStateProvider({ children }: { children: React.ReactNode }) {
   const [activeRole, setActiveRoleState] = useState<StaffRole>('Owner');
-  const [scenario, setScenarioState] = useState<DemoScenario>('normal');
   const [simulatedError, setSimulatedError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -377,16 +364,39 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
     [activeRole, products, orders, shipments, refunds, returns, customers, supportTickets, collections, designs, team, stockMovements, discountCodes, abandonedCarts, blogCategories, blogAuthors, blogTags, blogMedia, blogPosts, blogRevisions, blogSlugHistory]
   );
 
+  // Auto-dismiss timers are tracked per toast so dismissing one cannot leave a
+  // stale timer behind, and no timer can call setToasts after the provider
+  // unmounts.
+  const toastTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const clearToastTimer = useCallback((id: string) => {
+    const timer = toastTimers.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      toastTimers.current.delete(id);
+    }
+  }, []);
+
   const showToast = useCallback((toast: Omit<ToastMessage, 'id'>) => {
     const id = 'toast-' + Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { ...toast, id }]);
-    setTimeout(() => {
+    const timer = setTimeout(() => {
+      toastTimers.current.delete(id);
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 4000);
+    toastTimers.current.set(id, timer);
   }, []);
 
   const dismissToast = useCallback((id: string) => {
+    clearToastTimer(id);
     setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, [clearToastTimer]);
+
+  useEffect(() => {
+    return () => {
+      toastTimers.current.forEach((timer) => clearTimeout(timer));
+      toastTimers.current.clear();
+    };
   }, []);
 
   const setActiveRole = (role: StaffRole) => {
@@ -639,200 +649,6 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
       title: 'Order Created',
       description: `Order ${newOrder.id} initialized with ${newOrder.fulfillmentStatus} status.`,
     });
-    return true;
-  };
-
-  const updateOrderStatus = (
-    orderId: string,
-    paymentStatus?: OrderItem['paymentStatus'],
-    fulfillmentStatus?: OrderItem['fulfillmentStatus'],
-    silent = false
-  ) => {
-    if (!canPerformAction('orders')) return false;
-    const next = orders.map((o) => {
-      if (o.id === orderId) {
-        const updated = { ...o };
-        if (paymentStatus) {
-          updated.paymentStatus = paymentStatus;
-          if (paymentStatus === 'paid') updated.paidAmount = o.total;
-        }
-        if (fulfillmentStatus) {
-          updated.fulfillmentStatus = fulfillmentStatus;
-          updated.timeline = [
-            {
-              title: `Status changed to ${fulfillmentStatus}`,
-              time: 'Just now',
-              note: `Updated by ${activeRole}`,
-            },
-            ...o.timeline,
-          ];
-        }
-        return updated;
-      }
-      return o;
-    });
-    setOrders(next);
-    persistState({ orders: next });
-    if (!silent) {
-      showToast({
-        type: 'success',
-        title: 'Order Status Updated',
-        description: `Order ${orderId} record updated locally.`,
-      });
-    }
-    return true;
-  };
-
-  const retryFulfillment = async (orderId: string, silent = false): Promise<boolean> => {
-    if (!canPerformAction('fulfillment')) return false;
-    // Simulate network delay
-    if (!silent) {
-      showToast({
-        type: 'info',
-        title: 'Retrying Partner API Webhook',
-        description: `Submitting order ${orderId} payload to print hub...`,
-      });
-    }
-    await new Promise((r) => setTimeout(r, 900));
-
-    const next = orders.map((o) => {
-      if (o.id === orderId) {
-        return {
-          ...o,
-          fulfillmentStatus: 'printing' as const,
-          timeline: [
-            {
-              title: 'Retry Succeeded',
-              time: 'Just now',
-              note: 'Partner print queue confirmed receipt (Webhook 200 OK)',
-            },
-            ...o.timeline,
-          ],
-        };
-      }
-      return o;
-    });
-    setOrders(next);
-    persistState({ orders: next });
-    if (!silent) {
-      showToast({
-        type: 'success',
-        title: 'Fulfillment Retry Succeeded',
-        description: `Order ${orderId} moved from submission_failed to printing queue.`,
-      });
-    }
-    return true;
-  };
-
-  const createShipment = (s: Omit<ShipmentItem, 'dispatchDate' | 'events'>) => {
-    if (!canPerformAction('fulfillment')) return false;
-    const newShipment: ShipmentItem = {
-      ...s,
-      dispatchDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      events: [
-        {
-          time: 'Just now',
-          location: 'Origin Fulfillment Center',
-          description: `Dispatched via ${s.carrier}. Manifest created.`,
-        },
-      ],
-    };
-    const nextShipments = [newShipment, ...shipments];
-    setShipments(nextShipments);
-    // Also update order status to shipped
-    updateOrderStatus(s.orderId, undefined, 'shipped');
-    persistState({ shipments: nextShipments });
-    showToast({
-      type: 'success',
-      title: 'Shipment Dispatched',
-      description: `Tracking ${s.trackingId} assigned to ${s.orderId}.`,
-    });
-    return true;
-  };
-
-  const issueRefund = (params: {
-    orderId: string;
-    amount: number;
-    reason: string;
-    method: string;
-  }): { success: boolean; error?: string } => {
-    if (!canPerformAction('refunds')) return { success: false, error: 'Unauthorized demo role' };
-
-    const targetOrder = orders.find((o) => o.id === params.orderId);
-    if (!targetOrder) {
-      return { success: false, error: 'Order not found' };
-    }
-
-    const availableToRefund = targetOrder.paidAmount - targetOrder.refundedAmount;
-    if (params.amount <= 0) {
-      return { success: false, error: 'Refund amount must be greater than ₹0.00' };
-    }
-    if (params.amount > availableToRefund) {
-      return {
-        success: false,
-        error: `Cannot refund ₹${params.amount.toFixed(2)}. Maximum refundable balance is ₹${availableToRefund.toFixed(2)}.`,
-      };
-    }
-
-    const newRefundId = `REF-${Math.floor(2042 + Math.random() * 50)}`;
-    const newRefund: RefundItem = {
-      id: newRefundId,
-      orderId: params.orderId,
-      customer: targetOrder.customerName,
-      reason: params.reason,
-      amount: params.amount,
-      method: params.method,
-      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      status: 'completed',
-    };
-
-    const nextRefunds = [newRefund, ...refunds];
-    setRefunds(nextRefunds);
-
-    // Update order amounts
-    const nextOrders = orders.map((o) => {
-      if (o.id === params.orderId) {
-        const newRefunded = o.refundedAmount + params.amount;
-        return {
-          ...o,
-          refundedAmount: newRefunded,
-          paymentStatus: newRefunded >= o.paidAmount ? ('refunded' as const) : o.paymentStatus,
-          timeline: [
-            {
-              title: `Refund Processed (${newRefundId})`,
-              time: 'Just now',
-              note: `₹${params.amount.toFixed(2)} refunded via ${params.method}. Reason: ${params.reason}`,
-            },
-            ...o.timeline,
-          ],
-        };
-      }
-      return o;
-    });
-    setOrders(nextOrders);
-
-    persistState({ refunds: nextRefunds, orders: nextOrders });
-    showToast({
-      type: 'success',
-      title: 'Refund Successfully Disbursed',
-      description: `₹${params.amount.toFixed(2)} refunded for ${params.orderId} via ${params.method}.`,
-    });
-
-    return { success: true };
-  };
-
-  const updateReturnStatus = (returnId: string, stage: ReturnItem['stage'], silent = false) => {
-    if (!canPerformAction('orders')) return false;
-    const next = returns.map((r) => (r.id === returnId ? { ...r, stage } : r));
-    setReturns(next);
-    persistState({ returns: next });
-    if (!silent) {
-      showToast({
-        type: 'success',
-        title: 'RMA Stage Updated',
-        description: `Return ${returnId} marked as ${stage}.`,
-      });
-    }
     return true;
   };
 
@@ -1351,83 +1167,11 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
     return id;
   };
 
-  const setScenario = (sc: DemoScenario) => {
-    setScenarioState(sc);
-    if (sc === 'empty') {
-      setProducts([]);
-      setOrders([]);
-      setShipments([]);
-      setRefunds([]);
-      setReturns([]);
-      setCustomers([]);
-      setSupportTickets([]);
-      setSimulatedError(null);
-      showToast({
-        type: 'info',
-        title: 'Scenario: Empty State Active',
-        description: 'Dataset cleared to test empty states and zero-data recovery actions.',
-      });
-    } else if (sc === 'error') {
-      setSimulatedError('Operational Service Interruption: POD Gateway Timeout HTTP 504 on Tiruppur print router.');
-      showToast({
-        type: 'error',
-        title: 'Scenario: Simulated Error Active',
-        description: 'Simulating partner webhook failure and operational exception banners.',
-      });
-    } else if (sc === 'long_content') {
-      setProducts(
-        initialProducts.map((p) => ({
-          ...p,
-          name: `${p.name} — Limited Architectural Archival Collector Edition With Double-Reinforced Coverstitching And High-Tenacity Organic Weave`,
-          description: `${p.description} This garment incorporates multi-generational weaving techniques developed across the Kaveri basin, tested through rigorous industrial wash trials to guarantee zero shrinkage, no twisting along side seams, and complete tactile permanence over decades of intentional daily rotation.`,
-        }))
-      );
-      setOrders(
-        initialOrders.map((o) => ({
-          ...o,
-          customerName: `${o.customerName} (Senior Architectural Textile Conservator & Brand Ambassador)`,
-          shippingAddress: `${o.shippingAddress}, Building 4C Wing South, Floor 14 Penthouse Suite, Metropolitan Heritage Enclave`,
-        }))
-      );
-      setSimulatedError(null);
-      showToast({
-        type: 'info',
-        title: 'Scenario: Long Content Active',
-        description: 'Products and orders populated with extended multiline strings to verify layout wrapping.',
-      });
-    } else if (sc === 'normal') {
-      setProducts(initialProducts);
-      setOrders(initialOrders);
-      setShipments(initialShipments);
-      setRefunds(initialRefunds);
-      setReturns(initialReturns);
-      setCustomers(initialCustomers);
-      setSupportTickets(initialSupportTickets);
-      setCollections(initialCollections);
-      setDesigns(initialDesigns);
-      setTeam(initialTeam);
-      setStockMovements(initialStockMovements);
-      setDiscountCodes(initialDiscountCodes);
-      setAbandonedCarts(initialAbandonedCarts);
-      setBlogCategories(initialBlogCategories);
-      setBlogAuthors(initialBlogAuthors);
-      setBlogTags(initialBlogTags);
-      setBlogMedia(initialBlogMedia);
-      setBlogPosts(initialBlogPosts);
-      setBlogRevisions(initialBlogRevisions);
-      setBlogSlugHistory(initialBlogSlugHistory);
-      setSimulatedError(null);
-      showToast({
-        type: 'success',
-        title: 'Scenario: Normal Baseline Active',
-        description: 'Restored standard deterministic dataset.',
-      });
-    }
-  };
-
+  // Recovery only clears the simulated banner error. Dataset restoration is
+  // exclusively the responsibility of resetDemoData — retry must never wipe
+  // the user's local changes.
   const retryConnection = () => {
     setSimulatedError(null);
-    setScenario('normal');
     showToast({
       type: 'success',
       title: 'Connection Restored',
@@ -1444,7 +1188,6 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
       // storage clear
     }
     setActiveRoleState('Owner');
-    setScenarioState('normal');
     setSimulatedError(null);
     setProducts(initialProducts);
     setOrders(initialOrders);
@@ -1480,8 +1223,6 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
         activeRole,
         setActiveRole,
         canPerformAction,
-        scenario,
-        setScenario,
         simulatedError,
         retryConnection,
         products,
@@ -1512,11 +1253,6 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
         updateProduct,
         deleteProduct,
         createOrder,
-        updateOrderStatus,
-        retryFulfillment,
-        createShipment,
-        issueRefund,
-        updateReturnStatus,
         addCustomerNote,
         createCustomer,
         sendSupportReply,

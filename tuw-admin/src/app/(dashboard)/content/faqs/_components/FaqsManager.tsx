@@ -49,15 +49,17 @@ export default function FaqsManager({ initial, products, categories }: {
       sortOrder: form.sortOrder, isPublished: form.isPublished,
     });
     if (!res.ok) { setNotice(res.error.message); return; }
-    setFaqs((list) => [res.data, ...list.filter((f) => f.id !== res.data.id)]);
+    setFaqs((list) => [res.data.faq, ...list.filter((f) => f.id !== res.data.faq.id)]);
     setForm({ ...empty });
-    setNotice('Saved.');
+    const storefrontNote = res.data.storefront.ok ? '' : ` Storefront refresh failed: ${res.data.storefront.reason}`;
+    setNotice(`Saved.${storefrontNote}`);
   }
 
   async function remove(id: string) {
     const res = await deleteFaqAction({ id });
     if (!res.ok) { setNotice(res.error.message); return; }
     setFaqs((list) => list.filter((f) => f.id !== id));
+    if (!res.data.storefront.ok) setNotice(`Removed. Storefront refresh failed: ${res.data.storefront.reason}`);
   }
 
   return (

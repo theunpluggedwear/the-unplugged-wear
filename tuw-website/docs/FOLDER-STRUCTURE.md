@@ -48,7 +48,6 @@ tuw-website/
         editorial/              # journal, lookbook and story blocks
       lib/                      # FLAT helpers — no subfolders until >8 files
         db.ts                   # server-only Neon Postgres client
-        razorpay.ts             # Razorpay checkout + webhook verify (website-only)
         cn.ts                   # clsx + tailwind-merge
         format.ts               # currency (INR), date formatters
         site.ts                 # navigation, footer links, SEO defaults
@@ -94,7 +93,7 @@ src/app/checkout/
   _components/
     CheckoutForm.tsx    # ONLY used here
     AddressStep.tsx     # ONLY used here
-  _actions.ts           # place-order, calls @storefront/lib/razorpay + @storefront/lib/db
+  _actions.ts           # server-only actions for this route (calls @storefront/lib/db)
   _schemas.ts           # zod schema, private
 ```
 
@@ -103,7 +102,7 @@ If `VariantSelector.tsx` is needed in `shop/` + `products/[slug]/` + `cart/`, it
 ## When to graduate (do NOT pre-create)
 
 1. `_components/X.tsx` imported by 2+ routes → move to `src/storefront/components/commerce/` or `src/storefront/components/ui/`.
-2. `src/storefront/lib/` has >8 files or `razorpay.ts` >200 lines → split to `src/storefront/services/razorpay/`.
+2. `src/storefront/lib/` has >8 files → split into focused subfolders.
 3. One domain (e.g. `cart`) has 5+ private files reused → create `src/storefront/features/cart/` then.
 4. `globals.css` >500 lines → use comment blocks (`/* Tokens */`, `/* Base */`, `/* Utilities */`), still 1 file.
 5. `useX` used in 3+ routes → create `src/storefront/hooks/useX.ts`. Until then keep next to route.

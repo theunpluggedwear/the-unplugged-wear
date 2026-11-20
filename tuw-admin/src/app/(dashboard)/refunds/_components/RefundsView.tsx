@@ -57,10 +57,14 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
   const request = useRef(0);
   const load = async () => {
     const mine = ++request.current;
-    const result = await listRefundsAction({ q: searchTerm || undefined, status: statusFilter === 'all' ? undefined : statusFilter, page: currentPage, perPage: pageSize });
-    if (mine !== request.current) return;
-    if (result.ok) setList(result.data);
-    else showToast({ type: 'warning', title: 'Could Not Load Refunds', description: result.error.message });
+    try {
+      const result = await listRefundsAction({ q: searchTerm || undefined, status: statusFilter === 'all' ? undefined : statusFilter, page: currentPage, perPage: pageSize });
+      if (mine !== request.current) return;
+      if (result.ok) setList(result.data);
+      else showToast({ type: 'warning', title: 'Could Not Load Refunds', description: result.error.message });
+    } catch {
+      if (mine === request.current) showToast({ type: 'warning', title: 'Could Not Load Refunds', description: 'The request failed. Please try again.' });
+    }
   };
   const first = useRef(true);
   useEffect(() => {
@@ -71,16 +75,38 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
   }, [searchTerm, statusFilter, currentPage, pageSize]);
   useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter]);
 
+  // Two Look up clicks can resolve out of order; only the newest answer wins.
+  const lookupRequest = useRef(0);
   const lookUp = async (num: string) => {
     if (!num.trim()) return;
+    const mine = ++lookupRequest.current;
     setBusy(true);
     setFormError(null);
-    const result = await refundableOrderAction({ orderNumber: num.trim() });
-    setBusy(false);
-    if (!result.ok) { setFound(null); setFormError(result.error.message); return; }
-    setFound(result.data);
-    setMethod(result.data.cashOnDelivery ? 'upi' : 'source');
-    setAmount(result.data.availablePaise ? (result.data.availablePaise / 100).toFixed(2) : '');
+    try {
+      const result = await refundableOrderAction({ orderNumber: num.trim() });
+      if (mine !== lookupRequest.current) return;
+      if (!result.ok) { setFound(null); setFormError(result.error.message); return; }
+      setFound(result.data);
+      setMethod(result.data.cashOnDelivery ? 'upi' : 'source');
+      setAmount(result.data.availablePaise ? (result.data.availablePaise / 100).toFixed(2) : '');
+    } catch {
+      if (mine === lookupRequest.current) setFormError('The lookup failed. Please try again.');
+    } finally {
+      if (mine === lookupRequest.current) setBusy(false);
+    }
+  };
+
+  // Reset the busy flag even when a server call rejects.
+  const withBusy = async <T,>(run: () => Promise<T>, failureTitle: string): Promise<T | null> => {
+    setBusy(true);
+    try {
+      return await run();
+    } catch {
+      showToast({ type: 'warning', title: failureTitle, description: 'The request failed. Please try again.' });
+      return null;
+    } finally {
+      setBusy(false);
+    }
   };
 
   const openIssue = (num = '') => {
@@ -112,13 +138,12 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
     if (!found) return setFormError('Look up the order first.');
     const value = Number(amount);
     if (!Number.isFinite(value) || value <= 0) return setFormError('Enter an amount above zero.');
-    setBusy(true);
-    const result = await issueRefundAction({
+    const result = await withBusy(() => issueRefundAction({
       orderNumber: found.orderNumber, amount: value, method, refundKey: issueKey,
       reason: reason === 'Other' ? reasonOther.trim() || 'Other' : reason,
       destination: found.cashOnDelivery ? destination : undefined,
-    });
-    setBusy(false);
+    }), 'Refund Failed');
+    if (!result) return;
     if (!result.ok) {
       // Keep everything typed; show what to fix.
       setFormError(result.error.details[0]?.message ?? result.error.message);
@@ -138,10 +163,9 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
 
   const finishPayout = async () => {
     if (!selected) return;
-    setBusy(true);
     setDetailError(null);
-    const result = await markRefundPaidAction({ refundId: selected.id, payoutReference: utr });
-    setBusy(false);
+    const result = await withBusy(() => markRefundPaidAction({ refundId: selected.id, payoutReference: utr }), 'Payout Failed');
+    if (!result) return;
     if (!result.ok) return setDetailError(result.error.details[0]?.message ?? result.error.message);
     showToast({ type: 'success', title: 'Payout Completed', description: `${selected.orderNumber}: ${rupees(selected.amountPaise)} recorded with UTR ${utr.trim().toUpperCase()}.` });
     setSelected(null);
@@ -150,10 +174,9 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
   };
   const rejectPayout = async () => {
     if (!selected) return;
-    setBusy(true);
     setDetailError(null);
-    const result = await rejectRefundAction({ refundId: selected.id, note: rejectNote });
-    setBusy(false);
+    const result = await withBusy(() => rejectRefundAction({ refundId: selected.id, note: rejectNote }), 'Reject Failed');
+    if (!result) return;
     if (!result.ok) return setDetailError(result.error.details[0]?.message ?? result.error.message);
     showToast({ type: 'info', title: 'Payout Rejected', description: `${rupees(selected.amountPaise)} for ${selected.orderNumber} can be refunded another way.` });
     setSelected(null);
@@ -162,15 +185,21 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
   };
 
   const handleExportCSV = async () => {
-    const result = await listRefundsAction({ q: searchTerm || undefined, status: statusFilter === 'all' ? undefined : statusFilter, page: 1, perPage: 5000 });
-    if (!result.ok) return showToast({ type: 'warning', title: 'Export Failed', description: result.error.message });
-    const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const rows = result.data.rows.map((r) => [r.orderNumber, r.customerName, r.reason, (r.amountPaise / 100).toFixed(2), METHOD[r.method], r.status, r.payoutReference ?? '', r.destinationMasked ?? '', r.actorName, when(r.createdAt)].map(cell).join(','));
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([[['Order', 'Customer', 'Reason', 'Amount', 'Method', 'Status', 'Reference', 'Paid to', 'By', 'Created'].join(','), ...rows].join('\n')], { type: 'text/csv' }));
-    link.download = `tuw_refunds_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
+    try {
+      const result = await listRefundsAction({ q: searchTerm || undefined, status: statusFilter === 'all' ? undefined : statusFilter, page: 1, perPage: 5000 });
+      if (!result.ok) return showToast({ type: 'warning', title: 'Export Failed', description: result.error.message });
+      const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+      const rows = result.data.rows.map((r) => [r.orderNumber, r.customerName, r.reason, (r.amountPaise / 100).toFixed(2), METHOD[r.method], r.status, r.payoutReference ?? '', r.destinationMasked ?? '', r.actorName, when(r.createdAt)].map(cell).join(','));
+      const url = URL.createObjectURL(new Blob([[['Order', 'Customer', 'Reason', 'Amount', 'Method', 'Status', 'Reference', 'Paid to', 'By', 'Created'].join(','), ...rows].join('\n')], { type: 'text/csv' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `tuw_refunds_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      // Let the download start before releasing the blob URL.
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+    } catch {
+      showToast({ type: 'warning', title: 'Export Failed', description: 'The request failed. Please try again.' });
+    }
   };
 
   const stats = list.stats;

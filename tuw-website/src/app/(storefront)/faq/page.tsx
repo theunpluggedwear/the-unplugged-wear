@@ -1,5 +1,3 @@
-import Header from '@storefront/components/layout/Header';
-import Footer from '@storefront/components/layout/Footer';
 import Breadcrumb from '@storefront/components/ui/Breadcrumb';
 import Disclosure from '@storefront/components/ui/Disclosure';
 import { cmsGeneralFaqs } from '@/server/cms';
@@ -7,8 +5,6 @@ import { cmsGeneralFaqs } from '@/server/cms';
 export default async function FaqPage() {
   const groups = await cmsGeneralFaqs();
   return (
-    <div className="min-h-screen flex flex-col bg-store-canvas">
-      <Header />
       <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 w-full">
         <Breadcrumb items={[{ label: 'Home', href: '/' }, { label: 'Help & FAQ' }]} />
         <div className="my-8">
@@ -31,7 +27,5 @@ export default async function FaqPage() {
           </section>
         ))}
       </main>
-      <Footer />
-    </div>
   );
 }

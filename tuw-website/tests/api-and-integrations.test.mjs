@@ -13,9 +13,9 @@ describe('Server Route & Asset Coverage Invariants', () => {
     'src/app/account/orders/page.tsx',
     'src/app/account/orders/[id]/page.tsx',
     'src/app/about/page.tsx',
-    'src/app/journal/page.tsx',
-    'src/app/journal/[slug]/page.tsx',
-    'src/app/faq/page.tsx',
+    'src/app/(storefront)/journal/page.tsx',
+    'src/app/(storefront)/journal/[slug]/page.tsx',
+    'src/app/(storefront)/faq/page.tsx',
     'src/app/policies/shipping/page.tsx',
     'src/app/policies/returns/page.tsx',
     'src/app/policies/privacy/page.tsx',
@@ -24,7 +24,6 @@ describe('Server Route & Asset Coverage Invariants', () => {
     'src/app/api/contact/route.ts',
     'src/app/api/webhooks/razorpay/route.ts',
     'src/app/api/fulfillment/qikink/route.ts',
-    'src/storefront/lib/razorpay.ts',
     'src/storefront/lib/qikink.ts',
   ];
 

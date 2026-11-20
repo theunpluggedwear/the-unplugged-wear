@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 
 // Mirrors E:\Unplugged\next.config.mjs redirects for identical routing behavior.
-// Note: '/' -> '/login' is also handled by src/app/page.tsx (verbatim old port).
+// The '/' -> '/login' redirect is defined here only (no duplicate page redirect).
 const nextConfig: NextConfig = {
   // Shared backend package (TypeScript source) compiled into this app's build.
   transpilePackages: ['@tuw/heart'],

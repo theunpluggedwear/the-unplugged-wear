@@ -8,7 +8,7 @@ import Footer from '@storefront/components/layout/Footer';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
 import { useStore } from '@storefront/mocks/store';
 import { getOrderAction } from '@/server/order-actions';
-import { getPaymentConfigAction } from '@/server/payment-actions';
+import { usePaymentConfig } from '@storefront/lib/payment-config';
 import { toStoreOrder } from '@storefront/lib/orders';
 import { useSession } from '@storefront/lib/session';
 import type { Order } from '@storefront/lib/types';
@@ -20,6 +20,7 @@ import { AlertCircle, ArrowRight, Check, Clock, Download, Info, Mail } from 'luc
 
 const STEPS = ['Order placed', 'Printing', 'Shipped', 'Delivered'] as const;
 const STEP_INDEX: Record<string, number> = { queued: 0, printing: 1, shipped: 2, delivered: 3 };
+const ORDER_POLL_MS = 5000;
 
 // Money in paise; order shipping/discount are stored in whole rupees.
 const linePaise = (item: Order['items'][number]) =>
@@ -36,13 +37,9 @@ function OrderSuccessContent() {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
-  const [testMode, setTestMode] = useState(false);
-
-  useEffect(() => {
-    let live = true;
-    void getPaymentConfigAction({}).then((r) => { if (live && r.ok) setTestMode(r.data.testMode); });
-    return () => { live = false; };
-  }, []);
+  // Gateway mode is read once on the server in checkout/layout.tsx and shared
+  // with the checkout screen (CLN-NXT-006).
+  const { testMode } = usePaymentConfig();
 
   useEffect(() => {
     if (!orderNumber) {
@@ -58,6 +55,24 @@ function OrderSuccessContent() {
     });
     return () => { live = false; };
   }, [orderNumber, receipt]);
+
+  // The notice below promises the page updates once payment is captured, so
+  // keep re-checking until it settles (COD never settles before delivery).
+  const awaitingCapture = order?.paymentStatus === 'pending' && order.paymentMethod !== 'COD (Demo)';
+  useEffect(() => {
+    if (!orderNumber || !awaitingCapture) return;
+    let live = true;
+    let inFlight = false;
+    const poll = window.setInterval(() => {
+      if (inFlight) return;
+      inFlight = true;
+      void getOrderAction({ orderNumber, receipt }).then((result) => {
+        inFlight = false;
+        if (live && result.ok) setOrder(toStoreOrder(result.data));
+      });
+    }, ORDER_POLL_MS);
+    return () => { live = false; window.clearInterval(poll); };
+  }, [orderNumber, receipt, awaitingCapture]);
 
   if (loading) {
     return (
@@ -96,7 +111,6 @@ function OrderSuccessContent() {
   const subtotal = order.items.reduce((sum, item) => sum + linePaise(item), 0);
   // The total the server charged (includes any tax or cash-on-delivery fee).
   const total = Math.round(order.totalINR * 100);
-  void subtotal;
   const hasShipped = order.fulfillmentStatus === 'shipped' || order.fulfillmentStatus === 'delivered';
   const address = order.shippingAddress;
 

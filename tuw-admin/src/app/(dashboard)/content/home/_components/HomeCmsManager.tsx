@@ -56,7 +56,9 @@ export default function HomeCmsManager({ initial, products, posts, categories }:
       return;
     }
     const res = await saveHomeFeaturedAction(featured);
-    setNotice(res.ok ? 'Featured products saved.' : res.error.message);
+    if (!res.ok) { setNotice(res.error.message); return; }
+    const storefrontNote = res.data.storefront.ok ? '' : ` Storefront refresh failed: ${res.data.storefront.reason}`;
+    setNotice(`Featured products saved.${storefrontNote}`);
   }
 
   async function saveJournal() {
@@ -66,7 +68,9 @@ export default function HomeCmsManager({ initial, products, posts, categories }:
       return;
     }
     const res = await saveHomeJournalAction(journal);
-    setNotice(res.ok ? 'Journal card saved.' : res.error.message);
+    if (!res.ok) { setNotice(res.error.message); return; }
+    const storefrontNote = res.data.storefront.ok ? '' : ` Storefront refresh failed: ${res.data.storefront.reason}`;
+    setNotice(`Journal card saved.${storefrontNote}`);
   }
 
   return (

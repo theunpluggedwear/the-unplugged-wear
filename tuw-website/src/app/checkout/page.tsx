@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Header from '@storefront/components/layout/Header';
 import Footer from '@storefront/components/layout/Footer';
-import PaymentSimulationPanel from '@storefront/components/commerce/PaymentSimulationPanel';
+import { PaymentSimulationPanel } from '@storefront/components/commerce';
 import LivePaymentPanel from '@storefront/components/commerce/LivePaymentPanel';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
 import Listbox from '@storefront/components/ui/Listbox';
@@ -13,7 +13,8 @@ import { useStore } from '@storefront/mocks/store';
 import { useSiteSettings } from '@storefront/lib/site-settings';
 import { placeOrderAction } from '@/server/order-actions';
 import { previewGiftCardAction } from '@/server/gift-card-actions';
-import { createPaymentIntentAction, confirmPaymentAction, getPaymentConfigAction, getCheckoutStatusAction, getCheckoutQuoteAction } from '@/server/payment-actions';
+import { createPaymentIntentAction, confirmPaymentAction, getCheckoutStatusAction, getCheckoutQuoteAction } from '@/server/payment-actions';
+import { usePaymentConfig } from '@storefront/lib/payment-config';
 import { openRazorpayCheckout } from '@storefront/lib/razorpay-checkout';
 import { useSession } from '@storefront/lib/session';
 import { useAccount } from '@storefront/lib/account';
@@ -36,10 +37,14 @@ import {
   Tag,
 } from 'lucide-react';
 
+type CheckoutQuote = { payablePaise: number; totalPaise: number; discountPaise: number; giftCardPaise: number };
+
 export default function CheckoutPage() {
   const router = useRouter();
   const {
     cart,
+    bagReady,
+    bagError,
     cartSubtotal,
     shippingFee,
     freeShippingThreshold,
@@ -61,15 +66,13 @@ export default function CheckoutPage() {
   const [checkoutKey] = useState(() => crypto.randomUUID());
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
-  const [paymentConfig, setPaymentConfig] = useState<{ provider: string; available: boolean; live: boolean; testMode: boolean; keyId: string | null } | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    getPaymentConfigAction({})
-      .then((r) => { if (active) setPaymentConfig(r.ok ? r.data : { provider: 'mock', available: false, live: false, testMode: true, keyId: null }); })
-      .catch(() => { if (active) setPaymentConfig({ provider: 'mock', available: false, live: false, testMode: true, keyId: null }); });
-    return () => { active = false; };
-  }, []);
+  // Synchronous guard: state updates are not applied until the next render, so a
+  // double click in the same tick would otherwise open two Razorpay flows (WEB-004).
+  const placingRef = useRef(false);
+  // Read on the server in checkout/layout.tsx and streamed down as a plain
+  // value (CLN-NXT-006): no hydration effect, no "Loading payment options…"
+  // gap, and the live-gateway / COD-sandbox branches below stay unchanged.
+  const paymentConfig = usePaymentConfig();
 
   const { session } = useSession();
   // Saved addresses come from the real address book (TL-BE-03); guests have none.
@@ -91,32 +94,52 @@ export default function CheckoutPage() {
   const [state, setState] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [country, setCountry] = useState('India');
-  const [prefilledFor, setPrefilledFor] = useState('');
-
-  useEffect(() => {
-    if (!session || prefilledFor === session.email) return;
-    const [first = '', ...rest] = session.name.split(' ');
-    const saved = addresses.find((a) => a.isDefault) || addresses[0];
-    // Only fill empty fields, so nothing the shopper typed is overwritten.
-    const fill = (setter: React.Dispatch<React.SetStateAction<string>>, value?: string) =>
-      setter((current) => current || value || '');
-    fill(setFirstName, first);
-    fill(setLastName, rest.join(' '));
-    fill(setEmail, session.email);
-    if (saved) {
-      fill(setPhone, saved.phone);
-      fill(setAddressLine1, saved.addressLine1);
-      fill(setAddressLine2, saved.addressLine2);
-      fill(setCity, saved.city);
-      fill(setState, saved.state);
-      fill(setPostalCode, saved.postalCode);
-    }
-    setPrefilledFor(session.email);
-  }, [session, addresses, prefilledFor]);
-
   // Signed-in shoppers can switch between saved addresses (home, work, a friend's place...).
   const [chosenAddressId, setChosenAddressId] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Refs (not state) so a late address hydration or an account switch cannot be
+  // skipped by a stale one-shot flag, and no extra render is needed (WEB-005).
+  const prefillSignatureRef = useRef('');
+  const prefillEmailRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const sessionEmail = session?.email ?? '';
+    const saved = addresses.find((a) => a.isDefault) || addresses[0];
+    const signature = `${sessionEmail}::${saved?.id ?? 'none'}`;
+    if (signature === prefillSignatureRef.current) return;
+    prefillSignatureRef.current = signature;
+
+    // A different account (or sign-out) means the previous shopper's details
+    // must not bleed into this checkout attempt.
+    if (prefillEmailRef.current !== sessionEmail) {
+      prefillEmailRef.current = sessionEmail;
+      setFirstName(''); setLastName(''); setEmail(sessionEmail);
+      setPhone(''); setAddressLine1(''); setAddressLine2('');
+      setCity(''); setState(''); setPostalCode('');
+      setChosenAddressId(null);
+    }
+
+    const [first = '', ...rest] = (session?.name ?? '').split(' ');
+    setFirstName((current) => current || first);
+    setLastName((current) => current || rest.join(' '));
+    setEmail((current) => current || sessionEmail);
+
+    // Re-apply whenever the default address changes / arrives, so a late
+    // address hydration is never skipped and an account switch self-corrects.
+    if (saved) {
+      setPhone(saved.phone);
+      setAddressLine1(saved.addressLine1);
+      setAddressLine2(saved.addressLine2 ?? '');
+      setCity(saved.city);
+      setState(saved.state);
+      setPostalCode(saved.postalCode);
+      setChosenAddressId(saved.id);
+    }
+  }, [session, addresses]);
+
   const applySavedAddress = (saved: (typeof addresses)[number]) => {
+    setErrors({});
     const [first = '', ...rest] = saved.fullName.split(' ');
     setFirstName(first);
     setLastName(rest.join(' '));
@@ -141,16 +164,25 @@ export default function CheckoutPage() {
   const [giftCardMessage, setGiftCardMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const giftCardApplied = giftCard ? giftCard.appliedPaise / 100 : 0;
   const payableTotal = Math.max(0, total - giftCardApplied);
-  const [serverQuotePaise, setServerQuotePaise] = useState<number | null>(null);
-  const displayPayable = (serverQuotePaise ?? Math.round(payableTotal * 100)) / 100;
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [serverQuote, setServerQuote] = useState<CheckoutQuote | null>(null);
+  // While the quote is being recalculated, fall back to locally computed totals
+  // instead of leaving the previous attempt's stale payable amount on screen (WEB-007).
+  const displayPayable = (serverQuote?.payablePaise ?? Math.round(payableTotal * 100)) / 100;
+  // Prefer the server's recomputed gift-card cap so the summary line cannot
+  // disagree with what will actually be charged after cart/delivery changes (WEB-024).
+  const displayedGiftCard = serverQuote ? serverQuote.giftCardPaise / 100 : giftCardApplied;
 
   useEffect(() => {
     let active = true;
+    // Clear the previous quote immediately; a stale total must never linger
+    // while inputs are changing and the new quote is in flight (WEB-007).
+    setServerQuote(null);
     getCheckoutQuoteAction({
+      // The quote schema accepts card/upi only; both are priced identically
+      // (no COD fee), so this display quote is method-independent.
       checkoutKey, discountCode: promoCode || undefined, giftCardCode: giftCard?.code,
       speed: deliverySpeed, method: 'card',
-    }).then((r) => { if (active && r.ok) setServerQuotePaise(r.data.payablePaise); });
+    }).then((r) => { if (active && r.ok) setServerQuote(r.data); });
     return () => { active = false; };
   }, [checkoutKey, promoCode, giftCard?.code, deliverySpeed, cartSubtotal]);
 
@@ -183,6 +215,12 @@ export default function CheckoutPage() {
     }
   };
 
+  // Single removal path so the success message can never outlive the promo (WEB-006).
+  const removePromo = () => {
+    removePromoCode();
+    setPromoMessage(null);
+  };
+
   const handleApplyGiftCard = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!giftCardInput.trim()) return;
@@ -206,18 +244,22 @@ export default function CheckoutPage() {
   };
 
   const handleProceedToDetails = () => {
+    if (placing) return;
     if (cart.length > 0) setStep(2);
   };
 
   const handleProceedToPayment = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (placing) return;
     if (validateDetails()) {
       setStep(3);
     }
   };
 
   const handlePaymentSuccess = async (paymentMethod: 'UPI' | 'Card' | 'COD (Demo)') => {
-    if (placing) return;
+    // Ref guard is synchronous so two same-tick clicks cannot both proceed (WEB-004).
+    if (placing || placingRef.current) return;
+    placingRef.current = true;
     setPlacing(true);
     setPlaceError(null);
     try {
@@ -255,13 +297,13 @@ export default function CheckoutPage() {
         if (!confirmed.ok) {
           let status = null;
           for (let i = 0; i < 8 && !status; i += 1) {
-            const polled = await getCheckoutStatusAction({ orderNumber: intent.data.orderNumber });
+            const polled = await getCheckoutStatusAction({ orderNumber: intent.data.orderNumber, receipt: intent.data.receipt });
             if (polled.ok && polled.data.paymentStatus === 'paid') status = polled.data;
             else await new Promise((r) => setTimeout(r, 1000));
           }
           if (!status) throw new Error(confirmed.error.message);
         }
-        removePromoCode();
+        removePromo();
         setGiftCard(null);
         setGiftCardMessage(null);
         router.push(`/checkout/success?order=${encodeURIComponent(intent.data.orderNumber)}&t=${encodeURIComponent(intent.data.receipt)}`);
@@ -274,7 +316,7 @@ export default function CheckoutPage() {
         setPlaceError(result.error.details[0]?.message && result.error.code === 'VALIDATION_FAILED' ? `${result.error.message} ${result.error.details[0].message}` : result.error.message);
         return;
       }
-      removePromoCode();
+      removePromo();
       setGiftCard(null);
       setGiftCardMessage(null);
       router.push(`/checkout/success?order=${encodeURIComponent(result.data.orderNumber)}&t=${encodeURIComponent(result.data.receipt)}`);
@@ -282,9 +324,45 @@ export default function CheckoutPage() {
     } catch (error) {
       setPlaceError(error instanceof Error ? error.message : 'Payment could not be completed.');
     } finally {
+      placingRef.current = false;
       setPlacing(false);
     }
   };
+
+  // Loading/error/empty are distinct states: a failed bag read must not look empty.
+  if (!bagReady && cart.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col bg-store-canvas">
+        <Header />
+        <main className="flex-1 max-w-7xl mx-auto px-4 py-24 text-center" role="status">
+          <p className="text-sm text-store-muted">Loading your bag…</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (bagError && cart.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col bg-store-canvas">
+        <Header />
+        <main className="flex-1 max-w-7xl mx-auto px-4 py-24 text-center" role="alert">
+          <h1 className="text-2xl font-bold font-heading text-store-charcoal">We couldn’t load your bag</h1>
+          <p className="text-sm text-store-muted mt-2">{bagError}</p>
+          <div className="mt-6">
+            <button
+              type="button"
+              onClick={() => void refreshBag()}
+              className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-store-action-primary text-white text-xs font-semibold uppercase tracking-wider hover:bg-store-action-hover transition-colors shadow-sm"
+            >
+              Try again
+            </button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   // Empty cart fallback
   if (cart.length === 0) {
@@ -346,7 +424,7 @@ export default function CheckoutPage() {
             {/* Step 1: Cart */}
             <button
               type="button"
-              onClick={() => setStep(1)}
+              onClick={() => { if (placing) return; setStep(1); }}
               className="flex items-center cursor-pointer group"
             >
               <span
@@ -378,6 +456,7 @@ export default function CheckoutPage() {
             <button
               type="button"
               onClick={() => {
+                if (placing) return;
                 if (cart.length > 0) setStep(2);
               }}
               className="flex items-center cursor-pointer group"
@@ -411,6 +490,10 @@ export default function CheckoutPage() {
             <button
               type="button"
               onClick={() => {
+                if (placing) return;
+                // Payment may only be entered from the Details step; from Cart
+                // the fields are unmounted, so validating them is a no-op (WEB-001).
+                if (step !== 2) return;
                 if (validateDetails()) setStep(3);
               }}
               className="flex items-center cursor-pointer group"
@@ -901,7 +984,7 @@ export default function CheckoutPage() {
                 <div className="pt-4 flex items-center justify-between border-t border-store-card-border">
                   <button
                     type="button"
-                    onClick={() => setStep(1)}
+                    onClick={() => { if (placing) return; setStep(1); }}
                     className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider font-semibold text-store-muted hover:text-store-charcoal transition-colors cursor-pointer"
                   >
                     <ArrowLeft size={14} />
@@ -944,12 +1027,17 @@ export default function CheckoutPage() {
                     totalAmount={displayPayable}
                     placing={placing}
                     onPay={handlePaymentSuccess}
-                    onCancel={() => setStep(2)}
+                    onCancel={() => { if (placing) return; setStep(2); }}
                   />
                 ) : (
-                  <p role="status" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                    Online payments are unavailable. Please try again later or contact support.
-                  </p>
+                  // No live gateway: still offer a way to place a COD/demo order
+                  // instead of a dead-end error (WEB-002).
+                  <PaymentSimulationPanel
+                    totalAmount={displayPayable}
+                    onPaymentSuccess={handlePaymentSuccess}
+                    onPaymentFail={(reason) => setPlaceError(reason)}
+                    onCancel={() => { if (placing) return; setStep(2); }}
+                  />
                 )}
               </div>
             )}
@@ -984,7 +1072,7 @@ export default function CheckoutPage() {
                 {giftCard && (
                   <div className="flex justify-between text-emerald-300 font-medium">
                     <span>Gift card (••••{giftCard.last4})</span>
-                    <span>-{formatRupees(giftCardApplied)}</span>
+                    <span>-{formatRupees(displayedGiftCard)}</span>
                   </div>
                 )}
 
@@ -1092,7 +1180,7 @@ export default function CheckoutPage() {
                     <span>Code {promoCode} applied</span>
                     <button
                       type="button"
-                      onClick={removePromoCode}
+                      onClick={removePromo}
                       className="underline text-white/70 hover:text-white transition-colors cursor-pointer"
                     >
                       Remove

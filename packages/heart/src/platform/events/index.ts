@@ -7,6 +7,15 @@
 //   declare module '@tuw/heart/platform/events' {
 //     interface HeartEvents { 'order.paid': { orderId: string } }
 //   }
+//
+// Why the emits are kept even though nothing is subscribed in production
+// (CLN-BE-012): modules emit 'order.placed', 'order.cancelled',
+// 'return.requested', 'return.decided' and 'auth.user_registered' through this
+// typed bus. Today the only subscriber is the unit test ('platform.ping'), so
+// an emit does no work in production. The bus and the declaration-merged event
+// types are the agreed extension point for the integrations phase (TL-INT-*):
+// a future email/analytics/job subscriber registers once here without editing
+// any emitter. Durable work still belongs in a row + job, never in a subscriber.
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface HeartEvents {

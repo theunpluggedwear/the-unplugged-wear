@@ -31,8 +31,9 @@ export default function JournalManager({ initial, meta }: { initial: Post[]; met
         tagIds: form.tagIds.split(',').map((s) => s.trim()).filter(Boolean),
       });
       if (!res.ok) { setNotice(res.error.message); return; }
-      setPosts((p) => [res.data, ...p.filter((x) => x.id !== res.data.id)]);
-      setNotice(`Saved ${form.slug}.`);
+      setPosts((p) => [res.data.post, ...p.filter((x) => x.id !== res.data.post.id)]);
+      const storefrontNote = res.data.storefront.ok ? '' : ` Storefront refresh failed: ${res.data.storefront.reason}`;
+      setNotice(`Saved ${form.slug}.${storefrontNote}`);
     } catch {
       setNotice('Content must be valid JSON.');
     }

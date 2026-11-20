@@ -61,6 +61,8 @@ export default function ShipmentsView({ initial, perms }: { initial: ListResult;
   const [note, setNote] = useState('');
 
   const request = useRef(0);
+  const openingInFlight = useRef(false);
+  const openRequest = useRef(0);
   const load = async (over: Partial<{ status: ShipmentStatusValue | 'all'; q: string; page: number; perPage: number }> = {}) => {
     const mine = ++request.current;
     setLoading(true);
@@ -80,17 +82,27 @@ export default function ShipmentsView({ initial, perms }: { initial: ListResult;
   useEffect(() => { setPage(1); }, [status, searchTerm]);
 
   const openParcel = async (row: AdminShipmentRow) => {
+    if (openingInFlight.current) return;
+    openingInFlight.current = true;
+    const mine = ++openRequest.current;
     setOpenId(row.id);
     setStatusNote('');
     setLocation('');
     setDetail(null);
-    const result = await getShipmentAction({ shipmentId: row.id });
-    setOpenId(null);
-    if (result.ok) {
-      setDetail(result.data);
-      setNextStatus(result.data.row.status === 'delivered' ? 'delivered' : 'in_transit');
-    } else {
-      showToast({ type: 'warning', title: 'Could Not Open The Parcel', description: result.error.message });
+    try {
+      const result = await getShipmentAction({ shipmentId: row.id });
+      if (mine !== openRequest.current) return;
+      if (result.ok) {
+        setDetail(result.data);
+        setNextStatus(result.data.row.status === 'delivered' ? 'delivered' : 'in_transit');
+      } else {
+        showToast({ type: 'warning', title: 'Could Not Open The Parcel', description: result.error.message });
+      }
+    } catch (error) {
+      showToast({ type: 'warning', title: 'Could Not Open The Parcel', description: error instanceof Error ? error.message : 'Unexpected error.' });
+    } finally {
+      openingInFlight.current = false;
+      if (mine === openRequest.current) setOpenId(null);
     }
   };
 
@@ -105,15 +117,20 @@ export default function ShipmentsView({ initial, perms }: { initial: ListResult;
   const move = async () => {
     if (!detail) return;
     setBusy(true);
-    const result = await setShipmentStatusAction({
-      shipmentId: detail.row.id, status: nextStatus,
-      location: location.trim() || undefined, note: statusNote.trim() || undefined,
-    });
-    setBusy(false);
-    if (!result.ok) { showToast({ type: 'warning', title: 'Could Not Update The Parcel', description: result.error.message }); return; }
-    showToast({ type: 'success', title: 'Parcel Updated', description: `${detail.row.orderNumber} is now ${STATUS_LABEL[nextStatus].toLowerCase()}.` });
-    setStatusNote(''); setLocation('');
-    await refresh(detail.row.id);
+    try {
+      const result = await setShipmentStatusAction({
+        shipmentId: detail.row.id, status: nextStatus,
+        location: location.trim() || undefined, note: statusNote.trim() || undefined,
+      });
+      if (!result.ok) { showToast({ type: 'warning', title: 'Could Not Update The Parcel', description: result.error.message }); return; }
+      showToast({ type: 'success', title: 'Parcel Updated', description: `${detail.row.orderNumber} is now ${STATUS_LABEL[nextStatus].toLowerCase()}.` });
+      setStatusNote(''); setLocation('');
+      await refresh(detail.row.id);
+    } catch (error) {
+      showToast({ type: 'warning', title: 'Could Not Update The Parcel', description: error instanceof Error ? error.message : 'Unexpected error.' });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const addTracking = async () => {
@@ -121,17 +138,22 @@ export default function ShipmentsView({ initial, perms }: { initial: ListResult;
     if (carrier.trim().length < 2) { showToast({ type: 'warning', title: 'Courier Required', description: 'Name the courier that took the parcel.' }); return; }
     if (trackingNumber.trim().length < 3) { showToast({ type: 'warning', title: 'Tracking Number Required', description: 'The customer needs something to track.' }); return; }
     setBusy(true);
-    const result = await addTrackingAction({
-      orderNumber: orderNumber.trim().toUpperCase(), carrier: carrier.trim(), trackingNumber: trackingNumber.trim(),
-      shippedAt: new Date(`${shippedAt}T12:00:00+05:30`).toISOString(),
-      estimatedDeliveryAt: eta || undefined, note: note.trim() || undefined,
-    });
-    setBusy(false);
-    if (!result.ok) { showToast({ type: 'warning', title: 'Tracking Not Added', description: result.error.message }); return; }
-    showToast({ type: 'success', title: 'Parcel Dispatched', description: `${result.data.orderNumber} · ${carrier.trim()} ${trackingNumber.trim()}` });
-    setTrackingOpen(false);
-    setOrderNumber(''); setCarrier(''); setTrackingNumber(''); setEta(''); setNote('');
-    await load();
+    try {
+      const result = await addTrackingAction({
+        orderNumber: orderNumber.trim().toUpperCase(), carrier: carrier.trim(), trackingNumber: trackingNumber.trim(),
+        shippedAt: new Date(`${shippedAt}T12:00:00+05:30`).toISOString(),
+        estimatedDeliveryAt: eta || undefined, note: note.trim() || undefined,
+      });
+      if (!result.ok) { showToast({ type: 'warning', title: 'Tracking Not Added', description: result.error.message }); return; }
+      showToast({ type: 'success', title: 'Parcel Dispatched', description: `${result.data.orderNumber} · ${carrier.trim()} ${trackingNumber.trim()}` });
+      setTrackingOpen(false);
+      setOrderNumber(''); setCarrier(''); setTrackingNumber(''); setEta(''); setNote('');
+      await load();
+    } catch (error) {
+      showToast({ type: 'warning', title: 'Tracking Not Added', description: error instanceof Error ? error.message : 'Unexpected error.' });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const totalPages = Math.max(1, Math.ceil(list.total / perPage));

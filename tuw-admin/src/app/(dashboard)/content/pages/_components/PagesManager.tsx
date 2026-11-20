@@ -18,8 +18,9 @@ export default function PagesManager({ initial }: { initial: Page[] }) {
       const parsed = JSON.parse(blocks);
       const res = await savePageAction({ slug, title, blocks: parsed, isActive: true });
       if (!res.ok) { setNotice(res.error.message); return; }
-      setPages((p) => [...p.filter((x) => x.slug !== slug), res.data]);
-      setNotice(`Saved ${slug}.`);
+      setPages((p) => [...p.filter((x) => x.slug !== slug), res.data.page]);
+      const storefrontNote = res.data.storefront.ok ? '' : ` Storefront refresh failed: ${res.data.storefront.reason}`;
+      setNotice(`Saved ${slug}.${storefrontNote}`);
     } catch {
       setNotice('Blocks must be valid JSON.');
     }

@@ -787,7 +787,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     category: 'Returns & Care',
     question: 'What is your returns and exchange policy?',
     answer:
-      'We accept hassle-free returns and exchanges within 14 days of delivery for all unworn garments in original condition with tags attached. You can submit an RMA request directly from your Account Dashboard with free doorstep pickup.',
+      'We accept hassle-free returns and exchanges within 7 days of delivery for all unworn garments in original condition with tags attached. You can submit an RMA request directly from your Account Dashboard with free doorstep pickup.',
   },
   {
     id: 'faq-5',

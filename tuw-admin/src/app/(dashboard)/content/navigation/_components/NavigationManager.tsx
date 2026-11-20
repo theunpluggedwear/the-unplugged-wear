@@ -12,7 +12,9 @@ export default function NavigationManager({ initial }: { initial: Record<string,
     try {
       const navbar = JSON.parse(text);
       const res = await saveNavigationAction({ navbar });
-      setNotice(res.ok ? 'Navigation saved.' : res.error.message);
+      if (!res.ok) { setNotice(res.error.message); return; }
+      const storefrontNote = res.data.storefront.ok ? '' : ` Storefront refresh failed: ${res.data.storefront.reason}`;
+      setNotice(`Navigation saved.${storefrontNote}`);
     } catch {
       setNotice('Navigation must be valid JSON.');
     }

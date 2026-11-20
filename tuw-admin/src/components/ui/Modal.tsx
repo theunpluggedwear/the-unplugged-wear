@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -23,6 +24,9 @@ export default function Modal({
   maxWidth = '560px',
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  // Shared, ref-counted body scroll lock: overlapping overlays keep scrolling
+  // locked until the last one closes, and the prior overflow is restored.
+  useBodyScrollLock(isOpen);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -31,11 +35,9 @@ export default function Modal({
       }
     };
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
     }
     return () => {
-      document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);

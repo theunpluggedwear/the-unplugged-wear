@@ -189,7 +189,7 @@ function TrackOrderContent() {
           </div>
         </div>
       ) : searchedRef && error ? (
-        <div role="alert" className="text-center py-16 bg-white rounded-3xl border border-[#E2DDCF] p-8 shadow-xs">
+        <div role="alert" className="text-center py-16 bg-white rounded-3xl border border-[#E2DDCF] px-8 shadow-xs">
           <div className="w-14 h-14 rounded-full bg-[#FEF2F2] text-[#EF4444] flex items-center justify-center mx-auto mb-4">
             <AlertCircle size={28} />
           </div>

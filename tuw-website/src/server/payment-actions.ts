@@ -5,8 +5,7 @@ import * as cart from '@tuw/heart/modules/cart';
 import * as orders from '@tuw/heart/modules/orders';
 import * as payments from '@tuw/heart/modules/payments';
 import { confirmPaidOrder } from '@tuw/heart/modules/orders';
-import { activeProviderSlug } from '@tuw/heart/integrations/registry';
-import { paymentAdapters } from '@tuw/heart/integrations/payments';
+import { getPaymentGateway, paymentAdapters, type PaymentGateway } from '@tuw/heart/integrations/payments';
 import { verifyRazorpayPaymentSignature } from '@tuw/heart/integrations/webhooks';
 import { guards } from './session';
 
@@ -19,14 +18,20 @@ const quoteInput = z.object({
 });
 
 export const getPaymentConfigAction = guards.action({ access: 'public', input: z.object({}) }, async () => {
-  const slug = (process.env.PAYMENT_PROVIDER || '').trim() || await activeProviderSlug('payment');
-  const adapter = paymentAdapters.find((a) => a.slug === slug);
-  if (!adapter || !adapter.clientConfig?.()) {
-    return { provider: slug ?? 'unavailable', available: false, live: false, testMode: true, keyId: null as string | null };
+  // Single source of truth for gateway resolution (registry + env override).
+  const envSlug = (process.env.PAYMENT_PROVIDER || '').trim();
+  let gateway: PaymentGateway | null = null;
+  try {
+    gateway = await getPaymentGateway();
+  } catch {
+    // No usable gateway: report unavailable instead of failing the action.
   }
-  const cfg = adapter.clientConfig();
+  if (!gateway?.clientConfig?.()) {
+    return { provider: (gateway?.slug ?? envSlug) || 'unavailable', available: false, live: false, testMode: true, keyId: null as string | null };
+  }
+  const cfg = gateway.clientConfig();
   return {
-    provider: adapter.slug,
+    provider: gateway.slug,
     available: true,
     live: (process.env.RAZORPAY_KEY_ID ?? '').startsWith('rzp_live_'),
     testMode: (process.env.RAZORPAY_KEY_ID ?? '').startsWith('rzp_test_'),
@@ -79,5 +84,5 @@ export const confirmPaymentAction = guards.action({
 
 export const getCheckoutStatusAction = guards.action({
   access: 'guestOrCustomer',
-  input: z.object({ orderNumber: z.string().trim().max(30) }),
-}, ({ input, ctx }) => orders.getOrderForViewer(input.orderNumber, { userId: ctx.user?.id ?? null }));
+  input: z.object({ orderNumber: z.string().trim().max(30), receipt: z.string().optional() }),
+}, ({ input, ctx }) => orders.getOrderForViewer(input.orderNumber, { userId: ctx.user?.id ?? null, receipt: input.receipt }));

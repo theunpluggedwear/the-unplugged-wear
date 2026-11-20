@@ -25,7 +25,7 @@ type Topic = (typeof TOPICS)[number]['value'];
 // Self-serve answers shown before the form, so most questions never need a message.
 const QUICK_HELP = [
   { href: '/track-order', label: 'Track an order', body: 'See where your order is' },
-  { href: '/policies/returns', label: 'Returns', body: '14 days on unworn clothing' },
+  { href: '/policies/returns', label: 'Returns', body: '7 days on unworn clothing' },
   { href: '/size-guide', label: 'Size guide', body: 'Measurements for every fit' },
   { href: '/faq', label: 'FAQ', body: 'Printing, delivery and more' },
 ];

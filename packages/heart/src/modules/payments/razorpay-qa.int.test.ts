@@ -444,22 +444,30 @@ test('currency mismatch never confirms an order', { skip }, async () => {
 });
 
 test('QA test SKU is never submitted to fulfilment, even when auto-submit is on', { skip }, async () => {
-  const p = await product(5, 100, {
-    sku: 'TUW-TEST-PRODUCT-49F1AA',
-    variants: [{ color: 'Black', size: 'M', price: 100, stock: 5, sku: 'TUW-TEST-PRODUCT-49F1AA-BLACK-M' }],
-  });
-  const g = guest();
-  await add(g, p, 1);
-  const f = form();
-  const made = await orders.createPendingOrder(g, f);
-  const providerOrderId = `mock_order_test_${f.checkoutKey.slice(0, 8)}`;
-  await payments.attachProviderOrder({ intentId: made.intentId, provider: 'mock', providerOrderId });
-  await orders.confirmPaidOrder({ providerOrderId, providerPaymentId: `pay_test_${f.checkoutKey.slice(0, 8)}`, amountPaise: made.amountPaise, currency: 'INR' });
+  // The production guard is env-driven; the QA fixture supplies the SKU here.
+  const previousSku = process.env.CHECKOUT_TEST_SKU;
+  process.env.CHECKOUT_TEST_SKU = 'TUW-TEST-PRODUCT-49F1AA';
+  try {
+    const p = await product(5, 100, {
+      sku: 'TUW-TEST-PRODUCT-49F1AA',
+      variants: [{ color: 'Black', size: 'M', price: 100, stock: 5, sku: 'TUW-TEST-PRODUCT-49F1AA-BLACK-M' }],
+    });
+    const g = guest();
+    await add(g, p, 1);
+    const f = form();
+    const made = await orders.createPendingOrder(g, f);
+    const providerOrderId = `mock_order_test_${f.checkoutKey.slice(0, 8)}`;
+    await payments.attachProviderOrder({ intentId: made.intentId, provider: 'mock', providerOrderId });
+    await orders.confirmPaidOrder({ providerOrderId, providerPaymentId: `pay_test_${f.checkoutKey.slice(0, 8)}`, amountPaise: made.amountPaise, currency: 'INR' });
 
-  const outcome = await fulfillment.sendPlanned(made.orderId);
-  assert.deepEqual(outcome.groups, []);
-  assert.match(outcome.skipped[0]!.reason, /Test product/);
-  assert.equal(await count(sql`SELECT count(*)::int AS n FROM fulfillment_orders WHERE order_id = ${made.orderId}`), 0);
+    const outcome = await fulfillment.sendPlanned(made.orderId);
+    assert.deepEqual(outcome.groups, []);
+    assert.match(outcome.skipped[0]!.reason, /Test product/);
+    assert.equal(await count(sql`SELECT count(*)::int AS n FROM fulfillment_orders WHERE order_id = ${made.orderId}`), 0);
+  } finally {
+    if (previousSku === undefined) delete process.env.CHECKOUT_TEST_SKU;
+    else process.env.CHECKOUT_TEST_SKU = previousSku;
+  }
 });
 
 test('DB invariants hold across the whole QA suite', { skip }, async () => {

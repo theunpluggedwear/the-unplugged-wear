@@ -56,7 +56,7 @@ export default function AccountOrdersPage() {
         {!loaded ? (
           <p role="status" className="py-16 text-center text-sm text-stone-500">Loading your orders…</p>
         ) : orders.length === 0 ? (
-          <div className="py-20 text-center bg-white rounded-2xl border border-stone-200 mt-8 p-8">
+          <div className="py-20 text-center bg-white rounded-2xl border border-stone-200 mt-8 px-8">
             <div className="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 mx-auto mb-4">
               <ShoppingBag size={28} />
             </div>
