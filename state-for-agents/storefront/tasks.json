@@ -19,19 +19,12 @@
   },
   "session": {
     "branch": "urvil-ui",
-    "tip": "c375057",
-    "unpushed": [
-      "d3eb96f",
-      "fc8d6e7",
-      "67fe9ff",
-      "5b25052",
-      "fc45619",
-      "c375057"
-    ],
+    "tip": "78a3e53",
+    "unpushed": [],
     "next_up": "TL-WEB-BE-31",
     "pending_verifications": [],
-    "last_updated": "2026-11-16",
-    "updated_by": "agent (Buffy)"
+    "last_updated": "2026-11-20",
+    "updated_by": "agent"
   },
   "workflow": {
     "how_to_close_a_task": "gates green → status done + log commit + design_match + verified + finished → recompute summary → refresh session → commit code + tracker together",

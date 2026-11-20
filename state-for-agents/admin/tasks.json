@@ -15,15 +15,8 @@
   },
   "session": {
     "branch": "urvil-ui",
-    "tip": "c375057",
-    "unpushed": [
-      "d3eb96f",
-      "fc8d6e7",
-      "67fe9ff",
-      "5b25052",
-      "fc45619",
-      "c375057"
-    ],
+    "tip": "78a3e53",
+    "unpushed": [],
     "next_up": "TL-INT-RAZORPAY-live-test",
     "pending_verifications": [
       "admin journal editor + list full keyboard/focus/Reset Demo pass at 360/768/1024/1440 (CDP route-load check passed; interactive pass pending)",
@@ -59,8 +52,8 @@
       "PEDIT Clothing Specs cards (c86e718): Compact one card per row; Expanded/Full pairs Display options+Clothing specs and Size chart+Monogram at 1024/1440; Display options switch hides/shows the monogram card; independent collapse survives tab switches; size-chart table scrolls inside a half-width card; monogram pair collapses to one column at 360; chart add/remove + in-use guard feedback; Reset Demo; 360/768/1024/1440 - browser pass pending",
       "SQL dry-run (f9de18b + 04f31ec): psql is not installed; validate 002 + 010 against a real Postgres instance before the first migration run. The static schema guard (28eccec + 04f31ec) checks inventory/FK order/retired names/semantic columns but does not replace a real parser."
     ],
-    "last_updated": "2026-11-16",
-    "updated_by": "agent (Buffy)"
+    "last_updated": "2026-11-20",
+    "updated_by": "agent"
   },
   "tasks": [
     {

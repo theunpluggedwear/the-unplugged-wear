@@ -1,0 +1,171 @@
+{
+  "project": "Codebase Cleanup, State-Machine Audit and Reliability Improvements",
+  "tracker_version": 1,
+  "source_of_truth": {
+    "code": "tuw-website/src, tuw-admin/src, packages/heart/src",
+    "tokens": "tuw-website/src/app/globals.css, tuw-admin/src/app/globals.css",
+    "skill_index": "state-for-agents/admin/AGENTS.md, state-for-agents/storefront/AGENTS.md, state-for-agents/backend/AGENTS.md",
+    "reference": "urvil-ui HEAD 78a3e53"
+  },
+  "summary": {
+    "total": 10,
+    "done": 0,
+    "in_progress": 1,
+    "backlog": 9
+  },
+  "session": {
+    "branch": "urvil-ui",
+    "tip": "78a3e53",
+    "unpushed": [],
+    "next_up": "CLN-001",
+    "pending_verifications": [],
+    "last_updated": "2026-11-20",
+    "updated_by": "agent"
+  },
+  "workflow": {
+    "how_to_close_a_task": "backlog -> in_progress -> done; done requires log commit, verified:true, finished date; summary counts recomputed on every edit.",
+    "validation": "JSON parses; ids unique; parent ids exist; summary counts match; done implies log + verified."
+  },
+  "tasks": [
+    {
+      "id": "CLN-001",
+      "title": "Establish baseline: git state, typecheck, tests, build and known failures",
+      "status": "in_progress",
+      "owner": "agent",
+      "started": "2026-11-20",
+      "finished": null,
+      "log": "",
+      "design_match": null,
+      "key_decisions": [],
+      "verified": false,
+      "pushed": false,
+      "follow_ups": []
+    },
+    {
+      "id": "CLN-002",
+      "title": "Audit implicit state machines in high-hook-density components and pages",
+      "status": "backlog",
+      "owner": "agent",
+      "started": null,
+      "finished": null,
+      "log": "",
+      "design_match": null,
+      "key_decisions": [],
+      "verified": false,
+      "pushed": false,
+      "follow_ups": []
+    },
+    {
+      "id": "CLN-003",
+      "title": "Verify and remove genuinely unused components, exports, hooks, flags and endpoints",
+      "status": "backlog",
+      "owner": "agent",
+      "started": null,
+      "finished": null,
+      "log": "",
+      "design_match": null,
+      "key_decisions": [],
+      "verified": false,
+      "pushed": false,
+      "follow_ups": []
+    },
+    {
+      "id": "CLN-004",
+      "title": "Simplify confirmed over-complex logic without changing behaviour",
+      "status": "backlog",
+      "owner": "agent",
+      "started": null,
+      "finished": null,
+      "log": "",
+      "design_match": null,
+      "key_decisions": [],
+      "verified": false,
+      "pushed": false,
+      "follow_ups": []
+    },
+    {
+      "id": "CLN-005",
+      "title": "Audit Next.js Server/Client boundaries, data fetching, effects and error handling",
+      "status": "backlog",
+      "owner": "agent",
+      "started": null,
+      "finished": null,
+      "log": "",
+      "design_match": null,
+      "key_decisions": [],
+      "verified": false,
+      "pushed": false,
+      "follow_ups": []
+    },
+    {
+      "id": "CLN-006",
+      "title": "Audit Tailwind/CSS for dead or conflicting styles with zero visual change",
+      "status": "backlog",
+      "owner": "agent",
+      "started": null,
+      "finished": null,
+      "log": "",
+      "design_match": null,
+      "key_decisions": [],
+      "verified": false,
+      "pushed": false,
+      "follow_ups": []
+    },
+    {
+      "id": "CLN-007",
+      "title": "Fix confirmed reliability bugs: races, leaks, stale state, unsafe handling",
+      "status": "backlog",
+      "owner": "agent",
+      "started": null,
+      "finished": null,
+      "log": "",
+      "design_match": null,
+      "key_decisions": [],
+      "verified": false,
+      "pushed": false,
+      "follow_ups": []
+    },
+    {
+      "id": "CLN-008",
+      "title": "TypeScript and code-quality cleanup: any, assertions, disables, leftovers",
+      "status": "backlog",
+      "owner": "agent",
+      "started": null,
+      "finished": null,
+      "log": "",
+      "design_match": null,
+      "key_decisions": [],
+      "verified": false,
+      "pushed": false,
+      "follow_ups": []
+    },
+    {
+      "id": "CLN-009",
+      "title": "Browser verification of affected routes and interactions at required viewports",
+      "status": "backlog",
+      "owner": "agent",
+      "started": null,
+      "finished": null,
+      "log": "",
+      "design_match": null,
+      "key_decisions": [],
+      "verified": false,
+      "pushed": false,
+      "follow_ups": []
+    },
+    {
+      "id": "CLN-010",
+      "title": "Final gates: typecheck, tests, build, diff review and tracker reconciliation",
+      "status": "backlog",
+      "owner": "agent",
+      "started": null,
+      "finished": null,
+      "log": "",
+      "design_match": null,
+      "key_decisions": [],
+      "verified": false,
+      "pushed": false,
+      "follow_ups": []
+    }
+  ]
+}
