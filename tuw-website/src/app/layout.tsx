@@ -9,6 +9,7 @@ import { getStorefrontSettings } from '@/server/settings';
 import { getCatalog } from '@/server/catalog';
 import { getNavigation } from '@/server/nav';
 import BrandIntro from '@storefront/components/layout/BrandIntro';
+import ScrollReveal from '@storefront/components/layout/ScrollReveal';
 import { INTRO_SEEN_KEY } from '@storefront/lib/intro';
 import type { Product } from '@storefront/lib/types';
 
@@ -122,6 +123,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </Suspense>
           {children}
         </Providers>
+        <ScrollReveal />
       </body>
     </html>
   );
