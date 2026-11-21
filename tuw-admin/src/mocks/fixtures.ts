@@ -1,3 +1,5 @@
+import type { OrderStatus } from '@tuw/heart/modules/orders';
+
 export type ProductGender = 'Female' | 'Male' | 'Unisex' | 'Kids' | 'Boy' | 'Girl';
 
 /** One preserved workbook row. Mirrors product_source_rows. */
@@ -158,7 +160,6 @@ export interface OrderItemLine {
 }
 
 export type PaymentStatus = 'paid' | 'pending' | 'failed' | 'refunded';
-export type FulfillmentStatus = 'queued' | 'printing' | 'shipped' | 'delivered' | 'submission_failed';
 
 export interface OrderItem {
   id: string;
@@ -174,7 +175,8 @@ export interface OrderItem {
   paidAmount: number;
   refundedAmount: number;
   paymentStatus: PaymentStatus;
-  fulfillmentStatus: FulfillmentStatus;
+  // Field name retained for fixture compatibility; values use the SQL order-status vocabulary.
+  fulfillmentStatus: OrderStatus;
   paymentMethod: string;
   carrier?: string;
   trackingNumber?: string;
@@ -532,7 +534,7 @@ export const initialOrders: OrderItem[] = [
     timeline: [
       { title: 'Order Placed', time: '16 Apr, 14:32', note: 'Customer completed checkout via Visa' },
       { title: 'Payment Captured', time: '16 Apr, 14:33', note: 'Stripe webhook verified settlement' },
-      { title: 'Fulfillment Queued', time: '16 Apr, 14:40', note: 'Submitted to Qikink, awaiting print' },
+      { title: 'Fulfilment confirmed', time: '16 Apr, 14:40', note: 'Submitted to Qikink, awaiting production' },
       { title: 'Dispatched via DHL', time: '16 Apr, 16:10', note: 'Tracking # DHL-489102834 generated' },
     ],
   },
@@ -552,12 +554,12 @@ export const initialOrders: OrderItem[] = [
     paidAmount: 127.0,
     refundedAmount: 0.0,
     paymentStatus: 'paid',
-    fulfillmentStatus: 'printing',
+    fulfillmentStatus: 'processing',
     paymentMethod: 'Apple Pay (Mastercard)',
     date: '16 Apr 2026, 14:15',
     timeline: [
       { title: 'Order Placed', time: '16 Apr, 14:15', note: 'Apple Pay authorization passed' },
-      { title: 'Sent to Floor', time: '16 Apr, 14:25', note: 'Qikink station printing garment' },
+      { title: 'Sent to Floor', time: '16 Apr, 14:25', note: 'Qikink station processing garment' },
     ],
   },
   {
@@ -601,7 +603,7 @@ export const initialOrders: OrderItem[] = [
     paidAmount: 62.0,
     refundedAmount: 0.0,
     paymentStatus: 'paid',
-    fulfillmentStatus: 'submission_failed',
+    fulfillmentStatus: 'failed',
     paymentMethod: 'Credit Card (Visa)',
     date: '16 Apr 2026, 13:12',
     timeline: [
@@ -624,7 +626,7 @@ export const initialOrders: OrderItem[] = [
     paidAmount: 0.0,
     refundedAmount: 0.0,
     paymentStatus: 'pending',
-    fulfillmentStatus: 'queued',
+    fulfillmentStatus: 'confirmed',
     paymentMethod: 'Bank Transfer (Awaiting confirmation)',
     date: '16 Apr 2026, 12:55',
     timeline: [
@@ -647,7 +649,7 @@ export const initialOrders: OrderItem[] = [
     paidAmount: 147.0,
     refundedAmount: 147.0,
     paymentStatus: 'refunded',
-    fulfillmentStatus: 'queued',
+    fulfillmentStatus: 'confirmed',
     paymentMethod: 'Credit Card (Visa)',
     date: '16 Apr 2026, 12:20',
     timeline: [
@@ -670,7 +672,7 @@ export const initialOrders: OrderItem[] = [
     paidAmount: 0.0,
     refundedAmount: 0.0,
     paymentStatus: 'failed',
-    fulfillmentStatus: 'queued',
+    fulfillmentStatus: 'confirmed',
     paymentMethod: 'Credit Card (Declined: Insufficient Funds)',
     date: '16 Apr 2026, 11:45',
     timeline: [
@@ -744,7 +746,7 @@ export const initialOrders: OrderItem[] = [
     paidAmount: 50.0,
     refundedAmount: 0.0,
     paymentStatus: 'paid',
-    fulfillmentStatus: 'queued',
+    fulfillmentStatus: 'confirmed',
     paymentMethod: 'Credit Card (Visa)',
     date: '16 Apr 2026, 09:50',
     timeline: [
@@ -767,11 +769,11 @@ export const initialOrders: OrderItem[] = [
     paidAmount: 106.0,
     refundedAmount: 0.0,
     paymentStatus: 'paid',
-    fulfillmentStatus: 'printing',
+    fulfillmentStatus: 'processing',
     paymentMethod: 'Credit Card (Mastercard)',
     date: '15 Apr 2026, 19:20',
     timeline: [
-      { title: 'Printing garment', time: '16 Apr, 08:30', note: 'Batch run 42' },
+      { title: 'Producing garment', time: '16 Apr, 08:30', note: 'Batch run 42' },
     ],
   },
   {
@@ -815,7 +817,7 @@ export const initialOrders: OrderItem[] = [
     paidAmount: 168.0,
     refundedAmount: 0.0,
     paymentStatus: 'paid',
-    fulfillmentStatus: 'submission_failed',
+    fulfillmentStatus: 'failed',
     paymentMethod: 'Credit Card (Visa)',
     date: '15 Apr 2026, 15:45',
     timeline: [
@@ -889,11 +891,11 @@ export const initialOrders: OrderItem[] = [
     paidAmount: 259.0,
     refundedAmount: 0.0,
     paymentStatus: 'paid',
-    fulfillmentStatus: 'printing',
+    fulfillmentStatus: 'processing',
     paymentMethod: 'Apple Pay (Visa)',
     date: '14 Apr 2026, 16:40',
     timeline: [
-      { title: 'Printing', time: '15 Apr, 09:00', note: 'Screenprint curing station' },
+      { title: 'In production', time: '15 Apr, 09:00', note: 'Screenprint curing station' },
     ],
   },
   {
@@ -937,7 +939,7 @@ export const initialOrders: OrderItem[] = [
     paidAmount: 0.0,
     refundedAmount: 0.0,
     paymentStatus: 'pending',
-    fulfillmentStatus: 'queued',
+    fulfillmentStatus: 'confirmed',
     paymentMethod: 'Klarna Pay Later',
     date: '14 Apr 2026, 11:00',
     timeline: [
@@ -1076,7 +1078,7 @@ export const initialRefunds: RefundItem[] = [
     id: 'REF-2041',
     orderId: '#ORD-8815',
     customer: 'Lucas Taylor',
-    reason: 'Customer cancellation prior to printing',
+    reason: 'Customer cancellation prior to processing',
     amount: 147.0,
     method: 'Original Payment (Visa)',
     date: '16 Apr 2026',
@@ -1460,7 +1462,7 @@ export const initialSupportTickets: SupportTicket[] = [
     status: 'open',
     createdAt: '16 Apr 2026, 14:10',
     messages: [
-      { sender: 'customer', text: 'My order has been sitting in submission failed status. Is everything alright with my items?', time: '16 Apr, 14:10' },
+      { sender: 'customer', text: 'My order has been sitting in failed status. Is everything alright with my items?', time: '16 Apr, 14:10' },
     ],
   },
   {

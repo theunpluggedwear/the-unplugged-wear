@@ -12,7 +12,7 @@ export function buildNotifications({ orders, supportTickets }: OpsSignals): Noti
   const items: Notification[] = [];
 
   orders
-    .filter((o) => o.fulfillmentStatus === 'submission_failed')
+    .filter((o) => o.fulfillmentStatus === 'failed')
     .slice(0, 3)
     .forEach((o, i) => {
       items.push({
@@ -26,7 +26,7 @@ export function buildNotifications({ orders, supportTickets }: OpsSignals): Noti
       });
     });
 
-  const readyToShip = orders.filter((o) => o.paymentStatus === 'paid' && o.fulfillmentStatus === 'queued');
+  const readyToShip = orders.filter((o) => o.paymentStatus === 'paid' && o.fulfillmentStatus === 'confirmed');
   if (readyToShip.length > 0) {
     items.push({
       id: 'ready-to-ship',

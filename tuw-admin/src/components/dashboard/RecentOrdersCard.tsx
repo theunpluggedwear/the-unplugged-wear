@@ -4,7 +4,8 @@ import { DashboardCard } from './DashboardCard';
 import { SeeAllLink } from './SeeAllLink';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
 import Badge from '@/components/ui/Badge';
-import type { FulfillmentStatus, OrderItem } from '@/mocks/fixtures';
+import type { OrderItem } from '@/mocks/fixtures';
+import type { OrderStatus } from '@tuw/heart/modules/orders';
 
 // Class map - selectors live in src/app/globals.css (single app.css, home- prefix).
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'home-' + String(p) });
@@ -21,13 +22,20 @@ interface RecentOrdersCardProps {
   orders: OrderItem[];
 }
 
-// Fulfillment status -> ui Badge variant + demo label.
-function statusBadge(status: FulfillmentStatus): { variant: 'success' | 'info' | 'warning' | 'danger'; label: string } {
-  if (status === 'shipped') return { variant: 'success', label: 'Shipped' };
-  if (status === 'delivered') return { variant: 'info', label: 'Delivered' };
-  if (status === 'submission_failed') return { variant: 'danger', label: 'Failed' };
-  if (status === 'printing') return { variant: 'warning', label: 'Printing' };
-  return { variant: 'warning', label: 'Queued' };
+// SQL order status -> ui Badge variant + demo label.
+const STATUS_BADGE: Record<OrderStatus, { variant: 'success' | 'info' | 'warning' | 'danger'; label: string }> = {
+  pending: { variant: 'warning', label: 'Pending' },
+  confirmed: { variant: 'warning', label: 'Confirmed' },
+  processing: { variant: 'warning', label: 'Processing' },
+  shipped: { variant: 'success', label: 'Shipped' },
+  delivered: { variant: 'info', label: 'Delivered' },
+  cancelled: { variant: 'danger', label: 'Cancelled' },
+  failed: { variant: 'danger', label: 'Failed' },
+  refunded: { variant: 'info', label: 'Refunded' },
+};
+
+function statusBadge(status: OrderStatus): { variant: 'success' | 'info' | 'warning' | 'danger'; label: string } {
+  return STATUS_BADGE[status];
 }
 
 export function RecentOrdersCard({ orders }: RecentOrdersCardProps) {

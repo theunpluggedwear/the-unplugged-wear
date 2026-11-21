@@ -42,7 +42,7 @@ const rupees = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN', { 
 const when = (iso: string) => new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
-  pending: 'Pending', confirmed: 'Confirmed', processing: 'Printing', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled', failed: 'Partner sync failed', refunded: 'Refunded',
+  pending: 'Pending', confirmed: 'Confirmed', processing: 'Processing', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled', failed: 'Partner sync failed', refunded: 'Refunded',
 };
 const STATUS_BADGE: Record<OrderStatus, 'success' | 'warning' | 'info' | 'danger' | 'neutral'> = {
   pending: 'warning', confirmed: 'neutral', processing: 'warning', shipped: 'success', delivered: 'info', cancelled: 'neutral', failed: 'danger', refunded: 'neutral',
@@ -51,7 +51,7 @@ const PAYMENT_LABEL: Record<AdminOrderRow['paymentStatus'], string> = { paid: 'P
 const PAYMENT_BADGE: Record<AdminOrderRow['paymentStatus'], 'success' | 'warning' | 'danger' | 'neutral'> = { paid: 'success', pending: 'warning', failed: 'danger', refunded: 'neutral' };
 const METHOD_LABEL: Record<string, string> = { card: 'Card', upi: 'UPI', cod: 'Cash on delivery', netbanking: 'Netbanking', wallet: 'Wallet' };
 /** What the button says for each move a staff member can make. */
-const MOVE_LABEL: Partial<Record<OrderStatus, string>> = { confirmed: 'Confirm order', processing: 'Mark printing', shipped: 'Mark shipped', delivered: 'Mark delivered', cancelled: 'Cancel order' };
+const MOVE_LABEL: Partial<Record<OrderStatus, string>> = { confirmed: 'Confirm order', processing: 'Mark processing', shipped: 'Mark shipped', delivered: 'Mark delivered', cancelled: 'Cancel order' };
 
 export default function OrdersView({ initial, perms, openOrder: openFromLink, query, tab, page: pageParam, perPage }: {
   initial: ListResult;
@@ -236,7 +236,7 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
 
       <div className={styles.statGrid}>
         <StatCard label="Total Revenue" value={rupees(stats.revenuePaise)} trend={`${stats.total} orders recorded`} trendType="up" hoverable />
-        <StatCard label="Active Queue" value={String(stats.activeQueue)} subtitle="Pending, confirmed & printing" trendType="neutral" hoverable />
+        <StatCard label="Active Queue" value={String(stats.activeQueue)} subtitle="Pending, confirmed & processing" trendType="neutral" hoverable />
         <StatCard label="Delivered" value={String(stats.delivered)} trend="Successful completions" trendType="up" hoverable />
         <StatCard label="Operational Issues" value={String(stats.issues)} subtitle={stats.issues > 0 ? 'Partner sync failed — retry' : 'No sync errors'} trendType={stats.issues > 0 ? 'down' : 'up'} hoverable />
       </div>
@@ -298,7 +298,7 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
                         }
                         items={[
                           { value: 'confirmed', label: 'Confirmed' },
-                          { value: 'processing', label: 'Printing' },
+                          { value: 'processing', label: 'Processing' },
                           { value: 'shipped', label: 'Shipped' },
                           { value: 'delivered', label: 'Delivered' },
                           { value: 'cancelled', label: 'Cancel orders', danger: true },
