@@ -36,7 +36,7 @@ export default function WishlistPage() {
         </div>
 
         {savedProducts.length === 0 ? (
-          <div className="py-20 text-center bg-white rounded-3xl border border-[#E2DDCF] p-8 max-w-xl mx-auto shadow-xs">
+          <div className="py-20 text-center bg-white rounded-3xl border border-[#E2DDCF] px-8 max-w-xl mx-auto shadow-xs">
             <div className="w-16 h-16 rounded-full bg-[#F4F1EA] flex items-center justify-center text-[#8A8A8A] mx-auto mb-4">
               <Heart size={28} />
             </div>

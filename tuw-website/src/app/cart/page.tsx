@@ -1,7 +1,7 @@
 'use client';
 import { formatRupees } from '@storefront/lib/format';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import Header from '@storefront/components/layout/Header';
 import Footer from '@storefront/components/layout/Footer';
@@ -14,6 +14,9 @@ import { useStore } from '@storefront/mocks/store';
 export default function CartPage() {
   const {
     cart,
+    bagReady,
+    bagError,
+    refreshBag,
     updateQuantity,
     removeFromCart,
     cartSubtotal,
@@ -27,14 +30,25 @@ export default function CartPage() {
   } = useStore();
 
   const [inputCode, setInputCode] = useState('');
+  const [isApplying, setIsApplying] = useState(false);
+  // Ref guards against same-tick double submits before state has committed.
+  const applyingRef = useRef(false);
 
   const total = cartSubtotal - discountAmount + shippingFee;
 
-  const handleApplyCode = (e: React.FormEvent) => {
+  const handleApplyCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputCode.trim()) {
-      applyPromoCode(inputCode);
-      setInputCode('');
+    const code = inputCode.trim();
+    if (!code || applyingRef.current) return;
+    applyingRef.current = true;
+    setIsApplying(true);
+    try {
+      const ok = await applyPromoCode(code);
+      // Keep what the shopper typed when the code was rejected so they can fix it.
+      if (ok) setInputCode('');
+    } finally {
+      applyingRef.current = false;
+      setIsApplying(false);
     }
   };
 
@@ -55,12 +69,24 @@ export default function CartPage() {
             Your Shopping Bag
           </h1>
           <p className="text-sm text-[#666] mt-1">
-            Review your intentional selection before moving to demo checkout.
+            Review your intentional selection before moving to checkout.
           </p>
         </div>
 
-        {cart.length === 0 ? (
-          <div className="py-20 text-center rounded-3xl bg-white border border-[#E2DDCF] p-8 max-w-2xl mx-auto shadow-xs">
+        {!bagReady && cart.length === 0 ? (
+          <p role="status" className="py-20 text-center text-sm text-[#666]">Loading your bag…</p>
+        ) : bagError && cart.length === 0 ? (
+          <div role="alert" className="py-20 text-center rounded-3xl bg-white border border-[#E2DDCF] px-8 max-w-2xl mx-auto shadow-xs">
+            <h2 className="text-xl font-bold text-[#1A1A1A]">We couldn’t load your bag</h2>
+            <p className="text-sm text-[#666] mt-2">{bagError}</p>
+            <div className="mt-6">
+              <Button variant="dark" size="lg" onClick={() => void refreshBag()}>
+                Try again
+              </Button>
+            </div>
+          </div>
+        ) : cart.length === 0 ? (
+          <div className="py-20 text-center rounded-3xl bg-white border border-[#E2DDCF] px-8 max-w-2xl mx-auto shadow-xs">
             <div className="w-16 h-16 rounded-full bg-[#F4F1EA] flex items-center justify-center text-[#8A8A8A] mx-auto mb-4">
               <ShoppingBag size={28} />
             </div>
@@ -198,10 +224,11 @@ export default function CartPage() {
                         placeholder="Promo code (UNPLUGGED10)"
                         value={inputCode}
                         onChange={(e) => setInputCode(e.target.value)}
+                        aria-busy={isApplying}
                         className="flex-1 h-10 px-3.5 rounded-xl border border-[#E2DDCF] text-xs uppercase outline-none focus:border-[#1A1A1A]"
                       />
-                      <Button variant="secondary" size="sm" type="submit">
-                        Apply
+                      <Button variant="secondary" size="sm" type="submit" disabled={isApplying}>
+                        {isApplying ? 'Applying…' : 'Apply'}
                       </Button>
                     </form>
                   )}
@@ -242,7 +269,7 @@ export default function CartPage() {
                     icon={<ArrowRight size={16} />}
                     iconPosition="right"
                   >
-                    Proceed to Demo Checkout
+                    Proceed to Checkout
                   </Button>
                 </div>
 

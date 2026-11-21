@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 
 export interface UpliftSurfaceProps extends React.HTMLAttributes<HTMLDivElement> {

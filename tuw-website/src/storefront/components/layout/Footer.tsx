@@ -12,6 +12,7 @@ import {
   Mail,
   MapPin,
 } from 'lucide-react';
+import { subscribeNewsletterAction } from '@/server/newsletter-actions';
 import TuwEmblem from './TuwEmblem';
 import { CopyrightYear } from './CopyrightYear';
 
@@ -71,13 +72,15 @@ const FOOTER_COLUMNS: FooterColumn[] = [
 export default function Footer() {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim() && email.includes('@')) {
-      setSubscribed(true);
-      setEmail('');
-    }
+    setNotice(null);
+    const result = await subscribeNewsletterAction({ email });
+    if (!result.ok) { setNotice(result.error.message); return; }
+    setSubscribed(true);
+    setEmail('');
   };
 
   return (
@@ -186,7 +189,7 @@ export default function Footer() {
                 {subscribed ? (
                   <div className="flex items-center gap-2 p-3 rounded-full bg-white/10 border border-white/20 text-xs text-secondary-mint">
                     <CheckCircle2 size={16} />
-                    <span>Demo only: no email was stored or sent. The newsletter is not live yet.</span>
+                    <span>Check your inbox to confirm. Emails are logged in demo mode until the live provider is connected.</span>
                   </div>
                 ) : (
                   <form onSubmit={handleSubscribe} className="flex gap-2">
@@ -211,6 +214,7 @@ export default function Footer() {
                     </button>
                   </form>
                 )}
+                {notice && <p className="text-xs text-rose-300">{notice}</p>}
               </div>
             </div>
 

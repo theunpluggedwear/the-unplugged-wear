@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 
 export interface SurfaceCardProps extends React.HTMLAttributes<HTMLDivElement> {

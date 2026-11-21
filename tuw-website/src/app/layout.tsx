@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
+import { cookies } from 'next/headers';
 import './globals.css';
 import { Providers } from './providers';
 import { getSessionSummary } from '@/server/session';
@@ -8,7 +9,39 @@ import { getStorefrontSettings } from '@/server/settings';
 import { getCatalog } from '@/server/catalog';
 import { getNavigation } from '@/server/nav';
 import BrandIntro from '@storefront/components/layout/BrandIntro';
-import { INTRO_SEEN_SCRIPT } from '@storefront/lib/intro';
+import { INTRO_SEEN_KEY } from '@storefront/lib/intro';
+import type { Product } from '@storefront/lib/types';
+
+/**
+ * Only the fields the client actually reads (mega-menu counts and tiles,
+ * search suggestions, wishlist/bag summaries) cross into the browser. Long
+ * copy, spec tables, FAQs, radio groups and partner metadata stay on the
+ * server, where the shop and PDP read the full catalog themselves.
+ */
+function toNavProduct(product: Product): Product {
+  return {
+    id: product.id,
+    productId: product.productId,
+    slug: product.slug,
+    aliases: product.aliases,
+    title: product.title,
+    subtitle: product.subtitle,
+    category: product.category,
+    audience: product.audience,
+    priceINR: product.priceINR,
+    compareAtPriceINR: product.compareAtPriceINR,
+    images: product.images,
+    colors: product.colors,
+    sizes: product.sizes,
+    sizeChartId: product.sizeChartId,
+    productType: product.productType,
+    variantLabel: product.variantLabel,
+    isNew: product.isNew,
+    isBestseller: product.isBestseller,
+    publicationStatus: product.publicationStatus,
+    priceIsDraft: product.priceIsDraft,
+  } as Product;
+}
 
 // Self-hosted Outfit for headings and body (vendored from @fontsource, OFL licensed).
 // next/font/local keeps Turbopack production builds deterministic with zero
@@ -28,6 +61,18 @@ const outfit = localFont({
     { path: './fonts/outfit-latin-900-normal.woff2', weight: '900', style: 'normal' },
   ],
 });
+
+/**
+ * Server gate for the one-time brand intro. Reading the cookie here (instead
+ * of a pre-paint script mutating <html>) means a repeat visitor never receives
+ * the overlay in the initial HTML — no flash, and no hydration mismatch. Kept
+ * inside <Suspense> so PPR still prerenders the rest of the shell statically.
+ */
+async function IntroGate() {
+  const store = await cookies();
+  if (store.get(INTRO_SEEN_KEY)?.value === '1') return null;
+  return <BrandIntro />;
+}
 
 export const metadata: Metadata = {
   title: 'The Unplugged Wear | Everyday Wear, Printed to Order',
@@ -50,16 +95,18 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // All cached ('settings' / 'products' / 'nav' tags) — part of the static
-  // shell, not dynamic holes. Shop and PDP now read the catalog on the server;
-  // the provider keeps it for Header (mega-menu counts, suggestions) and the
-  // per-browser bag/wishlist. Narrowing it to a nav-sized read is the next win.
-  const [settings, catalog, nav] = await Promise.all([getStorefrontSettings(), getCatalog(), getNavigation()]);
+  // shell, not dynamic holes. The full catalog stays here on the server (the
+  // shop and PDP read it directly); only the nav-sized projection below is
+  // serialized for the client Header and bag/wishlist summaries.
+  const settings = await getStorefrontSettings();
+  const catalog = await getCatalog();
+  const nav = await getNavigation();
+  const navCatalog = {
+    products: catalog.products.map(toNavProduct),
+    sizeCharts: catalog.sizeCharts,
+  };
   return (
-    <html lang="en" className={outfit.variable} suppressHydrationWarning>
-      <head>
-        {/* Before first paint: skip the brand intro for visitors who saw it this session. */}
-        <script dangerouslySetInnerHTML={{ __html: INTRO_SEEN_SCRIPT }} />
-      </head>
+    <html lang="en" className={outfit.variable}>
       <body className="font-sans antialiased bg-store-canvas text-store-text-primary min-h-screen">
         <a
           href="#main-content"
@@ -68,10 +115,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           Skip to main content
         </a>
         {/* Un-awaited: read with use() inside Suspense boundaries. */}
-        <Providers session={getSessionSummary()} settings={settings} catalog={catalog} nav={nav}>
-          {/* Reads the URL; streamed so dynamic routes keep a static shell. */}
+        <Providers session={getSessionSummary()} settings={settings} catalog={navCatalog} nav={nav}>
+          {/* Reads the cookie + URL; streamed so dynamic routes keep a static shell. */}
           <Suspense fallback={null}>
-            <BrandIntro />
+            <IntroGate />
           </Suspense>
           {children}
         </Providers>

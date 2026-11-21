@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { lockBodyScroll } from './scroll-lock';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -13,6 +14,9 @@ export interface ModalProps {
   className?: string;
 }
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export default function Modal({
   isOpen,
   onClose,
@@ -22,21 +26,61 @@ export default function Modal({
   maxWidth = 'max-w-lg',
   className = '',
 }: ModalProps) {
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  // Read the latest callback without re-running the focus/scroll effect on every
+  // parent render (that would restore focus and relock scroll mid-interaction).
+  const onCloseRef = useRef(onClose);
   useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const unlock = lockBodyScroll();
+    const surface = surfaceRef.current;
+    surface?.focus();
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
+      if (e.key === 'Escape') {
+        onCloseRef.current();
+        return;
+      }
+      if (e.key !== 'Tab' || !surface) return;
+
+      const focusables = Array.from(
+        surface.querySelectorAll<HTMLElement>(FOCUSABLE)
+      ).filter((el) => el.offsetParent !== null);
+
+      if (focusables.length === 0) {
+        e.preventDefault();
+        surface.focus();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey) {
+        if (active === first || active === surface) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last) {
+        e.preventDefault();
+        first.focus();
       }
     };
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    }
+
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
+      unlock();
+      if (previouslyFocused && document.contains(previouslyFocused)) {
+        previouslyFocused.focus();
+      }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -55,7 +99,9 @@ export default function Modal({
 
       {/* Modal Surface */}
       <div
-        className={`relative w-full ${maxWidth} bg-white rounded-2xl p-6 sm:p-8 shadow-2xl z-10 my-8 overflow-hidden transition-all border border-[#E2DDCF] ${className}`}
+        ref={surfaceRef}
+        tabIndex={-1}
+        className={`relative w-full ${maxWidth} bg-white rounded-2xl p-6 sm:p-8 shadow-2xl z-10 my-8 overflow-hidden transition-all border border-[#E2DDCF] focus:outline-none ${className}`}
       >
         <button
           type="button"

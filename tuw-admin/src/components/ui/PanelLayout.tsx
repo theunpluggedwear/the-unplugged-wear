@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import PanelHeader from './PanelHeader';
 import PanelBody from './PanelBody';

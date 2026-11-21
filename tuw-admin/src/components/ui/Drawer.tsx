@@ -5,6 +5,7 @@ import { X, Minimize2, Expand, Maximize2 } from 'lucide-react';
 import PanelLayout from './PanelLayout';
 import ViewToggle from './ViewToggle';
 import { usePopoverAnimation } from '@/hooks/usePopoverAnimation';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 export type DrawerView = 'compact' | 'matrix' | 'full';
 
@@ -49,6 +50,9 @@ export default function Drawer({
   // Exit plays through the shared popover contract (180ms drawer rhythm);
   // render follows visibility so the slide-out completes before unmount.
   const anim = usePopoverAnimation(isOpen, undefined, 180);
+  // Shared, ref-counted body scroll lock: overlapping overlays keep scrolling
+  // locked until the last one closes, and the prior overflow is restored.
+  useBodyScrollLock(isOpen);
   // Elastic sizes: compact (width prop) → matrix 880 → full canvas.
   // width:100% + maxWidth auto-clamps below 920px viewports.
   // Controlled mode (view/onViewChange): caller owns the size; internal
@@ -107,11 +111,9 @@ export default function Drawer({
       }
     };
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
     }
     return () => {
-      document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);

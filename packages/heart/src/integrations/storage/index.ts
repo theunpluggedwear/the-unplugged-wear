@@ -32,5 +32,3 @@ export function createMemoryStore(maxBytes = 10 * 1024 * 1024): ObjectStore {
   };
 }
 
-const globalStore = globalThis as unknown as { __tuwObjectStore?: ObjectStore };
-export const getObjectStore = (): ObjectStore => (globalStore.__tuwObjectStore ??= createMemoryStore());

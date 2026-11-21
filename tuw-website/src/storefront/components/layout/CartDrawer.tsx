@@ -4,15 +4,18 @@ import { formatRupees } from '@storefront/lib/format';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShieldCheck } from 'lucide-react';
-import { useStore } from '@storefront/mocks/store';
+import { useCartDrawer, useStore } from '@storefront/mocks/store';
 import Drawer from '@storefront/components/ui/Drawer';
 import Button from '@storefront/components/ui/Button';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
 
 export default function CartDrawer() {
+  const isCartDrawerOpen = useCartDrawer();
   const {
     cart,
-    isCartDrawerOpen,
+    bagReady,
+    bagError,
+    refreshBag,
     setIsCartDrawerOpen,
     updateQuantity,
     removeFromCart,
@@ -47,7 +50,18 @@ export default function CartDrawer() {
       title={`Shopping Bag (${cart.reduce((a, b) => a + b.quantity, 0)})`}
       subtitle="Printed to order"
     >
-      {cart.length === 0 ? (
+      {bagError ? (
+        <div className="flex flex-col items-center justify-center h-full text-center py-16" role="alert">
+          <p className="text-sm text-store-text-secondary max-w-xs">{bagError}</p>
+          <div className="mt-5">
+            <Button variant="secondary" size="md" onClick={() => void refreshBag()}>Try again</Button>
+          </div>
+        </div>
+      ) : !bagReady ? (
+        <div className="flex flex-col items-center justify-center h-full text-center py-16" aria-busy="true">
+          <p className="text-sm text-store-text-secondary">Loading your bag…</p>
+        </div>
+      ) : cart.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-center py-16">
           <div className="w-16 h-16 rounded-full bg-[#F4F1EA] flex items-center justify-center text-[#8A8A8A] mb-4">
             <ShoppingBag size={28} />
@@ -242,7 +256,7 @@ export default function CartDrawer() {
 
             <div className="flex items-center justify-center gap-1.5 text-xs text-[#8A8A8A] pt-1">
               <ShieldCheck size={14} className="text-[#10B981]" />
-              <span>Demo Checkout • No actual card charges</span>
+              <span>Secure checkout — you confirm the payment</span>
             </div>
           </div>
         </div>

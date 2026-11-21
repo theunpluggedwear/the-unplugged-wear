@@ -108,11 +108,16 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
   const load = async (over: Partial<{ tab: BoardTab; q: string; page: number; perPage: number }> = {}) => {
     const mine = ++request.current;
     setLoading(true);
-    const result = await listFulfillmentAction({ tab, q: searchTerm || undefined, page, perPage, ...over });
-    if (mine !== request.current) return;
-    setLoading(false);
-    if (result.ok) setList(result.data);
-    else showToast({ type: 'warning', title: 'Could Not Load Fulfilment', description: result.error.message });
+    try {
+      const result = await listFulfillmentAction({ tab, q: searchTerm || undefined, page, perPage, ...over });
+      if (mine !== request.current) return;
+      if (result.ok) setList(result.data);
+      else showToast({ type: 'warning', title: 'Could Not Load Fulfilment', description: result.error.message });
+    } catch {
+      if (mine === request.current) showToast({ type: 'warning', title: 'Could Not Load Fulfilment', description: 'The request failed. Please try again.' });
+    } finally {
+      if (mine === request.current) setLoading(false);
+    }
   };
   const first = useRef(true);
   useEffect(() => {
@@ -131,27 +136,66 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
     await load();
   };
 
+  const openRequest = useRef(0);
+  const openingInFlight = useRef(false);
+
+  // The decision draft belongs to one claim. Switching claims starts clean so
+  // an earlier resolution or credit cannot leak into the next decision.
+  const chooseDecisionClaim = (claimId: string | null) => {
+    setDecisionClaim(claimId);
+    if (claimId !== null) {
+      setDecision('reprint');
+      setCreditRupees('');
+      setDecisionNote('');
+    }
+  };
+
   const openOrder = async (row: AdminFulfillmentRow) => {
+    if (openingInFlight.current) return;
+    openingInFlight.current = true;
+    const mine = ++openRequest.current;
     setOpenRow(row);
     setDetail(null);
     setCancelNote('');
     setConfirmCancel(false);
-    setDecisionClaim(null);
+    chooseDecisionClaim(null);
     setClaimNote('');
-    if (!row.fulfillmentId) return;
+    if (!row.fulfillmentId) {
+      openingInFlight.current = false;
+      return;
+    }
     setOpeningId(row.id);
-    const result = await getFulfillmentAction({ fulfillmentId: row.fulfillmentId });
-    setOpeningId(null);
-    if (result.ok) setDetail(result.data);
-    else showToast({ type: 'warning', title: 'Could Not Open The Order', description: result.error.message });
+    try {
+      const result = await getFulfillmentAction({ fulfillmentId: row.fulfillmentId });
+      if (mine !== openRequest.current) return;
+      if (result.ok) setDetail(result.data);
+      else showToast({ type: 'warning', title: 'Could Not Open The Order', description: result.error.message });
+    } catch {
+      if (mine === openRequest.current) showToast({ type: 'warning', title: 'Could Not Open The Order', description: 'The request failed. Please try again.' });
+    } finally {
+      openingInFlight.current = false;
+      if (mine === openRequest.current) setOpeningId(null);
+    }
   };
 
   const closeDrawer = () => { setOpenRow(null); setDetail(null); };
 
-  const sendWaiting = async (row: AdminFulfillmentRow) => {
+  // A rejected server call must not leave every action stuck on "Sending…".
+  const withBusy = async <T,>(run: () => Promise<T>, failureTitle: string): Promise<T | null> => {
     setBusy(true);
-    const result = await submitWaitingAction({ orderNumber: row.orderNumber });
-    setBusy(false);
+    try {
+      return await run();
+    } catch {
+      showToast({ type: 'warning', title: failureTitle, description: 'The request failed. Please try again.' });
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendWaiting = async (row: AdminFulfillmentRow) => {
+    const result = await withBusy(() => submitWaitingAction({ orderNumber: row.orderNumber }), 'Not Sent');
+    if (!result) return;
     if (!result.ok) {
       showToast({ type: 'warning', title: 'Not Sent', description: result.error.message });
       return;
@@ -170,28 +214,27 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
 
   const submitAllWaiting = async () => {
     if (!list.rows.length) return;
-    setBusy(true);
-    let sent = 0;
-    let failed = 0;
-    for (const row of [...list.rows]) {
-      const result = await submitWaitingAction({ orderNumber: row.orderNumber });
-      if (result.ok && !result.data.failed) sent += 1;
-      else failed += 1;
-    }
-    setBusy(false);
-    showToast({
-      type: failed ? 'warning' : 'success',
-      title: 'Batch Submission Complete',
-      description: `${sent} sent · ${failed} refused. ${failed ? 'Open a refused order to read the partner message.' : ''}`.trim(),
-    });
-    await load();
+    await withBusy(async () => {
+      let sent = 0;
+      let failed = 0;
+      for (const row of [...list.rows]) {
+        const result = await submitWaitingAction({ orderNumber: row.orderNumber });
+        if (result.ok && !result.data.failed) sent += 1;
+        else failed += 1;
+      }
+      showToast({
+        type: failed ? 'warning' : 'success',
+        title: 'Batch Submission Complete',
+        description: `${sent} sent · ${failed} refused. ${failed ? 'Open a refused order to read the partner message.' : ''}`.trim(),
+      });
+      await load();
+    }, 'Batch Submission Failed');
   };
 
   const retry = async () => {
     if (!detail) return;
-    setBusy(true);
-    const result = await retryFulfillmentAction({ fulfillmentId: detail.row.id });
-    setBusy(false);
+    const result = await withBusy(() => retryFulfillmentAction({ fulfillmentId: detail.row.id }), 'Retry Failed');
+    if (!result) return;
     if (!result.ok) { showToast({ type: 'warning', title: 'Retry Failed', description: result.error.message }); return; }
     showToast({ type: result.data.failed ? 'warning' : 'success', title: result.data.failed ? 'Partner Refused' : 'Resubmitted', description: result.data.message });
     await refresh(detail.row.id);
@@ -199,9 +242,8 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
 
   const sync = async () => {
     if (!detail) return;
-    setBusy(true);
-    const result = await syncFulfillmentAction({ fulfillmentId: detail.row.id });
-    setBusy(false);
+    const result = await withBusy(() => syncFulfillmentAction({ fulfillmentId: detail.row.id }), 'Partner Did Not Answer');
+    if (!result) return;
     if (!result.ok) { showToast({ type: 'warning', title: 'Partner Did Not Answer', description: result.error.message }); return; }
     showToast({ type: 'success', title: 'Partner Status', description: `${result.data.providerStatus}${result.data.awb ? ` · ${result.data.awb}` : ''}` });
     await refresh(detail.row.id);
@@ -209,9 +251,8 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
 
   const cancelOrder = async () => {
     if (!detail) return;
-    setBusy(true);
-    const result = await cancelFulfillmentAction({ fulfillmentId: detail.row.id, note: cancelNote || undefined });
-    setBusy(false);
+    const result = await withBusy(() => cancelFulfillmentAction({ fulfillmentId: detail.row.id, note: cancelNote || undefined }), 'Cancel Refused');
+    if (!result) return;
     if (!result.ok) { showToast({ type: 'warning', title: 'Cancel Refused', description: result.error.message }); return; }
     showToast({
       type: 'success', title: 'Cancelled With Partner',
@@ -223,9 +264,8 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
 
   const reship = async () => {
     if (!detail) return;
-    setBusy(true);
-    const result = await reshipAction({ fulfillmentId: detail.row.id });
-    setBusy(false);
+    const result = await withBusy(() => reshipAction({ fulfillmentId: detail.row.id }), 'Re-ship Failed');
+    if (!result) return;
     if (!result.ok) { showToast({ type: 'warning', title: 'Re-ship Failed', description: result.error.message }); return; }
     showToast({
       type: result.data.status === 'sent' ? 'success' : 'warning',
@@ -237,9 +277,8 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
 
   const moveManually = async () => {
     if (!detail) return;
-    setBusy(true);
-    const result = await setProviderStateAction({ fulfillmentId: detail.row.id, status: manualState });
-    setBusy(false);
+    const result = await withBusy(() => setProviderStateAction({ fulfillmentId: detail.row.id, status: manualState }), 'Could Not Move It');
+    if (!result) return;
     if (!result.ok) { showToast({ type: 'warning', title: 'Could Not Move It', description: result.error.message }); return; }
     showToast({ type: 'success', title: 'Parcel Updated', description: `Marked ${STATUS_LABEL[manualState].toLowerCase()}.` });
     await refresh(detail.row.id);
@@ -247,9 +286,8 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
 
   const raiseClaim = async () => {
     if (!detail) return;
-    setBusy(true);
-    const result = await createClaimAction({ fulfillmentId: detail.row.id, type: claimType, customerNote: claimNote || undefined });
-    setBusy(false);
+    const result = await withBusy(() => createClaimAction({ fulfillmentId: detail.row.id, type: claimType, customerNote: claimNote || undefined }), 'Claim Not Raised');
+    if (!result) return;
     if (!result.ok) { showToast({ type: 'warning', title: 'Claim Not Raised', description: result.error.message }); return; }
     showToast({ type: 'success', title: 'Claim Drafted', description: 'Evidence is attached from the customer request. Submit it once you have checked it.' });
     setClaimNote('');
@@ -257,18 +295,22 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
   };
 
   const moveClaim = async (claim: ClaimRow, to: 'submitted' | 'rejected' | 'approved' | 'resolved') => {
-    setBusy(true);
-    const result = await updateClaimAction({
+    const result = await withBusy(() => updateClaimAction({
       claimId: claim.id, status: to,
       resolution: to === 'approved' || to === 'resolved' ? decision : undefined,
       staffNote: decisionNote || undefined,
       amountPaise: (to === 'approved' || to === 'resolved') && decision === 'wallet_credit' && Number(creditRupees) > 0
         ? Math.round(Number(creditRupees) * 100) : undefined,
-    });
-    setBusy(false);
+    }), 'Claim Not Updated');
+    if (!result) return;
     if (!result.ok) { showToast({ type: 'warning', title: 'Claim Not Updated', description: result.error.message }); return; }
     showToast({ type: 'success', title: `Claim ${result.data.status}`, description: result.data.resolution ? `Resolution: ${result.data.resolution.replace(/_/g, ' ')}.` : undefined });
-    if (result.data.status === 'resolved') setDecisionClaim(null);
+    if (result.data.status === 'resolved') {
+      setDecisionClaim(null);
+      setDecision('reprint');
+      setCreditRupees('');
+      setDecisionNote('');
+    }
     if (detail) await refresh(detail.row.id);
   };
 
@@ -286,7 +328,8 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
     a.href = url;
     a.download = `fulfillment-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
-    URL.revokeObjectURL(url);
+    // Give the browser a tick to start the download before releasing the URL.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   const stats = list.stats;
@@ -579,7 +622,7 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
                       ) : null}
                       {claim.status === 'submitted' ? (
                         <>
-                          <Button variant="secondary" size="sm" disabled={busy} onClick={() => setDecisionClaim(claim.id === decisionClaim ? null : claim.id)}>
+                          <Button variant="secondary" size="sm" disabled={busy} onClick={() => chooseDecisionClaim(claim.id === decisionClaim ? null : claim.id)}>
                             <span>{decisionClaim === claim.id ? 'Hide decision' : 'Decide'}</span>
                           </Button>
                           <Button variant="secondary" size="sm" disabled={busy} onClick={() => void moveClaim(claim, 'rejected')}><span>Reject</span></Button>

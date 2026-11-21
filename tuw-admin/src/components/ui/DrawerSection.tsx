@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 
 export interface DrawerSectionProps extends React.HTMLAttributes<HTMLDivElement> {

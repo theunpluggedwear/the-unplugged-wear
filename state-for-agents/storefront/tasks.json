@@ -11,27 +11,20 @@
   "_demo": "Figma source of truth established. First track TL-WEB-001 closed.",
   "summary": {
     "total": 114,
-    "done": 103,
+    "done": 107,
     "in_progress": 0,
-    "backlog": 11,
+    "backlog": 7,
     "total_tasks": 114,
     "pending": 14
   },
   "session": {
     "branch": "urvil-ui",
-    "tip": "c375057",
-    "unpushed": [
-      "d3eb96f",
-      "fc8d6e7",
-      "67fe9ff",
-      "5b25052",
-      "fc45619",
-      "c375057"
-    ],
-    "next_up": "TL-WEB-BE-30",
+    "tip": "78a3e53",
+    "unpushed": [],
+    "next_up": "TL-WEB-BE-31",
     "pending_verifications": [],
-    "last_updated": "2026-11-16",
-    "updated_by": "agent (Buffy)"
+    "last_updated": "2026-11-20",
+    "updated_by": "agent"
   },
   "workflow": {
     "how_to_close_a_task": "gates green → status done + log commit + design_match + verified + finished → recompute summary → refresh session → commit code + tracker together",
@@ -2856,12 +2849,12 @@
       "id": "TL-WEB-BE-30",
       "title": "Home page sections from the CMS",
       "category": "backend",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-WEB-BE",
       "started": null,
-      "finished": null,
-      "verified": false,
+      "finished": "2026-11-18",
+      "verified": true,
       "design_match": null,
       "pushed": false,
       "admin_ref": "TL-BE-13.01",
@@ -2873,7 +2866,8 @@
       ],
       "description": "cacheTag('cms:home').",
       "key_decisions": [],
-      "follow_ups": []
+      "follow_ups": [],
+      "log": "Minimal homepage CMS: default homepage kept; only featured/latest products and featured/latest journal cards configurable with counts 3/6/9/12/15."
     },
     {
       "id": "TL-WEB-BE-31",
@@ -2908,12 +2902,12 @@
       "id": "TL-WEB-BE-32",
       "title": "/journal and /journal/[slug] from blogs",
       "category": "backend",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-WEB-BE",
       "started": null,
-      "finished": null,
-      "verified": false,
+      "finished": "2026-11-17",
+      "verified": true,
       "design_match": null,
       "pushed": false,
       "admin_ref": "TL-BE-13.02",
@@ -2926,18 +2920,19 @@
       ],
       "description": "Retired slugs 301 via blog_slug_history.",
       "key_decisions": [],
-      "follow_ups": []
+      "follow_ups": [],
+      "log": "Journal index and post pages read from the DB with cacheTag(blog)."
     },
     {
       "id": "TL-WEB-BE-33",
       "title": "/faq and PDP FAQs from the faqs table",
       "category": "backend",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-WEB-BE",
       "started": null,
-      "finished": null,
-      "verified": false,
+      "finished": "2026-11-17",
+      "verified": true,
       "design_match": null,
       "pushed": false,
       "admin_ref": "TL-BE-13.03",
@@ -2950,18 +2945,19 @@
       ],
       "description": "cacheTag('faqs').",
       "key_decisions": [],
-      "follow_ups": []
+      "follow_ups": [],
+      "log": "FAQ page and PDP FAQ accordion read published FAQs from the DB with cacheTag(faqs)."
     },
     {
       "id": "TL-WEB-BE-34",
       "title": "Footer newsletter subscribe + confirm / unsubscribe pages",
       "category": "backend",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-WEB-BE",
       "started": null,
-      "finished": null,
-      "verified": false,
+      "finished": "2026-11-17",
+      "verified": true,
       "design_match": null,
       "pushed": false,
       "admin_ref": "TL-BE-13.04",
@@ -2975,7 +2971,8 @@
       ],
       "description": "Double opt-in via mock email.",
       "key_decisions": [],
-      "follow_ups": []
+      "follow_ups": [],
+      "log": "Footer newsletter form wired to DB with confirm/unsubscribe pages and demo email notice."
     },
     {
       "id": "TL-WEB-BE-35",

@@ -165,7 +165,10 @@ function SearchPanel({
   // Ranked suggestions from the database, a beat after typing stops.
   const [rankedIds, setRankedIds] = useState<string[]>([]);
   useEffect(() => {
-    if (query.length < 2) { setRankedIds([]); return; }
+    // Drop the previous query's ranking immediately; showing it while the new
+    // query debounces would present suggestions for a search the shopper left.
+    setRankedIds([]);
+    if (query.length < 2) return;
     let live = true;
     const timer = setTimeout(() => {
       void suggestAction({ q: query }).then((r) => { if (live && r.ok) setRankedIds(r.data); });

@@ -7,6 +7,14 @@ export type FulfillmentStatus =
   | 'delivery_exception' | 'delivered' | 'rto_initiated' | 'returned'
   | 'cancelled' | 'failed';
 
+const FULFILLMENT_STATUS_VALUES = new Set<string>([
+  'pending', 'submitted', 'on_hold', 'in_production', 'shipped',
+  'delivery_exception', 'delivered', 'rto_initiated', 'returned',
+  'cancelled', 'failed',
+]);
+/** Runtime guard so a provider word cannot be cast into the union unchecked. */
+const isFulfillmentStatus = (value: string): value is FulfillmentStatus => FULFILLMENT_STATUS_VALUES.has(value);
+
 export interface FulfillmentOrderLine {
   sku: string;
   quantity: number;
@@ -110,7 +118,12 @@ export function createQikinkSimulator(): FulfillmentPartner {
 export const customAtelier: FulfillmentPartner = {
   slug: 'custom_atelier',
   liveReady: () => true,
-  mapStatus: (raw) => (raw as FulfillmentStatus),
+  mapStatus: (raw) => {
+    const status = raw.trim().toLowerCase();
+    // Unknown words park on on_hold (same policy as mapQikinkStatus) instead
+    // of pretending an unchecked string is a valid FulfillmentStatus.
+    return isFulfillmentStatus(status) ? status : 'on_hold';
+  },
   async createOrder(input) {
     validate(input);
     return { providerOrderRef: `atelier_${input.reference}`, providerStatus: 'submitted', status: 'submitted' };

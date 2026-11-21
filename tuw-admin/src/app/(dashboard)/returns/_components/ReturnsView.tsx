@@ -127,6 +127,8 @@ export default function ReturnsView({ initial, perms, openRma }: { initial: List
 
   // A slower, older list answer never overwrites a newer one.
   const request = useRef(0);
+  const openingInFlight = useRef(false);
+  const openRequest = useRef(0);
   const load = async (over: Partial<{ q: string; status: StatusFilter; type: TypeFilter; page: number; perPage: number }> = {}) => {
     const mine = ++request.current;
     setLoading(true);
@@ -146,15 +148,25 @@ export default function ReturnsView({ initial, perms, openRma }: { initial: List
   useEffect(() => { setCurrentPage(1); }, [searchTerm, statusTab, typeTab]);
 
   const openReturn = async (row: AdminReturnRow) => {
+    if (openingInFlight.current) return;
+    openingInFlight.current = true;
+    const mine = ++openRequest.current;
     setOpeningId(row.id);
     setNote('');
     setRejecting(false);
     setRejectionReason('');
     setRefundOpen(false);
-    const result = await getReturnAction({ returnId: row.id });
-    setOpeningId(null);
-    if (result.ok) setDetail(result.data);
-    else showToast({ type: 'warning', title: 'Could Not Open Request', description: result.error.message });
+    try {
+      const result = await getReturnAction({ returnId: row.id });
+      if (mine !== openRequest.current) return;
+      if (result.ok) setDetail(result.data);
+      else showToast({ type: 'warning', title: 'Could Not Open Request', description: result.error.message });
+    } catch (error) {
+      showToast({ type: 'warning', title: 'Could Not Open Request', description: error instanceof Error ? error.message : 'Unexpected error.' });
+    } finally {
+      openingInFlight.current = false;
+      if (mine === openRequest.current) setOpeningId(null);
+    }
   };
 
   // Notification links arrive as /returns?open=RMA-XXXX; the list may not hold it.
@@ -184,44 +196,54 @@ export default function ReturnsView({ initial, perms, openRma }: { initial: List
       return;
     }
     setBusy(true);
-    const result = await setReturnStatusAction({
-      returnId: detail.id, to, note: note || undefined,
-      rejectionReason: to === 'rejected' ? rejectionReason : undefined,
-    });
-    setBusy(false);
-    if (!result.ok) {
-      showToast({ type: 'warning', title: 'Could Not Update Request', description: result.error.message });
-      return;
+    try {
+      const result = await setReturnStatusAction({
+        returnId: detail.id, to, note: note || undefined,
+        rejectionReason: to === 'rejected' ? rejectionReason : undefined,
+      });
+      if (!result.ok) {
+        showToast({ type: 'warning', title: 'Could Not Update Request', description: result.error.message });
+        return;
+      }
+      const followUp = result.data.replacementOrderNumber;
+      showToast({
+        type: 'success',
+        title: `Marked ${STATUS_LABEL[to].toLowerCase()}`,
+        description: to === 'approved'
+          ? followUp
+            ? detail.type === 'exchange'
+              ? `${followUp} created — ${detail.duePaise > 0 ? `the customer pays ${rupees(detail.duePaise)} difference` : 'no difference to collect'} (demo pay link).`
+              : `${followUp} created as a free reprint.`
+            : 'Request approved.'
+          : undefined,
+      });
+      setRejecting(false);
+      setRejectionReason('');
+      setNote('');
+      await Promise.all([refreshDetail(detail.id), load()]);
+    } catch (error) {
+      showToast({ type: 'warning', title: 'Could Not Update Request', description: error instanceof Error ? error.message : 'Unexpected error.' });
+    } finally {
+      setBusy(false);
     }
-    const followUp = result.data.replacementOrderNumber;
-    showToast({
-      type: 'success',
-      title: `Marked ${STATUS_LABEL[to].toLowerCase()}`,
-      description: to === 'approved'
-        ? followUp
-          ? detail.type === 'exchange'
-            ? `${followUp} created — ${detail.duePaise > 0 ? `the customer pays ${rupees(detail.duePaise)} difference` : 'no difference to collect'} (demo pay link).`
-            : `${followUp} created as a free reprint.`
-          : 'Request approved.'
-        : undefined,
-    });
-    setRejecting(false);
-    setRejectionReason('');
-    setNote('');
-    await Promise.all([refreshDetail(detail.id), load()]);
   };
 
   const setDisposition = async (itemId: string, disposition: string) => {
     if (!detail) return;
     setBusy(true);
-    const result = await setReturnItemAction({ returnId: detail.id, itemId, disposition: disposition as never });
-    setBusy(false);
-    if (!result.ok) {
-      showToast({ type: 'warning', title: 'Could Not Set Disposition', description: result.error.message });
-      return;
+    try {
+      const result = await setReturnItemAction({ returnId: detail.id, itemId, disposition: disposition as never });
+      if (!result.ok) {
+        showToast({ type: 'warning', title: 'Could Not Set Disposition', description: result.error.message });
+        return;
+      }
+      showToast({ type: 'success', title: 'Disposition Saved', description: disposition === 'restock' ? 'Stock added back and a movement recorded.' : DISPOSITION_LABEL[disposition] });
+      await Promise.all([refreshDetail(detail.id), load()]);
+    } catch (error) {
+      showToast({ type: 'warning', title: 'Could Not Set Disposition', description: error instanceof Error ? error.message : 'Unexpected error.' });
+    } finally {
+      setBusy(false);
     }
-    showToast({ type: 'success', title: 'Disposition Saved', description: disposition === 'restock' ? 'Stock added back and a movement recorded.' : DISPOSITION_LABEL[disposition] });
-    await Promise.all([refreshDetail(detail.id), load()]);
   };
 
   const refund = async () => {
@@ -232,20 +254,25 @@ export default function ReturnsView({ initial, perms, openRma }: { initial: List
     }
     refundKey.current ??= crypto.randomUUID();
     setBusy(true);
-    const result = await refundReturnAction({
-      returnId: detail.id, method: refundMethod, refundKey: refundKey.current,
-      destination: refundMethod === 'source' ? undefined : refundDestination.trim(),
-    });
-    setBusy(false);
-    if (!result.ok) {
-      showToast({ type: 'warning', title: 'Refund Failed', description: result.error.message });
-      return;
+    try {
+      const result = await refundReturnAction({
+        returnId: detail.id, method: refundMethod, refundKey: refundKey.current,
+        destination: refundMethod === 'source' ? undefined : refundDestination.trim(),
+      });
+      if (!result.ok) {
+        showToast({ type: 'warning', title: 'Refund Failed', description: result.error.message });
+        return;
+      }
+      showToast({ type: 'success', title: 'Refund Issued', description: `${result.data.refundId.slice(0, 8)}… recorded on the demo gateway.` });
+      refundKey.current = null;
+      setRefundOpen(false);
+      setRefundDestination('');
+      await Promise.all([refreshDetail(detail.id), load()]);
+    } catch (error) {
+      showToast({ type: 'warning', title: 'Refund Failed', description: error instanceof Error ? error.message : 'Unexpected error.' });
+    } finally {
+      setBusy(false);
     }
-    showToast({ type: 'success', title: 'Refund Issued', description: `${result.data.refundId.slice(0, 8)}… recorded on the demo gateway.` });
-    refundKey.current = null;
-    setRefundOpen(false);
-    setRefundDestination('');
-    await Promise.all([refreshDetail(detail.id), load()]);
   };
 
   const exportCsv = () => {
@@ -264,7 +291,7 @@ export default function ReturnsView({ initial, perms, openRma }: { initial: List
     a.href = url;
     a.download = `returns-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   const stats = list.stats;

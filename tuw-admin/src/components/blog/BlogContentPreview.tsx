@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { ImageWithFallback } from '@/components/ui';
 import type {

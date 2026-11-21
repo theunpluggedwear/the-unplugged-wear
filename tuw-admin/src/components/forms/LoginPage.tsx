@@ -23,7 +23,6 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
   const stateParam = searchParams.get('state') as StateMode | null;
 
   const [view, setView] = useState<AuthView>('login');
-  const [currentMode, setCurrentMode] = useState<StateMode>(initialMode || 'default');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -37,9 +36,10 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Apply a specific Figma state mode
+  // Apply a specific Figma state mode (design preview only — never an auth bypass).
+  // A state transition always clears any stale notice from a previous view.
   const applyState = (mode: StateMode) => {
-    setCurrentMode(mode);
+    setNotice('');
     if (mode === 'default') {
       setView('login');
       setEmail('');
@@ -48,14 +48,14 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
       setHasError(false);
     } else if (mode === 'filled') {
       setView('login');
-      setEmail('contactstylehub@gmail.com');
-      setPassword('stylehubforlyfe');
+      setEmail('admin@example.com');
+      setPassword('DemoPassword123!');
       setRememberMe(true);
       setHasError(false);
     } else if (mode === 'error') {
       setView('login');
-      setEmail('contactstylehub@gmail.com');
-      setPassword('stylehubforlyfe');
+      setEmail('admin@example.com');
+      setPassword('DemoPassword123!');
       setRememberMe(false);
       setHasError(true);
     } else if (mode === 'reset') {
@@ -80,24 +80,10 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
     }
   }, [stateParam, initialMode]);
 
-  // Keyboard shortcut listener to easily simulate any Figma frame:
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.altKey) {
-        if (e.key === '1') applyState('default');
-        if (e.key === '2') applyState('filled');
-        if (e.key === '3') applyState('error');
-        if (e.key === '4') applyState('reset');
-        if (e.key === '5') applyState('recovery');
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (pending) return;
+    setNotice('');
     if (!password || !email) {
       setHasError(true);
       setErrorMessage('Enter your email and password.');
@@ -118,13 +104,13 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
       // leave the typed password in memory or the DOM after signing in.
       setPassword('');
       router.push(result.data.next);
-      router.refresh();
     });
   };
 
   const handleResetSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (pending) return;
+    setNotice('');
     setPending(true);
     void forgotPasswordAction({ email }).then((result) => {
       setPending(false);
@@ -140,6 +126,7 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
   const handleSetPasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (pending) return;
+    setNotice('');
     const token = searchParams.get('token');
     if (!token) return setNotice('Open the reset link from your email to set a new password.');
     if (newPassword !== confirmPassword) return setNotice('The two passwords do not match.');
@@ -408,7 +395,7 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
           )}
 
           {view === 'set-password' && (
-            <div className="flex w-full max-w-auth-card flex-col gap-6 rounded-auth-card border border-auth-line bg-white shadow-auth-card p-10 px-8">
+            <div className="flex w-full max-w-auth-card flex-col gap-6 rounded-auth-card border border-auth-line bg-white shadow-auth-card py-10 px-8">
               <form className="flex w-full max-w-auth-form flex-col gap-4" onSubmit={handleSetPasswordSubmit} noValidate>
                 {notice && <p role="alert" className="text-auth-input tracking-auth-input text-auth-error">{notice}</p>}
                 {[
@@ -441,7 +428,7 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
               Card width: 552px, radius: 20px, fill: surface token, stroke: auth-line token
               ========================================================================== */}
           {view === 'reset-password' && (
-            <div className="flex w-full max-w-auth-card flex-col gap-6 rounded-auth-card border border-auth-line bg-white shadow-auth-card p-10 px-8">
+            <div className="flex w-full max-w-auth-card flex-col gap-6 rounded-auth-card border border-auth-line bg-white shadow-auth-card py-10 px-8">
               <form className="flex w-full max-w-auth-form flex-col" onSubmit={handleResetSubmit}>
                 <div className="flex w-full flex-col mb-6">
                   <label

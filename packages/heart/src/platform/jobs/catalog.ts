@@ -4,6 +4,7 @@ import { sweepExpired } from '../idempotency/index.ts';
 import { notifyRestocked } from '../../modules/inventory/index.ts';
 import { submitDueOrders, syncOpenFulfillment } from '../../modules/fulfillment/index.ts';
 import { expireDue } from '../../modules/gift-cards/index.ts';
+import { reconcilePendingPayments, retryFailedWebhooks } from '../../modules/payments/index.ts';
 import { sweepRateLimits } from '../ratelimit/index.ts';
 
 // Every job the system runs, registered in one place so any trigger (Cron
@@ -44,6 +45,18 @@ export function loadJobs(): void {
     name: 'giftCards.expireDue',
     description: 'Flip gift cards past their expiry date to expired (DOC/backend/22).',
     run: expireDue,
+  });
+
+  registerJob({
+    name: 'payments.reconcileRazorpay',
+    description: 'Poll provider status for pending payment intents and expire abandoned orders.',
+    run: reconcilePendingPayments,
+  });
+
+  registerJob({
+    name: 'webhooks.retryFailed',
+    description: 'Retry failed provider webhook deliveries from the durable inbox.',
+    run: retryFailedWebhooks,
   });
 }
 

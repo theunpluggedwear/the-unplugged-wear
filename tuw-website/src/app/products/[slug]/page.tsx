@@ -12,6 +12,7 @@ import ProductReviews from '@storefront/components/commerce/ProductReviews';
 import { EditorialFeatureSplit } from '@storefront/components/editorial';
 import { getCatalog } from '@/server/catalog';
 import { getStorefrontSettings } from '@/server/settings';
+import { cmsProductFaqs } from '@/server/cms';
 import type { Product, ProductSpecTable, ProductType } from '@storefront/lib/types';
 import {
   categoryLabel,
@@ -70,6 +71,11 @@ export default async function ProductDetailPage({
     null;
   if (!product) notFound();
   const settings = await getStorefrontSettings();
+  const scopedFaqs = product.productId ? await cmsProductFaqs(product.productId, product.categoryId) : [];
+  const faqs = [
+    ...(product.faqs ?? []),
+    ...scopedFaqs.map((f) => ({ id: f.id, question: f.question, answer: f.answer })),
+  ];
 
   const type = productTypeOf(product);
   const categoryName = categoryLabel(product.category);
@@ -132,9 +138,9 @@ export default async function ProductDetailPage({
           />
         )}
 
-        {product.faqs && product.faqs.length > 0 && (
+        {faqs.length > 0 && (
           <DynamicAccordionFaq
-            faqs={product.faqs}
+            faqs={faqs}
             eyebrow="Questions"
             title="Frequently asked questions"
             description="How this piece is printed, sized and delivered."

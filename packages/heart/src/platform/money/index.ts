@@ -25,12 +25,22 @@ export function assertPaise(value: number): void {
 }
 
 const INR = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 2 });
+/** Intl's default for INR keeps both fraction digits ("₹3,899.00"). */
+const INR_FIXED = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
 /** "₹3,899" / "₹3,899.50" for display. */
 export const formatINR = (paise: number): string => {
   assertPaise(paise);
   return INR.format(paise / 100);
 };
+
+/**
+ * Same en-IN currency, always two fraction digits ("₹3,899.00"). This is the
+ * exact output the storefront and admin `formatINR` helpers have always
+ * produced; both re-export this so the Intl configuration lives in one place.
+ * Deliberately non-asserting: existing callers pass arithmetic results.
+ */
+export const formatINRFixed = (paise: number): string => INR_FIXED.format(paise / 100);
 
 /** Percentage of an amount, rounded half-up to whole paise. */
 export function percentOf(paise: number, percent: number): number {

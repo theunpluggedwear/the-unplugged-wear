@@ -130,7 +130,9 @@ export default function ProductsView({ initialProducts, categories, perms, store
 
   // Size charts save themselves: structure at once, typed cells after a pause.
   const [sizeCharts, setSizeCharts] = useState<SizeChart[]>(initialSizeCharts);
-  const chartTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  // Each pending autosave keeps its timer and its commit callback so the edit
+  // can be flushed when the drawer closes and cancelled on unmount.
+  const chartTimers = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; commit: () => void }>());
   // Cells hold what was typed; numbers are converted only when saving.
   const cellValue = (v: number | string): number | string | null => {
     if (typeof v === 'number') return v;
@@ -141,15 +143,30 @@ export default function ProductsView({ initialProducts, categories, perms, store
   };
   const persistChart = (chart: SizeChart, delay = 0) => {
     const pending = chartTimers.current.get(chart.id);
-    if (pending) clearTimeout(pending);
-    chartTimers.current.set(chart.id, setTimeout(() => {
+    if (pending) clearTimeout(pending.timer);
+    const commit = () => {
+      chartTimers.current.delete(chart.id);
       // A half-typed range waits until it is complete.
       if (chart.rows.some((r) => Object.values(r.measures).some((v) => cellValue(v) === null))) return;
       const rows = chart.rows.map((r) => ({ ...r, measures: Object.fromEntries(Object.entries(r.measures).map(([k, v]) => [k, cellValue(v)!])) }));
       void saveSizeChartAction({ id: chart.id, name: chart.name, columns: chart.columns, rows }).then((r) => {
         if (!r.ok) showToast({ type: 'warning', title: 'Size Chart Not Saved', description: r.error.message });
       });
-    }, delay));
+    };
+    chartTimers.current.set(chart.id, { timer: setTimeout(commit, delay), commit });
+  };
+  // Never let a debounced chart save fire after this screen is gone.
+  useEffect(() => () => {
+    chartTimers.current.forEach(({ timer }) => clearTimeout(timer));
+    chartTimers.current.clear();
+  }, []);
+  // Closing the editor flushes valid pending cells instead of dropping them.
+  const flushChartTimers = () => {
+    chartTimers.current.forEach(({ timer, commit }) => {
+      clearTimeout(timer);
+      commit();
+    });
+    chartTimers.current.clear();
   };
   const updateChart = (chartId: string, change: (c: SizeChart) => SizeChart, delay = 0) => {
     const chart = sizeCharts.find((c) => c.id === chartId);
@@ -207,7 +224,6 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const [chartColDrafts, setChartColDrafts] = useState<Record<string, string>>({});
   const can = (permission: string) => perms.includes(permission);
   const libId = (name: string) => initialLibrary.find((l) => l.name.toLowerCase() === name.toLowerCase())?.id;
-  const canPerformAction = (_category: 'products') => can('product.update');
   const refused = (what: string) => showToast({ type: 'warning', title: 'Action Restricted', description: `You do not have permission to ${what}.` });
   /** Honest save toast: says when the storefront could not be refreshed. */
   const storefrontNote = (storefront: { ok: true } | { ok: false; reason: string }) =>
@@ -318,6 +334,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
 
   const openCreateDrawer = () => {
     if (!can('product.create')) return refused('create products');
+    releaseUploadPreviews();
     setEditingProduct(null);
     setIsCreating(true);
     setBasicCardOpen(false);
@@ -398,6 +415,15 @@ export default function ProductsView({ initialProducts, categories, perms, store
     });
   };
 
+  // Release every session-only upload preview currently held in the draft.
+  // The functional updater reads the latest list even across rapid exits.
+  const releaseUploadPreviews = () => {
+    setFormImages((prev) => {
+      revokeUploads(prev.filter((im) => !im.persisted).map((im) => ({ url: im.src })));
+      return prev;
+    });
+  };
+
   // Unified asset list (MX2): persisted gallery URLs + session upload
   // previews in one orderable list. Reorder/cover operate on the list;
   // save splits it back (URLs persist, uploads drop with a toast).
@@ -469,6 +495,26 @@ export default function ProductsView({ initialProducts, categories, perms, store
       setDrawerView('matrix');
     }
   }, [productTab, drawerView]);
+
+  // One exit path for the editor drawer: cancel, replace, save, delete and
+  // the Drawer's own onClose all release blob previews and pending autosaves.
+  const closeEditor = () => {
+    flushChartTimers();
+    releaseUploadPreviews();
+    setEditingProduct(null);
+    setIsCreating(false);
+    setBasicCardOpen(false);
+    setPricingCardOpen(false);
+    setDiscountsCardOpen(false);
+    setFulfillmentCardOpen(false);
+    setAttributesCardOpen(false);
+    setSpecsDisplayCardOpen(false);
+    setSpecsClothingCardOpen(false);
+    setSpecsSizeChartCardOpen(false);
+    setSpecsMonogramCardOpen(false);
+    setDrawerView('compact');
+    autoExpandedRef.current = false;
+  };
 
   const removeImage = (id: string) => {
     setFormImages((prev) => {
@@ -980,13 +1026,24 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const openEditDrawer = async (summary: ProductItem) => {
     if (!can('product.update')) return refused('edit products');
     if (openingId) return;
+    // Leave create mode before the await: otherwise the create branch can run
+    // with isCreating still true while the product detail is loading.
+    setIsCreating(false);
     setOpeningId(summary.id);
-    const result = await getProductAction({ id: summary.id });
-    setOpeningId(null);
-    if (!result.ok) return showToast({ type: 'warning', title: 'Could Not Open Product', description: result.error.message });
-    const { movements, ...detail } = result.data;
-    setStockMovements(movements as StockMovement[]);
-    loadEditDrawer(detail as unknown as ProductItem);
+    try {
+      const result = await getProductAction({ id: summary.id });
+      if (!result.ok) {
+        showToast({ type: 'warning', title: 'Could Not Open Product', description: result.error.message });
+        return;
+      }
+      const { movements, ...detail } = result.data;
+      setStockMovements(movements as StockMovement[]);
+      loadEditDrawer(detail as unknown as ProductItem);
+    } catch {
+      showToast({ type: 'warning', title: 'Could Not Open Product', description: 'The request failed. Please try again.' });
+    } finally {
+      setOpeningId(null);
+    }
   };
 
   // Spotlight deep link (?open=<id>): open that product once on arrival.
@@ -1000,6 +1057,9 @@ export default function ProductsView({ initialProducts, categories, perms, store
   }, [openId]);
 
   const loadEditDrawer = (product: ProductItem) => {
+    // Replace any upload previews from the previous draft before the persisted
+    // gallery takes their place, so their object URLs are not orphaned.
+    releaseUploadPreviews();
     setIsCreating(false);
     setEditingProduct(product);
     setBasicCardOpen(false);
@@ -1123,6 +1183,24 @@ export default function ProductsView({ initialProducts, categories, perms, store
     showToast({ type: 'warning', title: 'Not Saved', description: error.message });
   };
 
+  // Reset the in-flight flag even when a server call rejects, so one failed
+  // request can never leave a control stuck on "Saving…" or "Working…".
+  const withGuard = async <T,>(
+    setFlag: (value: boolean) => void,
+    run: () => Promise<T>,
+    failureTitle: string
+  ): Promise<T | null> => {
+    setFlag(true);
+    try {
+      return await run();
+    } catch {
+      showToast({ type: 'warning', title: failureTitle, description: 'The request failed. Please try again.' });
+      return null;
+    } finally {
+      setFlag(false);
+    }
+  };
+
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (saving) return;
@@ -1148,8 +1226,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
         return;
       }
       setFormCompareError(null);
-      setSaving(true);
-      const created = await createProductAction({
+      const created = await withGuard(setSaving, () => createProductAction({
         name: formName,
         slug: formSlug,
         category: formCategory,
@@ -1188,8 +1265,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
               upcharge: parseFloat(formMonogramUpcharge) || 0,
             }
           : undefined,
-      });
-      setSaving(false);
+      }), 'Not Created');
+      if (!created) return;
       // A refused save keeps the drawer open with every input intact.
       if (!created.ok) return showSaveError(created.error);
       setProducts((list) => [created.data.product as unknown as ProductItem, ...list]);
@@ -1202,7 +1279,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
           description: `${droppedCount} uploaded preview${droppedCount === 1 ? '' : 's'} can't persist as files — add URLs to keep them.`,
         });
       }
-      setIsCreating(false);
+      closeEditor();
       return;
     }
     if (!editingProduct) return;
@@ -1238,8 +1315,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     setFormCompareError(null);
     const cleanAdjustments = pruneAdjustments(formAdjustments, formAttributes).next;
 
-    setSaving(true);
-    const updated = await updateProductAction({
+    const updated = await withGuard(setSaving, () => updateProductAction({
       id: editingProduct.id,
       expectedUpdatedAt: editingProduct.updatedAt,
       colors: colorValues,
@@ -1283,8 +1359,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
             upcharge: parseFloat(formMonogramUpcharge) || 0,
           }
         : undefined,
-    });
-    setSaving(false);
+    }), 'Not Saved');
+    if (!updated) return;
     if (!updated.ok) return showSaveError(updated.error);
     setProducts((list) => list.map((p) => (p.id === editingProduct.id ? (updated.data.product as unknown as ProductItem) : p)));
     showToast({ type: 'success', title: 'Product Updated', description: `Changes saved. ${storefrontNote(updated.data.storefront)}` });
@@ -1298,7 +1374,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
       });
     }
 
-    setEditingProduct(null);
+    closeEditor();
   };
 
   React.useEffect(() => {
@@ -1567,11 +1643,10 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const applyImport = async () => {
     if (!importPreview || importPreview.groups.length === 0 || importing) return;
     if (!can('product.import')) return refused('import products');
-    setImporting(true);
-    const result = await importListingAction({
+    const result = await withGuard(setImporting, () => importListingAction({
       rows: importPreview.listing,
-    });
-    setImporting(false);
+    }), 'Import Failed');
+    if (!result) return;
     if (!result.ok) return showToast({ type: 'warning', title: 'Import Failed', description: result.error.message });
     setImportPreview(null);
     if (csvInputRef.current) csvInputRef.current.value = '';
@@ -1642,9 +1717,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
     const ids = [...selectedIds];
     if (ids.length === 0 || saving) return;
     if (!can(status === 'archived' ? 'product.archive' : 'product.update')) return refused('change product status');
-    setSaving(true);
-    const result = await setProductsStatusAction({ ids, status });
-    setSaving(false);
+    const result = await withGuard(setSaving, () => setProductsStatusAction({ ids, status }), 'Not Updated');
+    if (!result) return;
     if (!result.ok) return showToast({ type: 'warning', title: 'Not Updated', description: result.error.message });
     const done = new Set(result.data.updated);
     setProducts((list) => list.map((p) => (done.has(p.id) ? { ...p, publicationStatus: status } : p)));
@@ -1662,9 +1736,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
 
   const removeProducts = async (ids: string[]) => {
     if (!can('product.archive')) { refused('delete products'); return false; }
-    setSaving(true);
-    const result = await deleteProductsAction({ ids });
-    setSaving(false);
+    const result = await withGuard(setSaving, () => deleteProductsAction({ ids }), 'Not Deleted');
+    if (!result) return false;
     if (!result.ok) { showToast({ type: 'warning', title: 'Not Deleted', description: result.error.message }); return false; }
     const gone = new Set(result.data.deleted);
     setProducts((list) => list.filter((p) => !gone.has(p.id)));
@@ -1676,7 +1749,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     if (ids.length === 0 || saving) return;
     if (!window.confirm(`Delete ${ids.length} product${ids.length === 1 ? '' : 's'} from the catalog? They disappear from the store; past orders keep their records.`)) return;
     if (!(await removeProducts(ids))) return;
-    if (editingProduct && selectedIds.has(editingProduct.id)) setEditingProduct(null);
+    if (editingProduct && selectedIds.has(editingProduct.id)) closeEditor();
     setCurrentPage(1);
     showToast({ type: 'success', title: 'Bulk Delete Applied', description: `${ids.length} product${ids.length === 1 ? '' : 's'} removed from the catalog.` });
     clearSelection();
@@ -1769,7 +1842,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
       padding="10px"
       gap="12px"
       hoverable
-      className={`${idx === 0 ? 'tuw-stat-active' : ''} ${draggingId === im.id ? 'tuw-stat-active' : ''}`.trim()}
+      className={idx === 0 || draggingId === im.id ? 'tuw-stat-active' : ''}
       draggable
       onDragStart={(e) => {
         dragIdRef.current = im.id;
@@ -1849,7 +1922,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
           padding="10px"
           gap="12px"
           hoverable
-          className={`${idx === 0 ? 'tuw-stat-active' : ''} ${draggingId === im.id ? 'tuw-stat-active' : ''}`.trim()}
+          className={idx === 0 || draggingId === im.id ? 'tuw-stat-active' : ''}
           draggable
           onDragStart={(e) => {
             dragIdRef.current = im.id;
@@ -2532,25 +2605,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
       {/* Edit Product Drawer */}
       <Drawer
         isOpen={Boolean(editingProduct) || isCreating}
-        onClose={() => {
-          setEditingProduct(null);
-          setIsCreating(false);
-          setBasicCardOpen(false);
-          setPricingCardOpen(false);
-          setDiscountsCardOpen(false);
-          setFulfillmentCardOpen(false);
-          setAttributesCardOpen(false);
-          setSpecsDisplayCardOpen(false);
-          setSpecsClothingCardOpen(false);
-          setSpecsSizeChartCardOpen(false);
-          setSpecsMonogramCardOpen(false);
-          setDrawerView('compact');
-          autoExpandedRef.current = false;
-          setFormImages((prev) => {
-            revokeUploads(prev.filter((im) => !im.persisted).map((im) => ({ url: im.src })));
-            return prev;
-          });
-        }}
+        onClose={closeEditor}
         title={editingProduct ? `Manage ${editingProduct.name}` : 'Add New Product'}
         subtitle={
           editingProduct ? (
@@ -2601,7 +2656,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
         footer={
           isCreating ? (
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, width: '100%' }}>
-              <Button variant="secondary" size="sm" onClick={() => setIsCreating(false)}>
+              <Button variant="secondary" size="sm" onClick={closeEditor}>
                 Cancel
               </Button>
               <Button variant="primary" size="sm" onClick={handleEditSubmit}>
@@ -2620,7 +2675,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
                     void removeProducts([editingProduct.id]).then((ok) => {
                       if (!ok) return;
                       showToast({ type: 'info', title: 'Product Deleted', description: `"${editingProduct.name}" was removed from the catalog.` });
-                      setEditingProduct(null);
+                      closeEditor();
                     });
                   }
                 }}
@@ -2628,7 +2683,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
                 Delete
               </Button>
               <div style={{ display: 'flex', gap: 10 }}>
-                <Button variant="secondary" size="sm" onClick={() => setEditingProduct(null)}>
+                <Button variant="secondary" size="sm" onClick={closeEditor}>
                   Cancel
                 </Button>
                 <Button variant="primary" size="sm" onClick={handleEditSubmit} disabled={saving}>

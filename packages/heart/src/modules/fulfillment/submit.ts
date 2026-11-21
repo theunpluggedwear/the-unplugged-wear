@@ -4,6 +4,7 @@ import { getDb, withTransaction } from '../../platform/db/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import { toRupees } from '../../platform/money/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
+import { isTestSku } from '../../platform/test-sku/index.ts';
 import { getFulfillmentPartner } from '../../integrations/fulfillment/index.ts';
 import { notifyStaff } from '../notifications/index.ts';
 import { getSetting } from '../settings/index.ts';
@@ -80,7 +81,21 @@ async function lease(planned: { orderId: string; orderNumber: string; gateway: '
  * so a batch keeps going.
  */
 export async function sendPlanned(orderId: string, force = false): Promise<SubmitOutcome> {
+  // A configured test SKU is never manufactured. Check before planning so a
+  // missing partner SKU mapping cannot get in the way. Covers automatic and
+  // manual sends; the SKU comes from env, not a hard-coded QA fixture.
+  const { rows: orderSkus } = await getDb().execute<{ order_number: string; sku: string }>(sql`
+    SELECT o.order_number, oi.sku FROM orders o JOIN order_items oi ON oi.order_id = o.id WHERE o.id = ${orderId}`);
+  if (orderSkus.some((r) => isTestSku(r.sku))) {
+    return { orderNumber: orderSkus[0]?.order_number ?? '', groups: [], skipped: [{ slug: '*', reason: 'Test product — fulfilment submission is blocked.' }] };
+  }
+
+  if (process.env.FULFILLMENT_SUBMIT_ENABLED === 'false') {
+    const planned = await planOrder(orderId);
+    return { orderNumber: planned.orderNumber, groups: [], skipped: [{ slug: '*', reason: 'Fulfilment submission is disabled in this environment.' }] };
+  }
   const planned = await planOrder(orderId);
+
   if (!force) {
     const { rows: [cap] } = await getDb().execute<{ n: number }>(sql`
       SELECT count(*)::int AS n FROM fulfillment_orders WHERE order_id = ${orderId} AND submit_attempts >= ${MAX_AUTO_ATTEMPTS}`);

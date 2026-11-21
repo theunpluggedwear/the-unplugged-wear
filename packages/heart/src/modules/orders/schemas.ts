@@ -24,6 +24,11 @@ export const placeOrder = z.object({
   method: z.enum(['card', 'upi', 'cod']),
   discountCode: z.string().trim().toUpperCase().max(50).optional(),
   giftCardCode: z.string().trim().max(64).optional(),
+  /** Live payment already captured through the provider before order placement. */
+  prepaid: z.object({
+    providerOrderId: z.string().trim().max(150),
+    providerPaymentId: z.string().trim().max(150),
+  }).optional(),
   /** Demo gateway only: exercise the decline path. */
   simulate: z.literal('decline').optional(),
 });

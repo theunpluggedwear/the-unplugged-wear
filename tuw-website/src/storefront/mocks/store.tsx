@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useSiteSettings } from '@storefront/lib/site-settings';
 import { Toaster, toast as sonnerToast } from 'sonner';
 import BrandToast, { type BrandToastProps } from '@storefront/components/ui/BrandToast';
@@ -21,15 +21,25 @@ import { useBag } from '@storefront/lib/bag';
 import { previewDiscountAction } from '@/server/order-actions';
 import { formatPaise } from '@storefront/lib/format';
 import type { DiscountRule } from '@tuw/heart/modules/orders';
-import type { Collection, SizeChartData } from '@storefront/lib/types';
+import type { SizeChartData } from '@storefront/lib/types';
 import type { Navigation } from '@/server/nav';
 
-export interface ToastMessage {
-  id: string;
+/**
+ * What crosses the Server → Client boundary. The shop and PDP read the full
+ * catalog on the server; the provider only needs the pieces the header's
+ * mega-menu, search suggestions and bag summaries resolve against.
+ */
+export interface NavCatalog {
+  products: Product[];
+  sizeCharts: SizeChartData[];
+}
+
+/** Sonner renders toasts directly; this is only the caller-facing shape. */
+export type ToastInput = {
   type: 'success' | 'info' | 'warning' | 'error';
   title: string;
   description?: string;
-}
+};
 
 interface StoreContextType {
   // Scenario & Testing Controls
@@ -38,9 +48,8 @@ interface StoreContextType {
   simulatedError: string | null;
   retryConnection: () => void;
 
-  // Products (from the database via the root layout — TL-BE-05)
+  // Products (nav-sized projection from the root layout — TL-BE-05)
   products: Product[];
-  collections: Collection[];
   hiddenCategories: string[];
   sizeCharts: SizeChartData[];
   getProductBySlug: (slug: string) => Product | undefined;
@@ -62,8 +71,14 @@ interface StoreContextType {
   discountAmount: number;
   applyPromoCode: (code: string) => Promise<boolean>;
   removePromoCode: () => void;
-  isCartDrawerOpen: boolean;
+  /** Stable setter; the open flag lives in its own subscription so opening the
+   * drawer does not re-render every useStore consumer. */
   setIsCartDrawerOpen: (open: boolean) => void;
+
+  /** Bag hydration state, exposed so list pages can show loading/error instead
+   * of a misleading empty bag. */
+  bagReady: boolean;
+  bagError: string | null;
 
   // Wishlist
   wishlist: string[]; // product IDs
@@ -90,14 +105,8 @@ interface StoreContextType {
   submitReturnRequest: (req: Omit<ReturnRequest, 'id' | 'createdAt' | 'status'>) => void;
 
 
-  // Search & Global filters
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
-
-  // Toasts
-  toasts: ToastMessage[];
-  addToast: (toast: Omit<ToastMessage, 'id'>) => void;
-  dismissToast: (id: string) => void;
+  // Toasts (Sonner is mounted once by the provider)
+  addToast: (toast: ToastInput) => void;
 
   // Reset Demo
   resetStoreData: () => void;
@@ -112,7 +121,25 @@ const StoreContext = createContext<StoreContextType | null>(null);
 // date, which is still "yesterday" in India until 05:30).
 const localDate = (d: Date) => d.toLocaleDateString('en-CA');
 
-export function StoreProvider({ children, catalog, nav, session }: { children: React.ReactNode; session?: unknown; catalog: { products: Product[]; collections: Collection[]; sizeCharts: SizeChartData[] }; nav: Navigation }) {
+// The cart drawer is UI-only state. Keeping it outside the data context means
+// opening/closing it re-renders just the drawer, not every bag/catalog consumer.
+let cartDrawerOpen = false;
+const drawerListeners = new Set<() => void>();
+const subscribeDrawer = (listener: () => void) => {
+  drawerListeners.add(listener);
+  return () => { drawerListeners.delete(listener); };
+};
+const drawerSnapshot = () => cartDrawerOpen;
+const setIsCartDrawerOpen = (open: boolean) => {
+  if (cartDrawerOpen === open) return;
+  cartDrawerOpen = open;
+  drawerListeners.forEach((listener) => listener());
+};
+export function useCartDrawer() {
+  return useSyncExternalStore(subscribeDrawer, drawerSnapshot, drawerSnapshot);
+}
+
+export function StoreProvider({ children, catalog, nav, session }: { children: React.ReactNode; session?: unknown; catalog: NavCatalog; nav: Navigation }) {
   const STORE_PRODUCTS = catalog.products;
   // Fees come from admin Settings (store_settings). The bag and wishlist
   // live in the database (useBag); promo codes and orders are still demo.
@@ -128,13 +155,17 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalog.products]);
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  // Latest committed orders, so two same-tick creates cannot pick the same number.
+  const ordersRef = useRef(orders);
+  ordersRef.current = orders;
+  const commitOrders = useCallback((next: Order[]) => {
+    ordersRef.current = next;
+    setOrders(next);
+  }, []);
   const [returns, setReturns] = useState<ReturnRequest[]>([]);
   const [promoCode, setPromoCode] = useState<string>('');
   const [promoRule, setPromoRule] = useState<DiscountRule | null>(null);
   const [promoMinPaise, setPromoMinPaise] = useState<number | null>(null);
-  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [hasLoadedStorage, setHasLoadedStorage] = useState(false);
 
   // Load from localStorage with schema version tuw_website_v5 (v4: product photos became
@@ -147,7 +178,7 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
       localStorage.removeItem('tuw_website_v5_wishlist');
 
       const savedOrders = localStorage.getItem('tuw_website_v5_orders');
-      if (savedOrders) setOrders(JSON.parse(savedOrders));
+      if (savedOrders) commitOrders(JSON.parse(savedOrders) as Order[]);
 
       const savedReturns = localStorage.getItem('tuw_website_v5_returns');
       if (savedReturns) setReturns(JSON.parse(savedReturns));
@@ -172,7 +203,7 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
 
   const lastToastRef = useRef<{ key: string; time: number } | null>(null);
 
-  const addToast = useCallback((toast: Omit<ToastMessage, 'id'>) => {
+  const addToast = useCallback((toast: ToastInput) => {
     const key = `${toast.title}:${toast.description || ''}`;
     const now = Date.now();
     if (lastToastRef.current && lastToastRef.current.key === key && now - lastToastRef.current.time < 800) {
@@ -182,10 +213,6 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
 
     // Rendered by Sonner's <Toaster> below (brand-styled, stacked, swipe-to-dismiss).
     showToast({ title: toast.title, description: toast.description, tone: toast.type });
-  }, []);
-
-  const dismissToast = useCallback((id: string) => {
-    sonnerToast.dismiss(id);
   }, []);
 
   // Bag and wishlist from the database.
@@ -205,19 +232,23 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
     });
   }, [cart, bag.removeLine, addToast]);
 
-  const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const cartSubtotal = cart.reduce((acc, item) => acc + item.priceINR * item.quantity, 0);
-  // Same rule the server applies; shown here, recomputed at checkout.
-  const subtotalPaise = Math.round(cartSubtotal * 100);
-  const discountPaise = !promoRule || (promoMinPaise !== null && subtotalPaise < promoMinPaise) ? 0
-    : promoRule.type === 'percent' ? Math.round((subtotalPaise * promoRule.percent) / 100) : Math.min(subtotalPaise, promoRule.paise);
-  const discountAmount = discountPaise / 100;
-  const eligibleSubtotal = cartSubtotal - discountAmount;
-  const shippingFee = cartSubtotal === 0 || eligibleSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE;
-  const freeShippingRemaining = Math.max(0, FREE_SHIPPING_THRESHOLD - eligibleSubtotal);
+  const totals = useMemo(() => {
+    const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+    const cartSubtotal = cart.reduce((acc, item) => acc + item.priceINR * item.quantity, 0);
+    // Same rule the server applies; shown here, recomputed at checkout.
+    const subtotalPaise = Math.round(cartSubtotal * 100);
+    const discountPaise = !promoRule || (promoMinPaise !== null && subtotalPaise < promoMinPaise) ? 0
+      : promoRule.type === 'percent' ? Math.round((subtotalPaise * promoRule.percent) / 100) : Math.min(subtotalPaise, promoRule.paise);
+    const discountAmount = discountPaise / 100;
+    const eligibleSubtotal = cartSubtotal - discountAmount;
+    const shippingFee = cartSubtotal === 0 || eligibleSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE;
+    const freeShippingRemaining = Math.max(0, FREE_SHIPPING_THRESHOLD - eligibleSubtotal);
+    return { cartCount, cartSubtotal, discountAmount, shippingFee, freeShippingRemaining };
+  }, [cart, promoRule, promoMinPaise, FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING_FEE]);
+  const { cartCount, cartSubtotal, discountAmount, shippingFee, freeShippingRemaining } = totals;
 
   /** Checked on the server against the bag; the order total is decided again at checkout. */
-  const applyPromoCode = async (code: string): Promise<boolean> => {
+  const applyPromoCode = useCallback(async (code: string): Promise<boolean> => {
     const result = await previewDiscountAction({ code });
     if (result.ok) {
       setPromoCode(result.data.code);
@@ -228,13 +259,13 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
     }
     addToast({ type: 'error', title: 'Code not applied', description: result.error.message });
     return false;
-  };
+  }, [addToast]);
 
-  const removePromoCode = () => {
+  const removePromoCode = useCallback(() => {
     setPromoCode('');
     setPromoRule(null);
     setPromoMinPaise(null);
-  };
+  }, []);
 
   // Wishlist: customers only, so a guest's heart asks them to sign in.
   const toggleWishlist = useCallback((productId: string) => {
@@ -246,16 +277,18 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
       showToast({ title: 'Sign in to save pieces', description: 'Your wishlist is kept with your account.', image, tone: 'info', action: { label: 'Sign in', href: `/login?next=${encodeURIComponent(next)}` } });
       return;
     }
-    const isCurrentlySaved = wishlist.includes(productId);
-    void bag.setSaved(productId, !isCurrentlySaved).then((ok) => {
+    // Read the latest committed value (the ref inside useBag), not this render's
+    // closure, so two fast clicks always toggle in opposite directions.
+    const wasSaved = bag.isWishlistSaved(productId);
+    void bag.setSaved(productId).then((ok) => {
       if (!ok) return;
-      if (isCurrentlySaved) {
+      if (wasSaved) {
         showToast({ title: 'Removed from wishlist', description: name, image, tone: 'info', action: { label: 'Undo', onClick: () => void bag.setSaved(productId, true) } });
       } else {
         showToast({ title: 'Saved to wishlist', description: name, image, action: { label: 'View', href: '/wishlist' } });
       }
     });
-  }, [wishlist, products, bag.signedIn, bag.setSaved]);
+  }, [products, bag.signedIn, bag.setSaved, bag.isWishlistSaved]);
 
   const isInWishlist = useCallback(
     (productId: string) => wishlist.includes(productId),
@@ -263,7 +296,7 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
   );
 
   // Orders
-  const createOrder = (orderData: {
+  const createOrder = useCallback((orderData: {
     items: CartItem[];
     subtotalINR: number;
     shippingINR: number;
@@ -274,15 +307,17 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
     deliverySpeed?: 'standard' | 'express';
   }): Order => {
     // Order numbers must stay unique, or tracking would find an older order.
-    const taken = new Set(orders.map((o) => o.orderNumber));
+    // UUID bits are effectively collision-free and the ref check covers the
+    // same-tick case that Date.now()/Math.random() could not.
+    const taken = new Set(ordersRef.current.map((o) => o.orderNumber));
     let orderNumber = '';
     do {
-      orderNumber = `TUW-${Math.floor(1000 + Math.random() * 9000)}`;
+      orderNumber = `TUW-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
     } while (taken.has(orderNumber));
     const isCashOnDelivery = orderData.paymentMethod === 'COD (Demo)';
     const isExpress = orderData.deliverySpeed === 'express';
     const newOrder: Order = {
-      id: `ord-${Date.now()}`,
+      id: `ord-${crypto.randomUUID()}`,
       orderNumber,
       date: localDate(new Date()),
       status: 'Confirmed',
@@ -296,7 +331,7 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
       totalINR: orderData.totalINR,
       shippingAddress: orderData.shippingAddress,
       paymentMethod: orderData.paymentMethod,
-      trackingNumber: `EXP-${Math.floor(100000000 + Math.random() * 900000000)}`,
+      trackingNumber: `EXP-${crypto.randomUUID().slice(0, 12).toUpperCase()}`,
       carrier: isExpress ? 'BlueDart Air Priority Express' : 'Delhivery Surface',
       estimatedDelivery: localDate(new Date(Date.now() + (isExpress ? 3 : 5) * 86400000)),
       trackingEvents: [
@@ -312,22 +347,22 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
       ],
     };
 
-    setOrders((prev) => [newOrder, ...prev]);
+    commitOrders([newOrder, ...ordersRef.current]);
     clearCart();
     // A promo applies to one order only.
     removePromoCode();
     return newOrder;
-  };
+  }, [clearCart, removePromoCode, commitOrders]);
 
-  const getOrderById = (id: string) => orders.find((o) => o.id === id);
-  const getOrderByNumber = (num: string) =>
-    orders.find((o) => o.orderNumber.toLowerCase() === num.trim().toLowerCase());
+  const getOrderById = useCallback((id: string) => orders.find((o) => o.id === id), [orders]);
+  const getOrderByNumber = useCallback((num: string) =>
+    orders.find((o) => o.orderNumber.toLowerCase() === num.trim().toLowerCase()), [orders]);
 
   // Returns
-  const submitReturnRequest = (req: Omit<ReturnRequest, 'id' | 'createdAt' | 'status'>) => {
+  const submitReturnRequest = useCallback((req: Omit<ReturnRequest, 'id' | 'createdAt' | 'status'>) => {
     const newReturn: ReturnRequest = {
       ...req,
-      id: `ret-${Date.now()}`,
+      id: `ret-${crypto.randomUUID()}`,
       status: 'Requested',
       createdAt: localDate(new Date()),
     };
@@ -337,22 +372,22 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
       title: 'Return Requested',
       description: `RMA request logged for Order ${req.orderNumber}. We will schedule courier pickup.`,
     });
-  };
+  }, [addToast]);
 
   // Addresses live in the real address book now (storefront/lib/account, TL-BE-03).
 
-  const getProductBySlug = (slug: string) =>
+  const getProductBySlug = useCallback((slug: string) =>
     products.find(
       (p) =>
         p.slug.toLowerCase() === slug.toLowerCase() ||
         p.aliases?.some((a) => a.toLowerCase() === slug.toLowerCase())
-    );
+    ), [products]);
 
-  const setScenario = (sc: DemoScenario) => {
+  const setScenario = useCallback((sc: DemoScenario) => {
     setScenarioState(sc);
     if (sc === 'empty') {
       setProducts([]);
-      setOrders([]);
+      commitOrders([]);
       // The bag and wishlist are real now (database); scenarios leave them alone.
       setSimulatedError(null);
       addToast({
@@ -377,7 +412,7 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
       });
     } else if (sc === 'normal') {
       setProducts(STORE_PRODUCTS);
-      setOrders(INITIAL_ORDERS);
+      commitOrders(INITIAL_ORDERS);
       setSimulatedError(null);
       addToast({
         type: 'success',
@@ -385,9 +420,9 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
         description: 'Restored deterministic storefront catalog.',
       });
     }
-  };
+  }, [STORE_PRODUCTS, commitOrders, addToast]);
 
-  const retryConnection = () => {
+  const retryConnection = useCallback(() => {
     setSimulatedError(null);
     setScenario('normal');
     addToast({
@@ -395,14 +430,14 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
       title: 'Connection Restored',
       description: 'Storefront connected to simulated services successfully.',
     });
-  };
+  }, [setScenario, addToast]);
 
-  const resetStoreData = () => {
+  const resetStoreData = useCallback(() => {
     setScenarioState('normal');
     setSimulatedError(null);
     setProducts(STORE_PRODUCTS);
     // The bag and wishlist are real now (database); reset leaves them alone.
-    setOrders(INITIAL_ORDERS);
+    commitOrders(INITIAL_ORDERS);
     setReturns([]);
     setPromoCode('');
     setPromoRule(null);
@@ -431,55 +466,61 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
       title: 'Storefront Demo Reset',
       description: 'All local changes reset to baseline deterministic fixtures.',
     });
-  };
+  }, [STORE_PRODUCTS, commitOrders, addToast]);
+
+  // One value object per data change only: toasts are handled by Sonner and the
+  // drawer flag lives in its own subscription, so neither invalidates this.
+  const storeValue = useMemo<StoreContextType>(() => ({
+    scenario,
+    setScenario,
+    simulatedError,
+    retryConnection,
+    products,
+    hiddenCategories: nav.hiddenCategories,
+    sizeCharts: catalog.sizeCharts,
+    getProductBySlug,
+    cart,
+    addToCart,
+    updateQuantity,
+    updateCartItemVariant,
+    removeFromCart,
+    clearCart,
+    cartCount,
+    cartSubtotal,
+    shippingFee,
+    freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
+    freeShippingRemaining,
+    promoCode,
+    discountAmount,
+    applyPromoCode,
+    removePromoCode,
+    setIsCartDrawerOpen,
+    bagReady: bag.ready,
+    bagError: bag.error,
+    wishlist,
+    toggleWishlist,
+    isInWishlist,
+    orders,
+    createOrder,
+    getOrderById,
+    getOrderByNumber,
+    returns,
+    submitReturnRequest,
+    addToast,
+    resetStoreData,
+    refreshBag: bag.refreshBag,
+  }), [
+    scenario, setScenario, simulatedError, retryConnection, products, nav.hiddenCategories,
+    catalog.sizeCharts, getProductBySlug, cart, addToCart, updateQuantity, updateCartItemVariant,
+    removeFromCart, clearCart, cartCount, cartSubtotal, shippingFee, FREE_SHIPPING_THRESHOLD,
+    freeShippingRemaining, promoCode, discountAmount, applyPromoCode, removePromoCode,
+    bag.ready, bag.error, wishlist, toggleWishlist, isInWishlist, orders, createOrder,
+    getOrderById, getOrderByNumber, returns, submitReturnRequest, addToast, resetStoreData,
+    bag.refreshBag,
+  ]);
 
   return (
-    <StoreContext.Provider
-      value={{
-        scenario,
-        setScenario,
-        simulatedError,
-        retryConnection,
-        products,
-        collections: catalog.collections,
-        hiddenCategories: nav.hiddenCategories,
-        sizeCharts: catalog.sizeCharts,
-        getProductBySlug,
-        cart,
-        addToCart,
-        updateQuantity,
-        updateCartItemVariant,
-        removeFromCart,
-        clearCart,
-        cartCount,
-        cartSubtotal,
-        shippingFee,
-        freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
-        freeShippingRemaining,
-        promoCode,
-        discountAmount,
-        applyPromoCode,
-        removePromoCode,
-        isCartDrawerOpen,
-        setIsCartDrawerOpen,
-        wishlist,
-        toggleWishlist,
-        isInWishlist,
-        orders,
-        createOrder,
-        getOrderById,
-        getOrderByNumber,
-        returns,
-        submitReturnRequest,
-        searchQuery,
-        setSearchQuery,
-        toasts,
-        addToast,
-        dismissToast,
-        resetStoreData,
-        refreshBag: bag.refreshBag,
-      }}
-    >
+    <StoreContext.Provider value={storeValue}>
       {children}
 
       {/* Small toasts near the top edge, over the announcement bar. */}

@@ -540,6 +540,56 @@ export const DEFAULT_CHECKLIST: ChecklistItem[] = [
 
 const STORAGE_KEY = 'tuw_website_v2_roadmap_checklist_v6';
 
+// Coerce an imported backup into well-formed checklist items. Invalid entries
+// are skipped and missing fields fall back to defaults/route matches so a
+// malformed backup can never white-screen the table renderer (CLN-WEB-013).
+function normalizeImportedItems(raw: unknown): ChecklistItem[] | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+
+  const validStatuses = new Set<PageStatus>(['done', 'in_progress', 'pending']);
+  const seenIds = new Set<string>();
+  const normalized: ChecklistItem[] = [];
+
+  raw.forEach((value, position) => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return;
+    const candidate = value as Record<string, unknown>;
+
+    let id = typeof candidate.id === 'string' && candidate.id.trim() ? candidate.id : '';
+    if (!id || seenIds.has(id)) id = `imported-${position + 1}-${Date.now()}`;
+    seenIds.add(id);
+
+    const route =
+      typeof candidate.route === 'string' && candidate.route.trim() ? candidate.route : '/';
+    const def = DEFAULT_CHECKLIST.find((item) => item.id === id || item.route === route);
+
+    const name =
+      typeof candidate.name === 'string' && candidate.name.trim()
+        ? candidate.name
+        : def?.name ?? 'Untitled page';
+    const area =
+      typeof candidate.area === 'string' && candidate.area.trim()
+        ? candidate.area
+        : def?.area ?? 'Custom';
+    const purpose =
+      typeof candidate.purpose === 'string' ? candidate.purpose : def?.purpose ?? '';
+    const status: PageStatus =
+      typeof candidate.status === 'string' && validStatuses.has(candidate.status as PageStatus)
+        ? (candidate.status as PageStatus)
+        : def?.status ?? 'pending';
+    const index =
+      typeof candidate.index === 'number' && Number.isFinite(candidate.index)
+        ? candidate.index
+        : def?.index ?? position + 1;
+    const notes = typeof candidate.notes === 'string' ? candidate.notes : undefined;
+    const image = typeof candidate.image === 'string' ? candidate.image : def?.image;
+    const isCustom = typeof candidate.isCustom === 'boolean' ? candidate.isCustom : !def;
+
+    normalized.push({ index, id, area, name, route, purpose, status, notes, image, isCustom });
+  });
+
+  return normalized.length > 0 ? normalized : null;
+}
+
 export default function ChecklistPage() {
   const [items, setItems] = useState<ChecklistItem[]>(DEFAULT_CHECKLIST);
   const [loading, setLoading] = useState(true);
@@ -559,6 +609,48 @@ export default function ChecklistPage() {
 
   // File upload ref for JSON import
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Monotonic revision counter: a save may clear the dirty flag only if no edit
+  // landed while its request was in flight (CLN-WEB-012).
+  const revisionRef = useRef(0);
+  // Remembers the status a page had before a quick-check marked it complete so
+  // un-checking can restore it instead of always falling back to pending (CLN-WEB-015).
+  const quickCheckPreviousStatusRef = useRef<Record<string, PageStatus>>({});
+  // One timer per transient UI flag, cleared before a new one is scheduled, so
+  // an older timer cannot clear a newer toast/copy state (CLN-WEB-016).
+  const saveToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const markDirty = () => {
+    revisionRef.current += 1;
+    setHasUnsavedChanges(true);
+  };
+
+  const showSaveToast = (message: string, durationMs = 3500) => {
+    if (saveToastTimerRef.current) clearTimeout(saveToastTimerRef.current);
+    setSaveToast(message);
+    saveToastTimerRef.current = setTimeout(() => {
+      setSaveToast(null);
+      saveToastTimerRef.current = null;
+    }, durationMs);
+  };
+
+  const flashCopied = () => {
+    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    setCopied(true);
+    copiedTimerRef.current = setTimeout(() => {
+      setCopied(false);
+      copiedTimerRef.current = null;
+    }, 2500);
+  };
+
+  const clearQuickCheckMemory = (id?: string) => {
+    if (id) {
+      delete quickCheckPreviousStatusRef.current[id];
+    } else {
+      quickCheckPreviousStatusRef.current = {};
+    }
+  };
 
   // New item form state
   const [newName, setNewName] = useState('');
@@ -623,11 +715,40 @@ export default function ChecklistPage() {
     loadChecklist();
   }, []);
 
+  // Warn before navigating away or closing the tab with unsaved edits (CLN-WEB-014).
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Clear any pending transient timers when the page unmounts (CLN-WEB-016).
+  useEffect(() => {
+    return () => {
+      if (saveToastTimerRef.current) clearTimeout(saveToastTimerRef.current);
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    };
+  }, []);
+
   // Save changes handler to both /api/checklist and localStorage
   const handleSaveChanges = async (customItemsList?: ChecklistItem[]) => {
     const dataToSave = customItemsList || items;
+    const revisionAtStart = revisionRef.current;
     setIsSaving(true);
     const nowTime = new Date().toLocaleTimeString();
+
+    // Only clear the dirty flag when nothing changed while the save was in flight.
+    const finishSave = (message: string) => {
+      if (revisionRef.current === revisionAtStart) {
+        setHasUnsavedChanges(false);
+      }
+      setLastSavedAt(nowTime);
+      showSaveToast(message);
+    };
 
     try {
       // 1. Save to browser localStorage (always works on both localhost and hosted domains)
@@ -640,23 +761,16 @@ export default function ChecklistPage() {
         body: JSON.stringify({ items: dataToSave }),
       });
 
-      setHasUnsavedChanges(false);
-      setLastSavedAt(nowTime);
-
       if (res.ok) {
         const json = await res.json();
         const modeText = json.savedToDisk ? 'disk & browser' : 'browser storage';
-        setSaveToast(`Checklist saved successfully to ${modeText}! (${nowTime})`);
+        finishSave(`Checklist saved successfully to ${modeText}! (${nowTime})`);
       } else {
-        setSaveToast(`Saved to browser storage! (${nowTime})`);
+        finishSave(`Saved to browser storage! (${nowTime})`);
       }
-      setTimeout(() => setSaveToast(null), 3500);
     } catch {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-      setHasUnsavedChanges(false);
-      setLastSavedAt(nowTime);
-      setSaveToast('Saved locally in browser storage!');
-      setTimeout(() => setSaveToast(null), 3500);
+      finishSave('Saved locally in browser storage!');
     } finally {
       setIsSaving(false);
     }
@@ -671,8 +785,7 @@ export default function ChecklistPage() {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    setSaveToast('Checklist state JSON exported!');
-    setTimeout(() => setSaveToast(null), 3000);
+    showSaveToast('Checklist state JSON exported!', 3000);
   };
 
   // Import JSON backup file
@@ -684,11 +797,12 @@ export default function ChecklistPage() {
     reader.onload = (event) => {
       try {
         const parsed = JSON.parse(event.target?.result as string);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setItems(parsed);
-          setHasUnsavedChanges(true);
-          setSaveToast(`Imported ${parsed.length} pages from backup! Click Save Changes.`);
-          setTimeout(() => setSaveToast(null), 4000);
+        const validated = normalizeImportedItems(parsed);
+        if (validated) {
+          clearQuickCheckMemory();
+          setItems(validated);
+          markDirty();
+          showSaveToast(`Imported ${validated.length} pages from backup! Click Save Changes.`, 4000);
         } else {
           alert('Invalid checklist JSON file format.');
         }
@@ -702,48 +816,56 @@ export default function ChecklistPage() {
 
   // Status toggle handler
   const handleToggleStatus = (id: string, newStatus: PageStatus) => {
+    clearQuickCheckMemory(id);
     const updated = items.map((item) =>
       item.id === id ? { ...item, status: newStatus } : item
     );
     setItems(updated);
-    setHasUnsavedChanges(true);
+    markDirty();
   };
 
-  // Quick 1-click checkbox toggle between 'pending' (Not Complete) and 'done' (Complete)
+  // Quick 1-click check: marks Complete, and restores the exact prior status
+  // (pending OR in_progress) when un-checked (CLN-WEB-015).
   const handleQuickCheck = (id: string) => {
     const updated = items.map((item) => {
-      if (item.id === id) {
-        const nextStatus: PageStatus = item.status === 'done' ? 'pending' : 'done';
-        return { ...item, status: nextStatus };
+      if (item.id !== id) return item;
+      if (item.status === 'done') {
+        const restored = quickCheckPreviousStatusRef.current[id] ?? 'pending';
+        delete quickCheckPreviousStatusRef.current[id];
+        return { ...item, status: restored };
       }
-      return item;
+      quickCheckPreviousStatusRef.current[id] = item.status;
+      return { ...item, status: 'done' as PageStatus };
     });
     setItems(updated);
-    setHasUnsavedChanges(true);
+    markDirty();
   };
 
   // Mark all as done
   const handleMarkAll = (status: PageStatus) => {
     const label = status === 'done' ? 'Complete' : 'Not Complete';
     if (confirm(`Are you sure you want to mark all pages as "${label}"? Remember to click Save.`)) {
+      clearQuickCheckMemory();
       const updated = items.map((item) => ({ ...item, status }));
       setItems(updated);
-      setHasUnsavedChanges(true);
+      markDirty();
     }
   };
 
   // Delete custom item
   const handleDeleteItem = (id: string) => {
     if (confirm('Are you sure you want to remove this item from the checklist?')) {
+      clearQuickCheckMemory(id);
       const updated = items.filter((item) => item.id !== id);
       setItems(updated);
-      setHasUnsavedChanges(true);
+      markDirty();
     }
   };
 
   // Reset to default (all Not Complete)
   const handleReset = async () => {
     if (confirm('Reset all pages to "Not Complete"?')) {
+      clearQuickCheckMemory();
       const updated = items.map((item) => ({ ...item, status: 'pending' as PageStatus }));
       setItems(updated);
       await handleSaveChanges(updated);
@@ -756,7 +878,7 @@ export default function ChecklistPage() {
       item.id === id ? { ...item, notes: noteDraft.trim() || undefined } : item
     );
     setItems(updated);
-    setHasUnsavedChanges(true);
+    markDirty();
     setEditingNoteId(null);
     setNoteDraft('');
   };
@@ -780,7 +902,7 @@ export default function ChecklistPage() {
 
     const updated = [...items, newItem];
     setItems(updated);
-    setHasUnsavedChanges(true);
+    markDirty();
 
     setNewName('');
     setNewRoute('');
@@ -810,8 +932,7 @@ export default function ChecklistPage() {
     });
 
     navigator.clipboard.writeText(lines.join('\n'));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
+    flashCopied();
   };
 
   // Stats calculation
@@ -1366,7 +1487,7 @@ export default function ChecklistPage() {
         {/* Bottom Sticky Save Bar for convenient saving when scrolled down */}
         {hasUnsavedChanges && (
           <div className="sticky bottom-6 mt-8 z-40 animate-in fade-in slide-in-from-bottom-4 duration-200">
-            <div className="bg-[#1A1A1A] text-white p-4 sm:px-6 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 border border-[#333]">
+            <div className="bg-[#1A1A1A] text-white px-4 py-4 sm:px-6 rounded-3xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 border border-[#333]">
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 rounded-full bg-amber-400 animate-ping" />
                 <span className="text-sm font-semibold">

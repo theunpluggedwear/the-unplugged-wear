@@ -34,18 +34,36 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [signedIn, setSignedIn] = useState(false);
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const onError = useRef(opts.onError);
   onError.current = opts.onError;
 
-  const refreshBag = useCallback(async () => {
-    const result = await getBagAction({});
-    if (!result.ok) return;
-    setCart(result.data.lines.map(toItem));
-    setWishlist(result.data.wishlist);
-    setSignedIn(result.data.signedIn);
-    setReady(true);
+  // A ref mirrors the wishlist so a toggle computes its target from the latest
+  // value, not from a render's stale closure. Every write goes through this
+  // helper so state and ref can never drift apart.
+  const wishlistRef = useRef<string[]>([]);
+  const applyWishlist = useCallback((next: string[]) => {
+    wishlistRef.current = next;
+    setWishlist(next);
   }, []);
+
+  const refreshBag = useCallback(async () => {
+    try {
+      const result = await getBagAction({});
+      if (!result.ok) {
+        setError(result.error.message);
+        return;
+      }
+      setCart(result.data.lines.map(toItem));
+      applyWishlist(result.data.wishlist);
+      setSignedIn(result.data.signedIn);
+      setError(null);
+      setReady(true);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not load your bag.');
+    }
+  }, [applyWishlist]);
 
   // On load, and again whenever sign-in or sign-out refreshes the session.
   useEffect(() => { void refreshBag(); }, [opts.session, refreshBag]);
@@ -110,16 +128,39 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
 
   const clearCart = useCallback(() => send(() => [], () => clearBagAction({}), 'Could not empty the bag'), [send]);
 
-  const setSaved = useCallback(async (productId: string, saved: boolean) => {
-    setWishlist((prev) => (saved ? (prev.includes(productId) ? prev : [productId, ...prev]) : prev.filter((id) => id !== productId)));
-    const result = await setWishlistAction({ productId, saved });
-    if (result.ok) setWishlist(result.data);
-    else {
-      onError.current('Could not update your wishlist', result.error.message);
-      await refreshBag();
-    }
-    return result.ok;
-  }, [refreshBag]);
+  /**
+   * Queue a wishlist change. When `saved` is omitted the target is toggled from
+   * the ref (the latest committed value), so two clicks in one tick cannot both
+   * resolve to "save". The server calls still run one at a time, in order.
+   */
+  const setSaved = useCallback((productId: string, saved?: boolean) => {
+    const current = wishlistRef.current;
+    const isSaved = current.includes(productId);
+    const target = saved ?? !isSaved;
+    applyWishlist(target
+      ? (isSaved ? current : [productId, ...current])
+      : current.filter((id) => id !== productId));
 
-  return { cart, wishlist, signedIn, ready, refreshBag, addToCart, updateQuantity, updateCartItemVariant, removeLine, clearCart, setSaved };
+    const task = queue.current.then(async () => {
+      try {
+        const result = await setWishlistAction({ productId, saved: target });
+        if (result.ok) applyWishlist(result.data);
+        else {
+          onError.current('Could not update your wishlist', result.error.message);
+          await refreshBag();
+        }
+        return result.ok;
+      } catch (cause) {
+        onError.current('Could not update your wishlist', cause instanceof Error ? cause.message : 'Please try again.');
+        await refreshBag();
+        return false;
+      }
+    });
+    queue.current = task.catch(() => undefined);
+    return task;
+  }, [applyWishlist, refreshBag]);
+
+  const isWishlistSaved = useCallback((productId: string) => wishlistRef.current.includes(productId), []);
+
+  return { cart, wishlist, signedIn, ready, error, refreshBag, addToCart, updateQuantity, updateCartItemVariant, removeLine, clearCart, setSaved, isWishlistSaved };
 }

@@ -8,6 +8,7 @@ import Footer from '@storefront/components/layout/Footer';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
 import { useStore } from '@storefront/mocks/store';
 import { getOrderAction } from '@/server/order-actions';
+import { usePaymentConfig } from '@storefront/lib/payment-config';
 import { toStoreOrder } from '@storefront/lib/orders';
 import { useSession } from '@storefront/lib/session';
 import type { Order } from '@storefront/lib/types';
@@ -19,6 +20,7 @@ import { AlertCircle, ArrowRight, Check, Clock, Download, Info, Mail } from 'luc
 
 const STEPS = ['Order placed', 'Printing', 'Shipped', 'Delivered'] as const;
 const STEP_INDEX: Record<string, number> = { queued: 0, printing: 1, shipped: 2, delivered: 3 };
+const ORDER_POLL_MS = 5000;
 
 // Money in paise; order shipping/discount are stored in whole rupees.
 const linePaise = (item: Order['items'][number]) =>
@@ -35,6 +37,9 @@ function OrderSuccessContent() {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  // Gateway mode is read once on the server in checkout/layout.tsx and shared
+  // with the checkout screen (CLN-NXT-006).
+  const { testMode } = usePaymentConfig();
 
   useEffect(() => {
     if (!orderNumber) {
@@ -50,6 +55,24 @@ function OrderSuccessContent() {
     });
     return () => { live = false; };
   }, [orderNumber, receipt]);
+
+  // The notice below promises the page updates once payment is captured, so
+  // keep re-checking until it settles (COD never settles before delivery).
+  const awaitingCapture = order?.paymentStatus === 'pending' && order.paymentMethod !== 'COD (Demo)';
+  useEffect(() => {
+    if (!orderNumber || !awaitingCapture) return;
+    let live = true;
+    let inFlight = false;
+    const poll = window.setInterval(() => {
+      if (inFlight) return;
+      inFlight = true;
+      void getOrderAction({ orderNumber, receipt }).then((result) => {
+        inFlight = false;
+        if (live && result.ok) setOrder(toStoreOrder(result.data));
+      });
+    }, ORDER_POLL_MS);
+    return () => { live = false; window.clearInterval(poll); };
+  }, [orderNumber, receipt, awaitingCapture]);
 
   if (loading) {
     return (
@@ -88,16 +111,21 @@ function OrderSuccessContent() {
   const subtotal = order.items.reduce((sum, item) => sum + linePaise(item), 0);
   // The total the server charged (includes any tax or cash-on-delivery fee).
   const total = Math.round(order.totalINR * 100);
-  void subtotal;
   const hasShipped = order.fulfillmentStatus === 'shipped' || order.fulfillmentStatus === 'delivered';
   const address = order.shippingAddress;
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 w-full">
-      {/* Demo notice (required for simulated checkouts) */}
+      {/* Truthful payment notice: simulated checkouts stay clearly labelled. */}
       <p className="flex items-start gap-2 text-sm text-store-text-secondary border-l-2 border-store-gold pl-3 mb-10">
         <Info size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
-        Demo order — no payment was collected and nothing will be printed or shipped.
+        {order.paymentMethod === 'COD (Demo)'
+          ? 'Demo checkout — payment is collected on delivery and nothing is printed or shipped in this environment.'
+          : isPaid && testMode
+            ? 'Razorpay test payment captured — no real money was collected. Fulfilment submission is disabled in local dev.'
+            : isPaid
+              ? 'Payment captured. We’ll send tracking as soon as it ships.'
+              : 'Awaiting payment confirmation. This page updates once the payment is captured.'}
       </p>
 
       <header className="text-center max-w-2xl mx-auto">

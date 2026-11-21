@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 
 export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'prefix'> {

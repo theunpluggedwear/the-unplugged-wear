@@ -14,14 +14,37 @@ export default function SearchBox() {
   const urlQuery = params.get('q') ?? '';
   const [query, setQuery] = useState(urlQuery);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Last query we pushed to the URL. An effect run that only echoes our own
+  // navigation must not overwrite keystrokes typed during the debounce window.
+  const committedQuery = useRef(urlQuery);
 
-  useEffect(() => setQuery(urlQuery), [urlQuery]);
+  useEffect(() => {
+    if (urlQuery === committedQuery.current) return;
+    // A real external URL change (back/forward, another link) wins over a pending debounce.
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    committedQuery.current = urlQuery;
+    setQuery(urlQuery);
+  }, [urlQuery]);
 
-  const go = (q: string) => router.replace(q.trim() ? `${pathname}?q=${encodeURIComponent(q.trim())}` : pathname, { scroll: false });
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+
+  const go = (q: string) => {
+    const trimmed = q.trim();
+    committedQuery.current = trimmed;
+    router.replace(trimmed ? `${pathname}?q=${encodeURIComponent(trimmed)}` : pathname, { scroll: false });
+  };
   const change = (q: string, delay = 350) => {
     setQuery(q);
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => go(q), delay);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      go(q);
+    }, delay);
   };
 
   return (

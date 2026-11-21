@@ -152,6 +152,23 @@ function SearchableSelectCore({
     setActiveIndex((index) => Math.min(Math.max(0, index), Math.max(0, filtered.length - 1)));
   }, [filtered.length]);
 
+  // A value change from the parent while the popover is open must also update
+  // the text in the field; otherwise the previous label stays on screen.
+  const selectedKey = selected.join('\u0000');
+  useEffect(() => {
+    if (!open || !searchable || multiple) return;
+    setQuery(selectedOptions[0]?.label ?? '');
+    setQueryDirty(false);
+    // Re-seed only when the selected value actually changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedKey]);
+
+  // A narrower filter renders fewer rows; drop refs left over from the
+  // previous list so keyboard navigation cannot target a stale option.
+  useEffect(() => {
+    optionRefs.current.length = filtered.length;
+  }, [filtered.length]);
+
   // Close the fixed popover when the page moves under it — but never when the
   // scroll happens inside the popover itself (the option list).
   useEffect(() => {

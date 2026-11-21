@@ -21,7 +21,14 @@ export interface TakePaymentInput {
   simulate?: 'decline';
 }
 
-/** Card and UPI are captured now; cash on delivery is recorded as pending. */
+/**
+ * Card and UPI are captured now; cash on delivery is recorded as pending.
+ * This is the legacy checkout path and is COD / demo (mock) only. A live
+ * provider must never be contacted while the order transaction is open:
+ * prepareCheckout() calls the adapter outside the transaction instead. The
+ * mock adapter is deterministic and does no external I/O, so the capture
+ * below stays local even inside the transaction.
+ */
 export async function takePayment(tx: Transaction, gateway: PaymentGateway, input: TakePaymentInput): Promise<{ paymentId: string; captured: boolean }> {
   const id = uuidv7();
   if (input.method === 'cod' || input.amountPaise === 0) {
@@ -29,6 +36,9 @@ export async function takePayment(tx: Transaction, gateway: PaymentGateway, inpu
     await tx.execute(sql`INSERT INTO payments (id, order_id, provider, method, amount, status, paid_at)
       VALUES (${id}, ${input.orderId}, ${gateway.slug}, ${input.method}, ${toRupees(input.amountPaise)}, ${captured ? 'captured' : 'pending'}, ${captured ? sql`now()` : null})`);
     return { paymentId: id, captured };
+  }
+  if (gateway.liveReady()) {
+    throw new AppError('RULE_VIOLATION', 'Online payments must be completed from checkout. Please start checkout again.', [{ field: 'payment', message: 'Online payment must be completed from checkout.' }]);
   }
   const result = await gateway.createPayment({ reference: input.reference, amountPaise: input.amountPaise, currency: 'INR', ...(input.simulate ? { simulate: input.simulate } : {}) });
   if (result.status !== 'captured') {

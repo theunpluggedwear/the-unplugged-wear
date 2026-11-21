@@ -1,7 +1,7 @@
 // Formatters + price helpers. Pure functions only.
-export function formatINR(paise: number): string {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(paise / 100);
-}
+// Canonical en-IN currency formatter (always two fraction digits) now lives in
+// heart; the local clone was removed without changing the rendered output.
+export { formatINRFixed as formatINR } from '@tuw/heart/platform/money';
 
 export function formatDate(d: string | Date): string {
   return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(new Date(d));

@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 
 export interface PanelFooterProps extends React.HTMLAttributes<HTMLDivElement> {

@@ -317,11 +317,14 @@ export default function AccountPage() {
       addressLine2: addressLine2?.trim() || undefined,
       country: 'India',
     }).then((outcome) => {
-      setAddressSaving(false);
       // On failure the dialog stays open with every typed value.
       if (!outcome.ok) return setAddressError(outcome.message);
       setIsAddressModalOpen(false);
       addToast({ type: 'success', title: 'Address saved' });
+    }).catch(() => {
+      setAddressError('Could not save that address. Your entries are kept — please try again.');
+    }).finally(() => {
+      setAddressSaving(false);
     });
   };
 
@@ -490,10 +493,16 @@ export default function AccountPage() {
                         size="sm"
                         disabled={claiming}
                         onClick={async () => {
+                          if (claiming) return;
                           setClaiming(true);
-                          const result = await claim();
-                          setClaiming(false);
-                          setClaimNote({ ok: result.ok, text: result.message });
+                          try {
+                            const result = await claim();
+                            setClaimNote({ ok: result.ok, text: result.message });
+                          } catch {
+                            setClaimNote({ ok: false, text: 'Could not add your guest orders just now. Please try again.' });
+                          } finally {
+                            setClaiming(false);
+                          }
                         }}
                       >
                         {claiming ? 'Adding…' : 'Add them to my account'}
@@ -534,7 +543,7 @@ export default function AccountPage() {
                 </div>
 
                 {filteredOrders.length === 0 ? (
-                  <div className="py-16 text-center border border-store-card-border bg-store-surface p-8">
+                  <div className="py-16 text-center border border-store-card-border bg-store-surface px-8">
                     <p className="text-sm text-store-text-secondary">
                       {orders.length === 0 ? 'You haven’t placed any orders yet.' : 'No orders match this filter.'}
                     </p>
@@ -739,7 +748,9 @@ export default function AccountPage() {
                           Edit
                         </Button>
                         {!addr.isDefault && (
-                          <Button variant="ghost" size="sm" onClick={() => void setDefaultAddress(addr.id).then((o) => addToast(o.ok ? { type: 'success', title: 'Default address updated' } : { type: 'error', title: o.message }))}>
+                          <Button variant="ghost" size="sm" onClick={() => void setDefaultAddress(addr.id)
+                            .then((o) => addToast(o.ok ? { type: 'success', title: 'Default address updated' } : { type: 'error', title: o.message }))
+                            .catch(() => addToast({ type: 'error', title: 'Could not update the default address. Please try again.' }))}>
                             Set as default
                           </Button>
                         )}
@@ -939,6 +950,9 @@ export default function AccountPage() {
                   void deleteAddress(addressPendingDelete.id).then((outcome) => {
                     setAddressPendingDelete(null);
                     addToast(outcome.ok ? { type: 'info', title: 'Address removed' } : { type: 'error', title: outcome.message });
+                  }).catch(() => {
+                    setAddressPendingDelete(null);
+                    addToast({ type: 'error', title: 'Could not remove that address. Please try again.' });
                   });
                 }}
               >

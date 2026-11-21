@@ -5,6 +5,7 @@ import 'server-only';
 // Checkout orchestrates cart, inventory, payments and customers through
 // their index files inside one transaction.
 export * from './checkout.ts';
+export * from './payment-confirmation.ts';
 export * from './read.ts';
 export * from './pricing.ts';
 export { findDiscount, redeemDiscount, adminListDiscounts, adminCreateDiscount, adminSetDiscountActive, adminDeleteDiscount, type DiscountCode, type AdminDiscountCode, type DiscountInput } from './discounts.ts';

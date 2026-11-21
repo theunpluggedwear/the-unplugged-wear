@@ -1,7 +1,7 @@
 'use client';
 import { formatRupees } from '@storefront/lib/format';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   CreditCard,
   QrCode,
@@ -43,11 +43,20 @@ export default function PaymentSimulationPanel({
   const [upiVerified, setUpiVerified] = useState(true);
   const [selectedUpiApp, setSelectedUpiApp] = useState<'gpay' | 'phonepe' | 'paytm' | 'bhim'>('gpay');
 
+  // A simulated authorization must not fire callbacks after the panel unmounts
+  // (e.g. navigation away mid-processing).
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+
   const handleSimulatePayment = () => {
+    if (timer.current) clearTimeout(timer.current);
     setIsProcessing(true);
     setErrorMessage(null);
 
-    setTimeout(() => {
+    timer.current = setTimeout(() => {
+      timer.current = null;
       setIsProcessing(false);
 
       if (simulatedScenario === 'failure') {

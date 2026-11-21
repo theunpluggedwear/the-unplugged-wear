@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useRef, useState, useTransition } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Download, Search, Eye, RotateCcw, Clock, Printer, ChevronDown } from 'lucide-react';
 import type { AdminOrderDetail, AdminOrderRow, AdminOrderStats, AdminOrderTab, OrderStatus } from '@tuw/heart/modules/orders';
 import DashboardShell from '@/components/layout/DashboardShell';
@@ -53,18 +53,28 @@ const METHOD_LABEL: Record<string, string> = { card: 'Card', upi: 'UPI', cod: 'C
 /** What the button says for each move a staff member can make. */
 const MOVE_LABEL: Partial<Record<OrderStatus, string>> = { confirmed: 'Confirm order', processing: 'Mark printing', shipped: 'Mark shipped', delivered: 'Mark delivered', cancelled: 'Cancel order' };
 
-export default function OrdersView({ initial, perms, openOrder: openFromLink }: { initial: ListResult; perms: string[]; openOrder?: string }) {
+export default function OrdersView({ initial, perms, openOrder: openFromLink, query, tab, page: pageParam, perPage }: {
+  initial: ListResult;
+  perms: string[];
+  openOrder?: string;
+  query: string;
+  tab: AdminOrderTab;
+  page: number;
+  perPage: number;
+}) {
   const { showToast } = useAdminState();
   const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const [isNavigating, startTransition] = useTransition();
   const canUpdate = perms.includes('order.update_status');
   const canRefund = perms.includes('order.refund');
 
-  const [list, setList] = useState<ListResult>(initial);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [orderTab, setOrderTab] = useState<AdminOrderTab>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  // The server page owns the list. q/tab/page live in the URL so the first
+  // render arrives with the HTML and filter changes re-render the Server
+  // Component — no duplicate client-side list fetch after hydration.
+  const list = initial;
+  const [searchTerm, setSearchTerm] = useState(query);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [detail, setDetail] = useState<AdminOrderDetail | null>(null);
@@ -73,28 +83,29 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink }: 
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [moving, setMoving] = useState(false);
 
-  // Ask the server whenever the view changes; a slower, older answer never wins.
-  const request = useRef(0);
-  const load = async (over: Partial<{ q: string; tab: AdminOrderTab; page: number; perPage: number }> = {}) => {
-    const mine = ++request.current;
-    setLoading(true);
-    const result = await listOrdersAction({ q: searchTerm || undefined, tab: orderTab, page: currentPage, perPage: pageSize, ...over });
-    if (mine !== request.current) return;
-    setLoading(false);
-    if (result.ok) setList(result.data);
-    else showToast({ type: 'warning', title: 'Could Not Load Orders', description: result.error.message });
+  // A debounced search may fire after a tab/page change; always patch the
+  // latest URL rather than the one captured when the timer was scheduled.
+  const paramsRef = useRef(params);
+  useEffect(() => { paramsRef.current = params; }, [params]);
+  const setParams = (patch: Record<string, string | number | null>) => {
+    const next = new URLSearchParams(paramsRef.current.toString());
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === null || value === '') next.delete(key);
+      else next.set(key, String(value));
+    }
+    startTransition(() => router.replace(`${pathname}?${next.toString()}`, { scroll: false }));
   };
-  const first = useRef(true);
+
+  // Debounced server-side search — the URL drives the Server Component read.
   useEffect(() => {
-    if (first.current) { first.current = false; return; }
-    const t = setTimeout(() => void load(), searchTerm ? 300 : 0);
+    if (searchTerm === query) return;
+    const t = setTimeout(() => setParams({ q: searchTerm || null, page: null }), 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, orderTab, currentPage, pageSize]);
-  useEffect(() => { setCurrentPage(1); }, [searchTerm, orderTab]);
+  }, [searchTerm, query]);
 
   const rows = list.rows;
-  const totalPages = Math.max(1, Math.ceil(list.total / pageSize));
+  const totalPages = Math.max(1, Math.ceil(list.total / perPage));
   const pageIds = rows.map((o) => o.orderNumber);
   const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
   const somePageSelected = pageIds.some((id) => selectedIds.has(id));
@@ -110,12 +121,20 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink }: 
   const openOrder = async (orderNumber: string) => {
     if (openingId) return;
     setOpeningId(orderNumber);
-    const result = await getOrderAction({ orderNumber });
-    setOpeningId(null);
-    if (!result.ok) return showToast({ type: 'warning', title: 'Could Not Open Order', description: result.error.message });
-    setNote('');
-    setConfirmCancel(false);
-    setDetail(result.data);
+    try {
+      const result = await getOrderAction({ orderNumber });
+      if (!result.ok) {
+        showToast({ type: 'warning', title: 'Could Not Open Order', description: result.error.message });
+        return;
+      }
+      setNote('');
+      setConfirmCancel(false);
+      setDetail(result.data);
+    } catch {
+      showToast({ type: 'warning', title: 'Could Not Open Order', description: 'The request failed. Please try again.' });
+    } finally {
+      setOpeningId(null);
+    }
   };
 
   // Spotlight deep link (?open=<order number>): open that order on arrival.
@@ -127,31 +146,45 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink }: 
   const move = async (to: OrderStatus) => {
     if (!detail) return;
     setMoving(true);
-    const result = await setOrderStatusAction({ orderNumber: detail.orderNumber, to, note: note || undefined });
-    setMoving(false);
-    setConfirmCancel(false);
-    if (!result.ok) return showToast({ type: 'warning', title: 'Status Not Changed', description: result.error.message });
-    setDetail(result.data);
-    setNote('');
-    showToast({ type: 'success', title: 'Order Updated', description: `${detail.orderNumber} is now ${STATUS_LABEL[to].toLowerCase()}${to === 'cancelled' && result.data.paymentStatus === 'refunded' ? ' and refunded (demo payment)' : ''}.` });
-    void load();
+    try {
+      const result = await setOrderStatusAction({ orderNumber: detail.orderNumber, to, note: note || undefined });
+      setConfirmCancel(false);
+      if (!result.ok) {
+        showToast({ type: 'warning', title: 'Status Not Changed', description: result.error.message });
+        return;
+      }
+      setDetail(result.data);
+      setNote('');
+      showToast({ type: 'success', title: 'Order Updated', description: `${detail.orderNumber} is now ${STATUS_LABEL[to].toLowerCase()}${to === 'cancelled' && result.data.paymentStatus === 'refunded' ? ' and refunded (demo payment)' : ''}.` });
+      router.refresh();
+    } catch {
+      showToast({ type: 'warning', title: 'Status Not Changed', description: 'The request failed. Please try again.' });
+    } finally {
+      setMoving(false);
+    }
   };
 
   const toCsv = (data: AdminOrderRow[]) => {
     const headers = ['Order', 'Date', 'Customer', 'Email', 'Status', 'Payment', 'Method', 'Total', 'Paid', 'Refunded', 'Items'];
     const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
     const body = data.map((o) => [o.orderNumber, when(o.createdAt), o.customerName, o.customerEmail, o.status, o.paymentStatus, o.paymentMethod ?? '', (o.totalPaise / 100).toFixed(2), (o.paidPaise / 100).toFixed(2), (o.refundedPaise / 100).toFixed(2), o.itemCount].map(cell).join(','));
+    const url = URL.createObjectURL(new Blob([[headers.join(','), ...body].join('\n')], { type: 'text/csv' }));
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([[headers.join(','), ...body].join('\n')], { type: 'text/csv' }));
+    link.href = url;
     link.download = `tuw_orders_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
-    URL.revokeObjectURL(link.href);
+    // Let the download start before releasing the blob URL.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
   const handleExportCSV = async () => {
-    const result = await listOrdersAction({ q: searchTerm || undefined, tab: orderTab, page: 1, perPage: 5000 });
-    if (!result.ok) return showToast({ type: 'warning', title: 'Export Failed', description: result.error.message });
-    toCsv(result.data.rows);
-    showToast({ type: 'success', title: 'Orders Exported', description: `${result.data.rows.length} order${result.data.rows.length === 1 ? '' : 's'} saved as CSV.` });
+    try {
+      const result = await listOrdersAction({ q: searchTerm || undefined, tab, page: 1, perPage: 5000 });
+      if (!result.ok) return showToast({ type: 'warning', title: 'Export Failed', description: result.error.message });
+      toCsv(result.data.rows);
+      showToast({ type: 'success', title: 'Orders Exported', description: `${result.data.rows.length} order${result.data.rows.length === 1 ? '' : 's'} saved as CSV.` });
+    } catch {
+      showToast({ type: 'warning', title: 'Export Failed', description: 'The request failed. Please try again.' });
+    }
   };
   const handleExportSelected = () => {
     toCsv(rows.filter((o) => selectedIds.has(o.orderNumber)));
@@ -166,16 +199,23 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink }: 
     const ids = [...selectedIds];
     if (!ids.length) return;
     if (!canUpdate) return showToast({ type: 'warning', title: 'Action Restricted', description: 'You do not have permission to update orders.' });
-    const result = await setOrdersStatusAction({ orderNumbers: ids, to: value as OrderStatus });
-    if (!result.ok) return showToast({ type: 'warning', title: 'Bulk Update Failed', description: result.error.message });
-    const { updated, refused } = result.data;
-    showToast({
-      type: refused.length ? 'warning' : 'success',
-      title: refused.length ? 'Some Orders Not Changed' : 'Bulk Update Applied',
-      description: `${updated.length} marked ${STATUS_LABEL[value as OrderStatus].toLowerCase()}.${refused.length ? ` ${refused.length} refused — ${refused[0]!.orderNumber}: ${refused[0]!.reason}` : ''}`,
-    });
-    clearSelection();
-    void load();
+    try {
+      const result = await setOrdersStatusAction({ orderNumbers: ids, to: value as OrderStatus });
+      if (!result.ok) {
+        showToast({ type: 'warning', title: 'Bulk Update Failed', description: result.error.message });
+        return;
+      }
+      const { updated, refused } = result.data;
+      showToast({
+        type: refused.length ? 'warning' : 'success',
+        title: refused.length ? 'Some Orders Not Changed' : 'Bulk Update Applied',
+        description: `${updated.length} marked ${STATUS_LABEL[value as OrderStatus].toLowerCase()}.${refused.length ? ` ${refused.length} refused — ${refused[0]!.orderNumber}: ${refused[0]!.reason}` : ''}`,
+      });
+      clearSelection();
+      router.refresh();
+    } catch {
+      showToast({ type: 'warning', title: 'Bulk Update Failed', description: 'The request failed. Please try again.' });
+    }
   };
 
   const stats = list.stats;
@@ -217,8 +257,8 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink }: 
                     { value: 'cancelled', label: 'Cancelled' },
                     { value: 'finished', label: 'Delivered' },
                   ]}
-                  value={orderTab}
-                  onChange={(v) => setOrderTab(v as AdminOrderTab)}
+                  value={tab}
+                  onChange={(v) => setParams({ tab: v === 'all' ? null : v, page: null })}
                 />
                 <div style={{ maxWidth: 360, width: '100%' }}>
                   <Input placeholder="Search by order #, customer, or email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} prefixIcon={<Search size={16} />} aria-label="Search orders" />
@@ -228,17 +268,17 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink }: 
           }
           footer={
             <Pagination
-              currentPage={currentPage}
+              currentPage={pageParam}
               totalPages={totalPages}
-              onPageChange={setCurrentPage}
+              onPageChange={(n) => setParams({ page: n === 1 ? null : n })}
               totalItems={list.total}
-              pageSize={pageSize}
+              pageSize={perPage}
               pageSizeOptions={[10, 20, 50]}
-              onPageSizeChange={(n) => { setPageSize(n); setCurrentPage(1); }}
+              onPageSizeChange={(n) => setParams({ perPage: n === 10 ? null : n, page: null })}
             />
           }
         >
-          <Table aria-busy={loading}>
+          <Table aria-busy={isNavigating}>
             <TableHeader>
               {selectedIds.size > 0 ? (
                 <TableRow hoverable={false}>
@@ -288,7 +328,7 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink }: 
               {rows.length === 0 ? (
                 <TableRow hoverable={false}>
                   <TableCell colSpan={9} style={{ padding: '48px 16px', textAlign: 'center', color: 'var(--tuw-text-secondary, #5D6772)', fontSize: 16 }}>
-                    {loading ? 'Loading orders…' : list.stats.total === 0 ? 'No orders yet. They appear here as soon as a customer checks out.' : 'No orders match your search criteria.'}
+                    {isNavigating ? 'Loading orders…' : list.stats.total === 0 ? 'No orders yet. They appear here as soon as a customer checks out.' : 'No orders match your search criteria.'}
                   </TableCell>
                 </TableRow>
               ) : (

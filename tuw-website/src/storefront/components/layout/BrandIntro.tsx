@@ -6,23 +6,15 @@ import TuwEmblem from './TuwEmblem';
 
 // The intro plays once per browser session, on the homepage only, so deep
 // links (shared product pages) and repeat visits open straight to content.
-// The pre-paint script that hides the overlay for repeat visitors lives in the
-// root layout's <head> (a client component may not render a <script>).
-import { INTRO_SEEN_KEY } from '@storefront/lib/intro';
+// The root layout reads a cookie (written below when the intro finishes) and
+// gates this component on the server, so repeat visitors get no overlay at all.
+import { INTRO_SEEN_KEY, markIntroSeen } from '@storefront/lib/intro';
 
 const BRAND_WORDS = [
   { word: 'THE', chars: ['T', 'H', 'E'] },
   { word: 'UNPLUGGED', chars: ['U', 'N', 'P', 'L', 'U', 'G', 'G', 'E', 'D'] },
   { word: 'WEAR', chars: ['W', 'E', 'A', 'R'] },
 ];
-
-function markIntroSeen() {
-  try {
-    sessionStorage.setItem(INTRO_SEEN_KEY, '1');
-  } catch {
-    // Storage blocked: the intro may replay, which is harmless.
-  }
-}
 
 export default function BrandIntro() {
   // Homespace ID Staggered Letter-by-Letter Architecture:

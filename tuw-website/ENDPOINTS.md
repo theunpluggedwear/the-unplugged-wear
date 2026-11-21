@@ -133,7 +133,8 @@
 - **Endpoint**: `/api/contact`
 - **Method**: `POST`
 - **Source**: `src/app/api/contact/route.ts`
-- **Description**: Receives and validates customer support messages with length enforcement.
+- **Description**: Receives and validates customer support messages with length enforcement, throttles public submissions, and records a row in the demo email outbox. Only the mock email sender exists in this phase, so nothing is delivered and the response says so explicitly.
+- **Rate limit**: 5 submissions / 10 min per visitor IP and 3 / hour per sender email (`429` when exceeded).
 - **Request Body**:
 ```json
 {
@@ -143,11 +144,13 @@
   "message": "Inquiry regarding the heavyweight drape on size Medium."
 }
 ```
-- **Response** (`200 OK`):
+- **Response** (`200 OK`, demo — `delivered` is `false` until a live email provider exists):
 ```json
 {
   "success": true,
-  "message": "Your inquiry has been received. Our studio concierge will reply within 24–48 hours."
+  "demo": true,
+  "delivered": false,
+  "message": "Demo mode — no email has been sent and your message has not been delivered. If you need a reply, please write to care@theunpluggedwear.com."
 }
 ```
 

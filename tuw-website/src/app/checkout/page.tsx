@@ -1,17 +1,21 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Header from '@storefront/components/layout/Header';
 import Footer from '@storefront/components/layout/Footer';
-import PaymentSimulationPanel from '@storefront/components/commerce/PaymentSimulationPanel';
+import { PaymentSimulationPanel } from '@storefront/components/commerce';
+import LivePaymentPanel from '@storefront/components/commerce/LivePaymentPanel';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
 import Listbox from '@storefront/components/ui/Listbox';
 import { useStore } from '@storefront/mocks/store';
 import { useSiteSettings } from '@storefront/lib/site-settings';
 import { placeOrderAction } from '@/server/order-actions';
 import { previewGiftCardAction } from '@/server/gift-card-actions';
+import { createPaymentIntentAction, confirmPaymentAction, getCheckoutStatusAction, getCheckoutQuoteAction } from '@/server/payment-actions';
+import { usePaymentConfig } from '@storefront/lib/payment-config';
+import { openRazorpayCheckout } from '@storefront/lib/razorpay-checkout';
 import { useSession } from '@storefront/lib/session';
 import { useAccount } from '@storefront/lib/account';
 import { RETURN_WINDOW_DAYS, deliveryEstimate, variantLabelOf } from '@storefront/lib/product';
@@ -33,10 +37,14 @@ import {
   Tag,
 } from 'lucide-react';
 
+type CheckoutQuote = { payablePaise: number; totalPaise: number; discountPaise: number; giftCardPaise: number };
+
 export default function CheckoutPage() {
   const router = useRouter();
   const {
     cart,
+    bagReady,
+    bagError,
     cartSubtotal,
     shippingFee,
     freeShippingThreshold,
@@ -58,6 +66,13 @@ export default function CheckoutPage() {
   const [checkoutKey] = useState(() => crypto.randomUUID());
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
+  // Synchronous guard: state updates are not applied until the next render, so a
+  // double click in the same tick would otherwise open two Razorpay flows (WEB-004).
+  const placingRef = useRef(false);
+  // Read on the server in checkout/layout.tsx and streamed down as a plain
+  // value (CLN-NXT-006): no hydration effect, no "Loading payment options…"
+  // gap, and the live-gateway / COD-sandbox branches below stay unchanged.
+  const paymentConfig = usePaymentConfig();
 
   const { session } = useSession();
   // Saved addresses come from the real address book (TL-BE-03); guests have none.
@@ -79,32 +94,52 @@ export default function CheckoutPage() {
   const [state, setState] = useState('');
   const [postalCode, setPostalCode] = useState('');
   const [country, setCountry] = useState('India');
-  const [prefilledFor, setPrefilledFor] = useState('');
-
-  useEffect(() => {
-    if (!session || prefilledFor === session.email) return;
-    const [first = '', ...rest] = session.name.split(' ');
-    const saved = addresses.find((a) => a.isDefault) || addresses[0];
-    // Only fill empty fields, so nothing the shopper typed is overwritten.
-    const fill = (setter: React.Dispatch<React.SetStateAction<string>>, value?: string) =>
-      setter((current) => current || value || '');
-    fill(setFirstName, first);
-    fill(setLastName, rest.join(' '));
-    fill(setEmail, session.email);
-    if (saved) {
-      fill(setPhone, saved.phone);
-      fill(setAddressLine1, saved.addressLine1);
-      fill(setAddressLine2, saved.addressLine2);
-      fill(setCity, saved.city);
-      fill(setState, saved.state);
-      fill(setPostalCode, saved.postalCode);
-    }
-    setPrefilledFor(session.email);
-  }, [session, addresses, prefilledFor]);
-
   // Signed-in shoppers can switch between saved addresses (home, work, a friend's place...).
   const [chosenAddressId, setChosenAddressId] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Refs (not state) so a late address hydration or an account switch cannot be
+  // skipped by a stale one-shot flag, and no extra render is needed (WEB-005).
+  const prefillSignatureRef = useRef('');
+  const prefillEmailRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const sessionEmail = session?.email ?? '';
+    const saved = addresses.find((a) => a.isDefault) || addresses[0];
+    const signature = `${sessionEmail}::${saved?.id ?? 'none'}`;
+    if (signature === prefillSignatureRef.current) return;
+    prefillSignatureRef.current = signature;
+
+    // A different account (or sign-out) means the previous shopper's details
+    // must not bleed into this checkout attempt.
+    if (prefillEmailRef.current !== sessionEmail) {
+      prefillEmailRef.current = sessionEmail;
+      setFirstName(''); setLastName(''); setEmail(sessionEmail);
+      setPhone(''); setAddressLine1(''); setAddressLine2('');
+      setCity(''); setState(''); setPostalCode('');
+      setChosenAddressId(null);
+    }
+
+    const [first = '', ...rest] = (session?.name ?? '').split(' ');
+    setFirstName((current) => current || first);
+    setLastName((current) => current || rest.join(' '));
+    setEmail((current) => current || sessionEmail);
+
+    // Re-apply whenever the default address changes / arrives, so a late
+    // address hydration is never skipped and an account switch self-corrects.
+    if (saved) {
+      setPhone(saved.phone);
+      setAddressLine1(saved.addressLine1);
+      setAddressLine2(saved.addressLine2 ?? '');
+      setCity(saved.city);
+      setState(saved.state);
+      setPostalCode(saved.postalCode);
+      setChosenAddressId(saved.id);
+    }
+  }, [session, addresses]);
+
   const applySavedAddress = (saved: (typeof addresses)[number]) => {
+    setErrors({});
     const [first = '', ...rest] = saved.fullName.split(' ');
     setFirstName(first);
     setLastName(rest.join(' '));
@@ -129,7 +164,27 @@ export default function CheckoutPage() {
   const [giftCardMessage, setGiftCardMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const giftCardApplied = giftCard ? giftCard.appliedPaise / 100 : 0;
   const payableTotal = Math.max(0, total - giftCardApplied);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [serverQuote, setServerQuote] = useState<CheckoutQuote | null>(null);
+  // While the quote is being recalculated, fall back to locally computed totals
+  // instead of leaving the previous attempt's stale payable amount on screen (WEB-007).
+  const displayPayable = (serverQuote?.payablePaise ?? Math.round(payableTotal * 100)) / 100;
+  // Prefer the server's recomputed gift-card cap so the summary line cannot
+  // disagree with what will actually be charged after cart/delivery changes (WEB-024).
+  const displayedGiftCard = serverQuote ? serverQuote.giftCardPaise / 100 : giftCardApplied;
+
+  useEffect(() => {
+    let active = true;
+    // Clear the previous quote immediately; a stale total must never linger
+    // while inputs are changing and the new quote is in flight (WEB-007).
+    setServerQuote(null);
+    getCheckoutQuoteAction({
+      // The quote schema accepts card/upi only; both are priced identically
+      // (no COD fee), so this display quote is method-independent.
+      checkoutKey, discountCode: promoCode || undefined, giftCardCode: giftCard?.code,
+      speed: deliverySpeed, method: 'card',
+    }).then((r) => { if (active && r.ok) setServerQuote(r.data); });
+    return () => { active = false; };
+  }, [checkoutKey, promoCode, giftCard?.code, deliverySpeed, cartSubtotal]);
 
   const validateDetails = () => {
     const errs: Record<string, string> = {};
@@ -160,6 +215,12 @@ export default function CheckoutPage() {
     }
   };
 
+  // Single removal path so the success message can never outlive the promo (WEB-006).
+  const removePromo = () => {
+    removePromoCode();
+    setPromoMessage(null);
+  };
+
   const handleApplyGiftCard = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!giftCardInput.trim()) return;
@@ -183,52 +244,125 @@ export default function CheckoutPage() {
   };
 
   const handleProceedToDetails = () => {
+    if (placing) return;
     if (cart.length > 0) setStep(2);
   };
 
   const handleProceedToPayment = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (placing) return;
     if (validateDetails()) {
       setStep(3);
     }
   };
 
-  // The server reads the bag, prices it, takes the stock and the (demo) payment
-  // in one step. On a refusal every typed value stays as it was.
   const handlePaymentSuccess = async (paymentMethod: 'UPI' | 'Card' | 'COD (Demo)') => {
-    if (placing) return;
+    // Ref guard is synchronous so two same-tick clicks cannot both proceed (WEB-004).
+    if (placing || placingRef.current) return;
+    placingRef.current = true;
     setPlacing(true);
     setPlaceError(null);
-    const result = await placeOrderAction({
-      checkoutKey,
-      email: email.trim() || undefined,
-      shippingAddress: {
-        fullName: `${firstName} ${lastName}`.trim(),
-        line1: addressLine1,
-        line2: addressLine2 || undefined,
-        city,
-        state,
-        postalCode,
-        country: 'India',
-        phone,
-      },
-      speed: deliverySpeed,
-      method: paymentMethod === 'Card' ? 'card' : paymentMethod === 'UPI' ? 'upi' : 'cod',
-      discountCode: promoCode || undefined,
-      giftCardCode: giftCard?.code,
-    });
-    if (!result.ok) {
+    try {
+      const method = paymentMethod === 'Card' ? 'card' : paymentMethod === 'UPI' ? 'upi' : 'cod';
+      const orderInput = {
+        checkoutKey,
+        email: email.trim() || undefined,
+        shippingAddress: {
+          fullName: `${firstName} ${lastName}`.trim(),
+          line1: addressLine1, line2: addressLine2 || undefined, city, state,
+          postalCode, country: 'India' as const, phone,
+        },
+        speed: deliverySpeed,
+        method,
+        discountCode: promoCode || undefined,
+        giftCardCode: giftCard?.code,
+      };
+
+      if (paymentConfig?.provider === 'razorpay' && paymentConfig.keyId && method !== 'cod') {
+        const intent = await createPaymentIntentAction(orderInput);
+        if (!intent.ok) throw new Error(intent.error.message);
+        const paid = await openRazorpayCheckout({
+          keyId: intent.data.keyId,
+          orderId: intent.data.providerOrderId,
+          amountPaise: intent.data.amountPaise,
+          name: 'The Unplugged Wear',
+          email: email.trim() || undefined,
+          phone: phone.trim() || undefined,
+        });
+        const confirmed = await confirmPaymentAction({
+          checkoutKey,
+          providerPaymentId: paid.razorpay_payment_id,
+          signature: paid.razorpay_signature,
+        });
+        if (!confirmed.ok) {
+          let status = null;
+          for (let i = 0; i < 8 && !status; i += 1) {
+            const polled = await getCheckoutStatusAction({ orderNumber: intent.data.orderNumber, receipt: intent.data.receipt });
+            if (polled.ok && polled.data.paymentStatus === 'paid') status = polled.data;
+            else await new Promise((r) => setTimeout(r, 1000));
+          }
+          if (!status) throw new Error(confirmed.error.message);
+        }
+        removePromo();
+        setGiftCard(null);
+        setGiftCardMessage(null);
+        router.push(`/checkout/success?order=${encodeURIComponent(intent.data.orderNumber)}&t=${encodeURIComponent(intent.data.receipt)}`);
+        setTimeout(() => void refreshBag(), 500);
+        return;
+      }
+
+      const result = await placeOrderAction(orderInput);
+      if (!result.ok) {
+        setPlaceError(result.error.details[0]?.message && result.error.code === 'VALIDATION_FAILED' ? `${result.error.message} ${result.error.details[0].message}` : result.error.message);
+        return;
+      }
+      removePromo();
+      setGiftCard(null);
+      setGiftCardMessage(null);
+      router.push(`/checkout/success?order=${encodeURIComponent(result.data.orderNumber)}&t=${encodeURIComponent(result.data.receipt)}`);
+      setTimeout(() => void refreshBag(), 500);
+    } catch (error) {
+      setPlaceError(error instanceof Error ? error.message : 'Payment could not be completed.');
+    } finally {
+      placingRef.current = false;
       setPlacing(false);
-      setPlaceError(result.error.details[0]?.message && result.error.code === 'VALIDATION_FAILED' ? `${result.error.message} ${result.error.details[0].message}` : result.error.message);
-      return;
     }
-    removePromoCode();
-    setGiftCard(null);
-    setGiftCardMessage(null);
-    router.push(`/checkout/success?order=${encodeURIComponent(result.data.orderNumber)}&t=${encodeURIComponent(result.data.receipt)}`);
-    // After leaving, so the page does not flash "your bag is empty" first.
-    setTimeout(() => void refreshBag(), 500);
   };
+
+  // Loading/error/empty are distinct states: a failed bag read must not look empty.
+  if (!bagReady && cart.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col bg-store-canvas">
+        <Header />
+        <main className="flex-1 max-w-7xl mx-auto px-4 py-24 text-center" role="status">
+          <p className="text-sm text-store-muted">Loading your bag…</p>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (bagError && cart.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col bg-store-canvas">
+        <Header />
+        <main className="flex-1 max-w-7xl mx-auto px-4 py-24 text-center" role="alert">
+          <h1 className="text-2xl font-bold font-heading text-store-charcoal">We couldn’t load your bag</h1>
+          <p className="text-sm text-store-muted mt-2">{bagError}</p>
+          <div className="mt-6">
+            <button
+              type="button"
+              onClick={() => void refreshBag()}
+              className="inline-flex items-center justify-center px-6 py-3 rounded-full bg-store-action-primary text-white text-xs font-semibold uppercase tracking-wider hover:bg-store-action-hover transition-colors shadow-sm"
+            >
+              Try again
+            </button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   // Empty cart fallback
   if (cart.length === 0) {
@@ -262,17 +396,15 @@ export default function CheckoutPage() {
       <Header />
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full">
-        {/* Truthful demo feedback (project rule): stated before any input */}
-        <div
-          role="note"
-          className="mb-6 flex items-start gap-2.5 rounded-xl border border-store-gold/40 bg-store-cream px-4 py-3 text-sm text-store-text-primary"
-        >
-          <ShieldCheck size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-store-gold" />
-          <p>
-            <span className="font-semibold">Demo checkout sandbox</span> — no payment will be
-            collected and no order will be printed or shipped.
-          </p>
-        </div>
+        {paymentConfig?.available ? (
+          <div role="note" className="mb-6 rounded-xl border border-store-gold/40 bg-store-cream px-4 py-3 text-sm text-store-text-primary">
+            {paymentConfig.testMode ? 'Razorpay test mode — no real money will be collected.' : 'Secure payment by Razorpay.'}
+          </div>
+        ) : paymentConfig ? (
+          <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            Online payments are not available right now. Please try again later or contact support.
+          </div>
+        ) : null}
 
         {/* ======================================================== */}
         {/* TOP ROW: Header Title (L) + Floating 3-Step Indicator (R)*/}
@@ -292,7 +424,7 @@ export default function CheckoutPage() {
             {/* Step 1: Cart */}
             <button
               type="button"
-              onClick={() => setStep(1)}
+              onClick={() => { if (placing) return; setStep(1); }}
               className="flex items-center cursor-pointer group"
             >
               <span
@@ -324,6 +456,7 @@ export default function CheckoutPage() {
             <button
               type="button"
               onClick={() => {
+                if (placing) return;
                 if (cart.length > 0) setStep(2);
               }}
               className="flex items-center cursor-pointer group"
@@ -357,6 +490,10 @@ export default function CheckoutPage() {
             <button
               type="button"
               onClick={() => {
+                if (placing) return;
+                // Payment may only be entered from the Details step; from Cart
+                // the fields are unmounted, so validating them is a no-op (WEB-001).
+                if (step !== 2) return;
                 if (validateDetails()) setStep(3);
               }}
               className="flex items-center cursor-pointer group"
@@ -847,7 +984,7 @@ export default function CheckoutPage() {
                 <div className="pt-4 flex items-center justify-between border-t border-store-card-border">
                   <button
                     type="button"
-                    onClick={() => setStep(1)}
+                    onClick={() => { if (placing) return; setStep(1); }}
                     className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider font-semibold text-store-muted hover:text-store-charcoal transition-colors cursor-pointer"
                   >
                     <ArrowLeft size={14} />
@@ -870,7 +1007,7 @@ export default function CheckoutPage() {
               <div className="space-y-6">
                 <div className="border-b border-store-card-border pb-4">
                   <span className="text-xs font-bold uppercase tracking-wider text-store-muted">
-                    Payment Authorization Sandbox
+                    {paymentConfig?.available ? 'Secure Payment' : 'Payment Authorization Sandbox'}
                   </span>
                 </div>
 
@@ -883,12 +1020,25 @@ export default function CheckoutPage() {
                   <p role="status" className="text-sm text-store-text-secondary">Placing your order…</p>
                 )}
 
-                <PaymentSimulationPanel
-                  totalAmount={payableTotal}
-                  onPaymentSuccess={handlePaymentSuccess}
-                  onPaymentFail={(reason) => console.log('Payment declined:', reason)}
-                  onCancel={() => setStep(2)}
-                />
+                {!paymentConfig ? (
+                  <p role="status" className="text-sm text-store-text-secondary">Loading payment options…</p>
+                ) : paymentConfig.available ? (
+                  <LivePaymentPanel
+                    totalAmount={displayPayable}
+                    placing={placing}
+                    onPay={handlePaymentSuccess}
+                    onCancel={() => { if (placing) return; setStep(2); }}
+                  />
+                ) : (
+                  // No live gateway: still offer a way to place a COD/demo order
+                  // instead of a dead-end error (WEB-002).
+                  <PaymentSimulationPanel
+                    totalAmount={displayPayable}
+                    onPaymentSuccess={handlePaymentSuccess}
+                    onPaymentFail={(reason) => setPlaceError(reason)}
+                    onCancel={() => { if (placing) return; setStep(2); }}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -922,7 +1072,7 @@ export default function CheckoutPage() {
                 {giftCard && (
                   <div className="flex justify-between text-emerald-300 font-medium">
                     <span>Gift card (••••{giftCard.last4})</span>
-                    <span>-{formatRupees(giftCardApplied)}</span>
+                    <span>-{formatRupees(displayedGiftCard)}</span>
                   </div>
                 )}
 
@@ -1030,7 +1180,7 @@ export default function CheckoutPage() {
                     <span>Code {promoCode} applied</span>
                     <button
                       type="button"
-                      onClick={removePromoCode}
+                      onClick={removePromo}
                       className="underline text-white/70 hover:text-white transition-colors cursor-pointer"
                     >
                       Remove
@@ -1100,7 +1250,7 @@ export default function CheckoutPage() {
               <div className="pt-4 border-t border-white/15 flex items-baseline justify-between">
                 <span className="text-sm font-medium text-white/90">Total</span>
                 <span className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-                  {formatRupees(payableTotal)}
+                  {formatRupees(displayPayable)}
                 </span>
               </div>
 
@@ -1152,7 +1302,9 @@ export default function CheckoutPage() {
               </li>
               <li className="flex items-center gap-2.5 pt-2.5 border-t border-store-card-border/60 text-store-charcoal">
                 <ShieldCheck size={16} aria-hidden="true" className="shrink-0" />
-                Demo checkout — no payment is collected
+                {paymentConfig?.available
+                  ? paymentConfig.testMode ? 'Razorpay test mode — no real payment' : 'Secure payment by Razorpay'
+                  : 'Online payments are currently unavailable'}
               </li>
             </ul>
           </div>
