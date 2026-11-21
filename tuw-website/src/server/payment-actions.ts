@@ -53,8 +53,8 @@ export const getCheckoutQuoteAction = guards.action({ access: 'guestOrCustomer',
 });
 
 /** Validate input, create the pending order, then create the provider order outside the DB transaction. */
-export const createPaymentIntentAction = guards.action({ access: 'guestOrCustomer', input: orders.orderSchemas.placeOrder }, async ({ input, ctx }) => {
-  const buyer: orders.Buyer = ctx.user ? { userId: ctx.user.id, email: input.email ?? '' } : { sessionId: ctx.guestSessionId! };
+export const createPaymentIntentAction = guards.action({ access: 'customer', input: orders.orderSchemas.placeOrder }, async ({ input, ctx }) => {
+  const buyer: orders.Buyer = { userId: ctx.user!.id, email: ctx.user!.email };
   return payments.prepareCheckout(buyer, input);
 });
 

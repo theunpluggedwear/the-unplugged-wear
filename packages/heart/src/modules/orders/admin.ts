@@ -44,6 +44,8 @@ export interface AdminOrderRow {
 }
 
 export interface AdminOrderDetail extends AdminOrderRow {
+  /** Provider-hosted payment invoice, when one was issued. */
+  invoiceUrl: string | null;
   lines: { id: string; title: string; variant: string; qty: number; unitPaise: number; sku: string }[];
   subtotalPaise: number;
   shippingPaise: number;
@@ -73,7 +75,7 @@ const FROM = sql`FROM orders o
 
 type RowSql = {
   id: string; order_number: string; created_at: string; name: string | null; email: string | null; shipping_address: Record<string, string>; status: OrderStatus;
-  payment_status: AdminOrderRow['paymentStatus']; method: string | null; grand_total: string; paid: string | null; refunded: string | null; items: number; guest: boolean;
+  payment_status: AdminOrderRow['paymentStatus']; method: string | null; grand_total: string; paid: string | null; refunded: string | null; items: number; guest: boolean; invoice_url: string | null;
 };
 
 const SELECT = sql`SELECT o.id, o.order_number, o.created_at,
@@ -82,7 +84,8 @@ const SELECT = sql`SELECT o.id, o.order_number, o.created_at,
     (SELECT p.method FROM payments p WHERE p.order_id = o.id ORDER BY p.created_at DESC LIMIT 1) AS method,
     (SELECT sum(p.amount) FROM payments p WHERE p.order_id = o.id AND p.status IN ('captured','refunded')) AS paid,
     (SELECT sum(r.amount) FROM refunds r WHERE r.order_id = o.id AND r.status = 'completed') AS refunded,
-    (SELECT coalesce(sum(oi.qty), 0)::int FROM order_items oi WHERE oi.order_id = o.id) AS items`;
+    (SELECT coalesce(sum(oi.qty), 0)::int FROM order_items oi WHERE oi.order_id = o.id) AS items,
+    (SELECT d.url FROM payment_documents d WHERE d.order_id = o.id ORDER BY d.created_at DESC LIMIT 1) AS invoice_url`;
 
 const toRow = (r: RowSql): AdminOrderRow => {
   const a = r.shipping_address ?? {};
@@ -137,6 +140,7 @@ export async function adminGetOrder(orderNumber: string): Promise<AdminOrderDeta
   ]);
   return {
     ...toRow(r),
+    invoiceUrl: r.invoice_url,
     lines: lines.map((l) => ({ id: l.id, title: l.product_name, variant: [l.options?.Color, l.options?.Size].filter(Boolean).join(' / ') || 'Standard', qty: l.qty, unitPaise: paise(l.unit_price), sku: l.sku })),
     subtotalPaise: paise(r.subtotal), shippingPaise: paise(r.shipping_fee), taxPaise: paise(r.tax), discountPaise: paise(r.discount), discountCode: r.code,
     cancellableUntil: r.cancellable_until ? new Date(r.cancellable_until).toISOString() : null,

@@ -222,6 +222,8 @@ export type Order = {
   refundAmountINR?: number;
   shippingAddress: Address;
   paymentMethod: 'UPI' | 'Card' | 'COD (Demo)';
+  /** Provider-hosted payment invoice, when one was issued. */
+  invoiceUrl?: string;
   partnerOrderId?: string;
   trackingNumber?: string;
   carrier?: string;

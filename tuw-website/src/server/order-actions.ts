@@ -11,8 +11,8 @@ import { guards, session } from './session';
 // decided on the server from the bag; the form only says where and how to pay.
 // Per-person data, so nothing here is cached.
 
-export const placeOrderAction = guards.action({ access: 'guestOrCustomer', input: s.placeOrder }, async ({ input, ctx }) => {
-  const buyer: orders.Buyer = ctx.user ? { userId: ctx.user.id, email: '' } : { sessionId: ctx.guestSessionId! };
+export const placeOrderAction = guards.action({ access: 'customer', input: s.placeOrder }, async ({ input, ctx }) => {
+  const buyer: orders.Buyer = { userId: ctx.user!.id, email: ctx.user!.email };
   const placed = await orders.placeOrder(buyer, input);
   return { orderNumber: placed.orderNumber, receipt: placed.receipt, totals: placed.totals, cancellableUntil: placed.cancellableUntil };
 });

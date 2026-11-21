@@ -3,6 +3,9 @@ import 'server-only';
 export type WebhookKind =
   | 'payment_captured'
   | 'payment_failed'
+  | 'invoice_paid'
+  | 'invoice_partially_paid'
+  | 'invoice_expired'
   | 'refund_created'
   | 'refund_processed'
   | 'refund_failed'
@@ -22,6 +25,8 @@ export interface NormalizedWebhookEvent {
   providerOrderId?: string;
   providerPaymentId?: string;
   providerRefundId?: string;
+  providerDocumentId?: string;
+  documentStatus?: string;
   amountPaise?: number;
   currency?: string;
   status?: string;

@@ -6,17 +6,18 @@ import { recordAudit } from '../../platform/audit/index.ts';
 import { paymentAdapters } from '../payments/adapters.ts';
 import { fulfillmentAdapters } from '../fulfillment/index.ts';
 import { emailAdapters } from '../email/index.ts';
+import { invoiceAdapters } from '../invoices/adapters.ts';
 
 // Integration provider registry (DOC/backend/16 §1). Owns integration_providers:
 // which provider is active per category and whether it runs sandbox or live.
 // Secrets never live here (env only). A provider can be switched on only if
 // an adapter exists, and live only if that adapter reports live keys.
 
-export type ProviderCategory = 'payment' | 'fulfillment' | 'shipping' | 'email' | 'sms' | 'other';
+export type ProviderCategory = 'payment' | 'invoice' | 'fulfillment' | 'shipping' | 'email' | 'sms' | 'other';
 type Db = Transaction | ReturnType<typeof getDb>;
 
 const ADAPTERS = new Map<string, { liveReady(): boolean }>(
-  [...paymentAdapters, ...fulfillmentAdapters, ...emailAdapters].map((a) => [a.slug, a]),
+  [...paymentAdapters, ...invoiceAdapters, ...fulfillmentAdapters, ...emailAdapters].map((a) => [a.slug, a]),
 );
 
 /** Categories where exactly one provider must be active (one checkout gateway, one sender). */

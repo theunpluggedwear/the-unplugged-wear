@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { getDb, withTransaction, type Database, type Transaction } from '../../platform/db/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
+import { hitRateLimit } from '../../platform/ratelimit/index.ts';
 import { emit } from '../../platform/events/index.ts';
 import { getEmailSender, showDevLinks } from '../../integrations/email/index.ts';
 import { createAccountHolder } from '../customers/index.ts';
@@ -282,6 +283,31 @@ export async function verifyEmail(token: string): Promise<{ userId: string }> {
     await tx.execute(sql`UPDATE users SET email_verified_at = COALESCE(email_verified_at, now()) WHERE id = ${row.user_id} AND email = ${row.email}`);
     return { userId: row.user_id };
   });
+}
+
+/**
+ * Signed-in customer asks for a fresh confirmation link (legacy guest orders
+ * can only be claimed once the account email is proven). Mirrors register():
+ * one short-lived token per attempt, older unused links stop working.
+ */
+export async function resendVerificationEmail(userId: string, meta: RequestMeta): Promise<{ alreadyVerified: boolean; devLink?: string; delivered: boolean }> {
+  const account = await accountEmail(userId);
+  if (!account) throw new AppError('UNAUTHENTICATED', 'Please sign in again.');
+  if (account.verified) return { alreadyVerified: true, delivered: false };
+
+  await hitRateLimit('auth.verify.resend', [{ key: userId, max: 3, windowSeconds: 3600 }]);
+
+  const email = normalizeEmail(account.email);
+  const verifySecret = randomSecret();
+  const tokenId = uuidv7();
+  await withTransaction(async (tx) => {
+    await tx.execute(sql`UPDATE email_verification_tokens SET used_at = now() WHERE email = ${email} AND used_at IS NULL`);
+    await tx.execute(sql`INSERT INTO email_verification_tokens (id, user_id, email, token_hash, expires_at)
+                         VALUES (${tokenId}, ${userId}, ${email}, ${hashSecret(verifySecret)}, now() + make_interval(hours => ${VERIFY_TTL_HOURS}))`);
+  });
+  const link = `${meta.origin}/verify-email?token=${verifySecret}`;
+  const sent = await getEmailSender().send({ to: email, subject: 'Confirm your email', template: 'auth.verify', link, dedupeKey: `auth.verify:${hashSecret(verifySecret)}` });
+  return { alreadyVerified: false, delivered: sent.delivered, ...(showDevLinks() ? { devLink: link } : {}) };
 }
 
 export async function changePassword(userId: string, current: string, next: string): Promise<void> {

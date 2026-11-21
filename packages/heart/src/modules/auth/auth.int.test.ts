@@ -45,6 +45,19 @@ test('register: 8 parallel signups with case variants of one email → exactly o
   assert.equal(row?.n, 1);
 });
 
+test('resendVerificationEmail: new dev link, invalidates old token, no-op after verification', { skip }, async () => {
+  const s = await auth.register(person('resend@example.com'), meta);
+  const first = await auth.resendVerificationEmail(s.claims.sub, meta);
+  assert.equal(first.alreadyVerified, false);
+  assert.ok(first.devLink?.includes('/verify-email?token='));
+  const [rows] = await q<{ n: number }>(sql`
+    SELECT count(*)::int AS n FROM email_verification_tokens WHERE email='resend@example.com' AND used_at IS NULL`);
+  assert.equal(rows?.n, 1, 'old unused token was replaced');
+  await auth.verifyEmail(tokenFrom(first.devLink));
+  const second = await auth.resendVerificationEmail(s.claims.sub, meta);
+  assert.deepEqual(second, { alreadyVerified: true, delivered: false });
+});
+
 test('register: hostile and boundary passwords', { skip }, async () => {
   assert.equal(await code(auth.register(person('short@example.com', 'abc'), meta)), 'VALIDATION_FAILED');
   assert.equal(await code(auth.register(person('spaces@example.com', '          '), meta)), 'VALIDATION_FAILED');

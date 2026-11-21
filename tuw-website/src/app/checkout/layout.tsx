@@ -4,6 +4,7 @@ import { AccountDataProvider } from '@storefront/lib/account';
 import { PaymentConfigProvider } from '@storefront/lib/payment-config';
 import { getMyAccount } from '@/server/account';
 import { readPaymentConfig } from '@/server/payment-config';
+import { session } from '@/server/session';
 
 // Private page: kept out of search results.
 export const metadata: Metadata = {
@@ -16,7 +17,8 @@ export const metadata: Metadata = {
 // server and stream it to both checkout screens with use() (CLN-NXT-006). The
 // promise is created here but resolved inside the client provider, so it bails
 // a static prerender out the same way getMyAccount() does instead of blocking.
-export default function CheckoutLayout({ children }: { children: ReactNode }) {
+export default async function CheckoutLayout({ children }: { children: ReactNode }) {
+  await session.requireUser('/checkout');
   const config = readPaymentConfig();
   return (
     <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>

@@ -6,8 +6,8 @@ import { AppError } from '../errors/index.ts';
 import { canonicalJson, hashRequest } from '../idempotency/index.ts';
 
 const base: RequestContext = { requestId: 'r', user: null, guestSessionId: null };
-const customer: RequestContext = { ...base, user: { id: 'u1', roles: ['customer'], permissions: [] } };
-const support: RequestContext = { ...base, user: { id: 's1', roles: ['support'], permissions: ['order.read'] } };
+const customer: RequestContext = { ...base, user: { id: 'u1', email: 'customer@example.com', roles: ['customer'], permissions: [] } };
+const support: RequestContext = { ...base, user: { id: 's1', email: 'support@example.com', roles: ['support'], permissions: ['order.read'] } };
 const code = (fn: () => void) => { try { fn(); return 'ok'; } catch (e) { return (e as AppError).code; } };
 
 test('storefront access levels', () => {

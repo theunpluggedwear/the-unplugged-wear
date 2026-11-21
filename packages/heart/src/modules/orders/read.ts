@@ -26,6 +26,8 @@ export interface OrderView {
   status: OrderStatus;
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   paymentMethod: 'card' | 'upi' | 'cod' | 'netbanking' | 'wallet' | null;
+  /** Provider-hosted payment invoice URL, when one was issued. */
+  invoiceUrl: string | null;
   isGuest: boolean;
   lines: OrderLineView[];
   subtotalPaise: number;
@@ -60,9 +62,10 @@ type Loaded = OrderView & { ownerId: string | null };
 async function load(where: ReturnType<typeof sql>, limit = 1): Promise<Loaded[]> {
   const db = getDb();
   const { rows: orders } = await db.execute<{ id: string; order_number: string; created_at: string; status: OrderStatus; payment_status: OrderView['paymentStatus']; placed_by_user_id: string | null;
-    subtotal: string; discount: string; shipping_fee: string; tax: string; grand_total: string; shipping_address: ShippingAddress; cancellable_until: string | null; method: OrderView['paymentMethod'] }>(sql`
+    subtotal: string; discount: string; shipping_fee: string; tax: string; grand_total: string; shipping_address: ShippingAddress; cancellable_until: string | null; method: OrderView['paymentMethod']; invoice_url: string | null }>(sql`
     SELECT o.id, o.order_number, o.created_at, o.status, o.payment_status, o.placed_by_user_id, o.subtotal, o.discount, o.shipping_fee, o.tax, o.grand_total, o.shipping_address, o.cancellable_until,
-           (SELECT p.method FROM payments p WHERE p.order_id = o.id ORDER BY p.created_at DESC LIMIT 1) AS method
+           (SELECT p.method FROM payments p WHERE p.order_id = o.id ORDER BY p.created_at DESC LIMIT 1) AS method,
+           (SELECT d.url FROM payment_documents d WHERE d.order_id = o.id ORDER BY d.created_at DESC LIMIT 1) AS invoice_url
     FROM orders o WHERE ${where} ORDER BY o.created_at DESC LIMIT ${limit}`);
   if (!orders.length) return [];
   const ids = sql.join(orders.map((o) => sql`${o.id}::uuid`), sql`, `);
@@ -84,6 +87,7 @@ async function load(where: ReturnType<typeof sql>, limit = 1): Promise<Loaded[]>
   const now = Date.now();
   return orders.map((o) => ({
     id: o.id, orderNumber: o.order_number, createdAt: new Date(o.created_at).toISOString(), status: o.status, paymentStatus: o.payment_status, paymentMethod: o.method,
+    invoiceUrl: o.invoice_url,
     isGuest: o.placed_by_user_id === null, ownerId: o.placed_by_user_id,
     lines: items.filter((i) => i.order_id === o.id).map((i) => ({
       id: i.id, productId: i.external_id ?? i.product_id, slug: i.slug, title: i.product_name, color: i.options?.Color ?? null, size: i.options?.Size ?? null,

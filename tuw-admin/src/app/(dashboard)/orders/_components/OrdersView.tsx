@@ -422,7 +422,19 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
               <div>
                 <span style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--tuw-text-secondary, #5D6772)', display: 'block' }}>Payment</span>
                 <Badge variant={PAYMENT_BADGE[detail.paymentStatus]}>{PAYMENT_LABEL[detail.paymentStatus]}</Badge>
-                <div style={{ fontSize: 12, color: 'var(--tuw-text-secondary, #5D6772)', marginTop: 4 }}>{METHOD_LABEL[detail.paymentMethod ?? ''] ?? '—'} · demo gateway</div>
+                <div style={{ fontSize: 12, color: 'var(--tuw-text-secondary, #5D6772)', marginTop: 4 }}>
+                  {METHOD_LABEL[detail.paymentMethod ?? ''] ?? '—'} · {detail.invoiceUrl ? 'hosted invoice' : 'demo gateway'}
+                </div>
+                {detail.invoiceUrl && (
+                  <a
+                    href={detail.invoiceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: 12, color: 'var(--tuw-text-primary, #262626)', textDecoration: 'underline', display: 'inline-block', marginTop: 4 }}
+                  >
+                    View payment invoice
+                  </a>
+                )}
               </div>
               <div>
                 <span style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--tuw-text-secondary, #5D6772)', display: 'block' }}>Status</span>

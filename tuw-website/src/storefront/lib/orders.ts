@@ -57,6 +57,7 @@ export function toStoreOrder(o: OrderView): Order {
     totalINR: o.grandTotalPaise / 100,
     shippingAddress: { id: o.id, fullName: a.fullName, addressLine1: a.line1, addressLine2: a.line2, city: a.city, state: a.state, postalCode: a.postalCode, country: a.country, phone: a.phone },
     paymentMethod: METHOD[o.paymentMethod ?? 'card'] ?? 'Card',
+    invoiceUrl: o.invoiceUrl ?? undefined,
     sqlStatus: o.status,
     cancellableUntil: o.cancellableUntil ?? undefined,
     canCancel: o.canCancel,

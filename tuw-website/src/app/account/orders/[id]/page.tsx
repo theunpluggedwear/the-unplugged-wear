@@ -16,9 +16,7 @@ import type { FulfillmentStatus, Order, PaymentStatus } from '@storefront/lib/ty
 import { formatPaise, formatShortDate } from '@storefront/lib/format';
 import { RETURN_WINDOW_DAYS, deliveryEstimate } from '@storefront/lib/product';
 import { AlertCircle, ArrowLeft, ArrowRight, Download, Undo2 } from 'lucide-react';
-import { downloadInvoicePdf } from '@storefront/lib/invoice';
-import { useSiteSettings } from '@storefront/lib/site-settings';
-import { useSession } from '@storefront/lib/session';
+
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -58,8 +56,6 @@ export default function OrderDetailPage({ params }: PageProps) {
   const [cancelling, setCancelling] = useState(false);
   const [cancelNote, setCancelNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [returnInfo, setReturnInfo] = useState<ReturnEligibility | null>(null);
-  const { session } = useSession();
-  const { supportEmail } = useSiteSettings();
   // Exchanges only open after delivery; the server decides and says why not.
   const delivered = order?.fulfillmentStatus === 'delivered' && order.sqlStatus !== 'cancelled';
   useEffect(() => {
@@ -373,13 +369,18 @@ export default function OrderDetailPage({ params }: PageProps) {
                 <dt className="text-xs">Payment</dt>
                 <dd className="text-right text-xs">{order.paymentMethod}</dd>
               </dl>
-              <button
-                type="button"
-                onClick={() => void downloadInvoicePdf(order, session?.email, supportEmail)}
-                className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-store-charcoal underline-offset-4 decoration-store-gold hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
-              >
-                <Download size={14} aria-hidden="true" /> Download invoice PDF (demo)
-              </button>
+              {order.invoiceUrl ? (
+                <a
+                  href={order.invoiceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-store-charcoal underline-offset-4 decoration-store-gold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
+                >
+                  <Download size={14} aria-hidden="true" /> View payment invoice
+                </a>
+              ) : (
+                <p className="mt-5 text-xs text-store-text-secondary">No payment invoice was issued for this order.</p>
+              )}
             </section>
 
             {/* Address */}
