@@ -36,7 +36,6 @@ export const brands = pgTable("brands", {
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
-	index("idx_brands_active").using("btree", table.isActive.asc().nullsLast().op("bool_ops")).where(sql`is_active`),
 	unique("brands_slug_key").on(table.slug),
 ]);
 
@@ -209,13 +208,12 @@ export const products = pgTable("products", {
 	badge: varchar({ length: 60 }),
 }, (table) => [
 	index("idx_products_active").using("btree", table.status.asc().nullsLast().op("text_ops")).where(sql`((status)::text = 'active'::text)`),
-	index("idx_products_active_price").using("btree", table.status.asc().nullsLast().op("text_ops"), table.price.asc().nullsLast().op("text_ops")).where(sql`((status)::text = 'active'::text)`),
+	index("idx_products_active_price").using("btree", table.status.asc().nullsLast().op("numeric_ops"), table.price.asc().nullsLast().op("text_ops")).where(sql`((status)::text = 'active'::text)`),
 	index("idx_products_brand_id").using("btree", table.brandId.asc().nullsLast().op("uuid_ops")),
 	index("idx_products_category_id").using("btree", table.categoryId.asc().nullsLast().op("uuid_ops")),
 	index("idx_products_internal_serial_no").using("btree", table.internalSerialNo.asc().nullsLast().op("int4_ops")).where(sql`(internal_serial_no IS NOT NULL)`),
 	index("idx_products_partner").using("btree", table.partnerProvider.asc().nullsLast().op("text_ops"), table.partnerAvailability.asc().nullsLast().op("text_ops")).where(sql`(((status)::text = 'active'::text) AND (partner_provider IS NOT NULL))`),
 	index("idx_products_search_vector").using("gin", table.searchVector.asc().nullsLast().op("tsvector_ops")),
-	index("idx_products_slug_aliases").using("gin", table.slugAliases.asc().nullsLast().op("array_ops")),
 	index("idx_products_tags").using("gin", table.tags.asc().nullsLast().op("array_ops")),
 	uniqueIndex("products_source_external_key").using("btree", table.source.asc().nullsLast().op("text_ops"), table.externalId.asc().nullsLast().op("text_ops")).where(sql`(external_id IS NOT NULL)`),
 	uniqueIndex("products_source_group_key").using("btree", table.source.asc().nullsLast().op("text_ops"), table.sourceGroupKey.asc().nullsLast().op("text_ops")).where(sql`(source_group_key IS NOT NULL)`),
@@ -575,6 +573,51 @@ export const reviews = pgTable("reviews", {
 			name: "reviews_user_id_fkey"
 		}).onDelete("cascade"),
 	check("reviews_rating_check", sql`(rating >= 1) AND (rating <= 5)`),
+]);
+
+export const paymentIntents = pgTable("payment_intents", {
+	id: uuid().primaryKey().notNull(),
+	checkoutKey: uuid("checkout_key").notNull(),
+	provider: varchar({ length: 30 }).notNull(),
+	providerOrderId: varchar("provider_order_id", { length: 150 }),
+	orderId: uuid("order_id"),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	amountPaise: bigint("amount_paise", { mode: "number" }).notNull(),
+	currency: char({ length: 3 }).default('INR').notNull(),
+	status: varchar({ length: 20 }).default('created').notNull(),
+	paymentId: varchar("payment_id", { length: 150 }),
+	signatureVerifiedAt: timestamp("signature_verified_at", { withTimezone: true, mode: 'string' }),
+	attempts: smallint().default(0).notNull(),
+	note: varchar({ length: 500 }),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	paidAt: timestamp("paid_at", { withTimezone: true, mode: 'string' }),
+	providerPaymentId: varchar("provider_payment_id", { length: 150 }),
+	payload: jsonb(),
+	confirmedAt: timestamp("confirmed_at", { withTimezone: true, mode: 'string' }),
+	providerInvoiceId: varchar("provider_invoice_id", { length: 150 }),
+	providerInvoiceUrl: text("provider_invoice_url"),
+	providerInvoiceStatus: varchar("provider_invoice_status", { length: 30 }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	providerInvoiceExpiresAt: bigint("provider_invoice_expires_at", { mode: "number" }),
+}, (table) => [
+	index("idx_payment_intents_order").using("btree", table.orderId.asc().nullsLast().op("uuid_ops")).where(sql`(order_id IS NOT NULL)`),
+	index("idx_payment_intents_status").using("btree", table.status.asc().nullsLast().op("timestamptz_ops"), table.createdAt.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.orderId],
+			foreignColumns: [orders.id],
+			name: "payment_intents_order_id_fkey"
+		}).onDelete("set null"),
+	foreignKey({
+			columns: [table.provider],
+			foreignColumns: [integrationProviders.slug],
+			name: "payment_intents_provider_fkey"
+		}).onUpdate("cascade").onDelete("restrict"),
+	unique("payment_intents_checkout_key_key").on(table.checkoutKey),
+	unique("payment_intents_provider_order_id_key").on(table.providerOrderId),
+	check("payment_intents_amount_paise_check", sql`amount_paise > 0`),
+	check("payment_intents_attempts_check", sql`attempts >= 0`),
+	check("payment_intents_status_check", sql`(status)::text = ANY ((ARRAY['created'::character varying, 'paid'::character varying, 'failed'::character varying, 'expired'::character varying, 'cancelled'::character varying])::text[])`),
 ]);
 
 export const discountCodes = pgTable("discount_codes", {
@@ -1099,31 +1142,6 @@ export const shipmentEvents = pgTable("shipment_events", {
 	check("shipment_events_status_check", sql`(status)::text = ANY ((ARRAY['pending'::character varying, 'shipped'::character varying, 'in_transit'::character varying, 'out_for_delivery'::character varying, 'delivered'::character varying, 'exception'::character varying, 'returned'::character varying])::text[])`),
 ]);
 
-export const webhookEvents = pgTable("webhook_events", {
-	id: uuid().primaryKey().notNull(),
-	provider: varchar({ length: 30 }).notNull(),
-	providerEventId: varchar("provider_event_id", { length: 150 }).notNull(),
-	eventType: varchar("event_type", { length: 100 }).notNull(),
-	signatureVerified: boolean("signature_verified").default(false).notNull(),
-	payload: jsonb().notNull(),
-	status: varchar({ length: 20 }).default('received').notNull(),
-	attempts: smallint().default(0).notNull(),
-	error: text(),
-	receivedAt: timestamp("received_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-	processedAt: timestamp("processed_at", { withTimezone: true, mode: 'string' }),
-}, (table) => [
-	index("idx_webhook_events_status").using("btree", table.status.asc().nullsLast().op("text_ops"), table.receivedAt.asc().nullsLast().op("text_ops")),
-	index("idx_webhook_events_type").using("btree", table.provider.asc().nullsLast().op("text_ops"), table.eventType.asc().nullsLast().op("text_ops")),
-	foreignKey({
-			columns: [table.provider],
-			foreignColumns: [integrationProviders.slug],
-			name: "webhook_events_provider_fk"
-		}).onUpdate("cascade").onDelete("restrict"),
-	unique("webhook_events_provider_provider_event_id_key").on(table.provider, table.providerEventId),
-	check("webhook_events_attempts_check", sql`attempts >= 0`),
-	check("webhook_events_status_check", sql`(status)::text = ANY ((ARRAY['received'::character varying, 'processed'::character varying, 'ignored'::character varying, 'failed'::character varying])::text[])`),
-]);
-
 export const importJobs = pgTable("import_jobs", {
 	id: uuid().primaryKey().notNull(),
 	source: varchar({ length: 20 }).default('csv').notNull(),
@@ -1210,6 +1228,38 @@ export const idempotencyKeys = pgTable("idempotency_keys", {
 	check("idempotency_keys_status_check", sql`(status)::text = ANY ((ARRAY['in_progress'::character varying, 'completed'::character varying, 'failed'::character varying])::text[])`),
 ]);
 
+export const webhookEvents = pgTable("webhook_events", {
+	id: uuid().primaryKey().notNull(),
+	provider: varchar({ length: 30 }).notNull(),
+	providerEventId: varchar("provider_event_id", { length: 150 }).notNull(),
+	eventType: varchar("event_type", { length: 100 }).notNull(),
+	signatureVerified: boolean("signature_verified").default(false).notNull(),
+	payload: jsonb().notNull(),
+	status: varchar({ length: 20 }).default('received').notNull(),
+	attempts: smallint().default(0).notNull(),
+	error: text(),
+	receivedAt: timestamp("received_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	processedAt: timestamp("processed_at", { withTimezone: true, mode: 'string' }),
+	businessRef: varchar("business_ref", { length: 150 }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	amountPaise: bigint("amount_paise", { mode: "number" }),
+	currency: char({ length: 3 }),
+	nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true, mode: 'string' }),
+	rawPayload: jsonb("raw_payload"),
+}, (table) => [
+	index("idx_webhook_events_retry").using("btree", table.status.asc().nullsLast().op("timestamptz_ops"), table.nextAttemptAt.asc().nullsLast().op("text_ops")).where(sql`((status)::text = 'failed'::text)`),
+	index("idx_webhook_events_status").using("btree", table.status.asc().nullsLast().op("text_ops"), table.receivedAt.asc().nullsLast().op("timestamptz_ops")),
+	index("idx_webhook_events_type").using("btree", table.provider.asc().nullsLast().op("text_ops"), table.eventType.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.provider],
+			foreignColumns: [integrationProviders.slug],
+			name: "webhook_events_provider_fk"
+		}).onUpdate("cascade").onDelete("restrict"),
+	unique("webhook_events_provider_provider_event_id_key").on(table.provider, table.providerEventId),
+	check("webhook_events_attempts_check", sql`attempts >= 0`),
+	check("webhook_events_status_check", sql`(status)::text = ANY ((ARRAY['received'::character varying, 'processed'::character varying, 'ignored'::character varying, 'failed'::character varying])::text[])`),
+]);
+
 export const media = pgTable("media", {
 	id: uuid().primaryKey().notNull(),
 	url: varchar({ length: 2048 }).notNull(),
@@ -1252,7 +1302,6 @@ export const blogAuthors = pgTable("blog_authors", {
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
 	index("idx_blog_authors_avatar_media_id").using("btree", table.avatarMediaId.asc().nullsLast().op("uuid_ops")),
-	index("idx_blog_authors_is_active").using("btree", table.isActive.asc().nullsLast().op("bool_ops")),
 	foreignKey({
 			columns: [table.avatarMediaId],
 			foreignColumns: [media.id],
@@ -1279,7 +1328,6 @@ export const blogCategories = pgTable("blog_categories", {
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
 	index("idx_blog_categories_active_sort").using("btree", table.isActive.asc().nullsLast().op("int4_ops"), table.sortOrder.asc().nullsLast().op("bool_ops")),
-	index("idx_blog_categories_slug").using("btree", table.slug.asc().nullsLast().op("text_ops")),
 	uniqueIndex("uq_blog_categories_name_lower").using("btree", sql`lower((name)::text)`),
 	unique("blog_categories_slug_key").on(table.slug),
 	check("blog_categories_slug_check", sql`(slug)::text ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'::text`),
@@ -1321,7 +1369,6 @@ export const blogs = pgTable("blogs", {
 	index("idx_blogs_og_media_id").using("btree", table.ogMediaId.asc().nullsLast().op("uuid_ops")),
 	index("idx_blogs_public_author").using("btree", table.authorId.asc().nullsLast().op("timestamptz_ops"), table.publishedAt.desc().nullsFirst().op("timestamptz_ops"), table.id.desc().nullsFirst().op("uuid_ops")).where(sql`((status)::text = 'published'::text)`),
 	index("idx_blogs_public_category").using("btree", table.categoryId.asc().nullsLast().op("uuid_ops"), table.publishedAt.desc().nullsFirst().op("uuid_ops"), table.id.desc().nullsFirst().op("uuid_ops")).where(sql`((status)::text = 'published'::text)`),
-	index("idx_blogs_public_featured").using("btree", table.publishedAt.desc().nullsFirst().op("uuid_ops"), table.id.desc().nullsFirst().op("timestamptz_ops")).where(sql`(((status)::text = 'published'::text) AND is_featured)`),
 	index("idx_blogs_public_feed").using("btree", table.publishedAt.desc().nullsFirst().op("uuid_ops"), table.id.desc().nullsFirst().op("uuid_ops")).where(sql`((status)::text = 'published'::text)`),
 	index("idx_blogs_scheduled").using("btree", table.publishedAt.asc().nullsLast().op("timestamptz_ops")).where(sql`((status)::text = 'scheduled'::text)`),
 	index("idx_blogs_search").using("gin", table.searchVector.asc().nullsLast().op("tsvector_ops")),
@@ -1436,7 +1483,6 @@ export const designAssets = pgTable("design_assets", {
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
 	index("idx_design_assets_category").using("btree", table.category.asc().nullsLast().op("text_ops")),
-	index("idx_design_assets_media_id").using("btree", table.mediaId.asc().nullsLast().op("uuid_ops")),
 	index("idx_design_assets_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
 	index("idx_design_assets_uploaded_by").using("btree", table.uploadedBy.asc().nullsLast().op("uuid_ops")),
 	uniqueIndex("one_design_per_media").using("btree", table.mediaId.asc().nullsLast().op("uuid_ops")).where(sql`(media_id IS NOT NULL)`),
@@ -1710,7 +1756,7 @@ export const integrationProviders = pgTable("integration_providers", {
 }, (table) => [
 	index("idx_integration_providers_category").using("btree", table.category.asc().nullsLast().op("text_ops"), table.isActive.asc().nullsLast().op("text_ops")),
 	unique("integration_providers_slug_key").on(table.slug),
-	check("integration_providers_category_check", sql`(category)::text = ANY ((ARRAY['payment'::character varying, 'fulfillment'::character varying, 'shipping'::character varying, 'email'::character varying, 'sms'::character varying, 'other'::character varying])::text[])`),
+	check("integration_providers_category_check", sql`(category)::text = ANY ((ARRAY['payment'::character varying, 'invoice'::character varying, 'fulfillment'::character varying, 'shipping'::character varying, 'email'::character varying, 'sms'::character varying, 'other'::character varying])::text[])`),
 	check("integration_providers_environment_check", sql`(environment)::text = ANY ((ARRAY['sandbox'::character varying, 'live'::character varying])::text[])`),
 ]);
 
@@ -2353,6 +2399,48 @@ export const notifications = pgTable("notifications", {
 			name: "notifications_user_id_fkey"
 		}).onDelete("cascade"),
 	check("notifications_kind_check", sql`(kind)::text = ANY ((ARRAY['order'::character varying, 'cart'::character varying, 'inventory'::character varying, 'payment'::character varying, 'system'::character varying, 'marketing'::character varying, 'refund'::character varying])::text[])`),
+]);
+
+export const paymentDocuments = pgTable("payment_documents", {
+	id: uuid().primaryKey().notNull(),
+	paymentIntentId: uuid("payment_intent_id").notNull(),
+	orderId: uuid("order_id").notNull(),
+	provider: varchar({ length: 30 }).notNull(),
+	documentType: varchar("document_type", { length: 30 }).default('payment_invoice').notNull(),
+	providerDocumentId: varchar("provider_document_id", { length: 150 }),
+	providerOrderId: varchar("provider_order_id", { length: 150 }),
+	providerPaymentId: varchar("provider_payment_id", { length: 150 }),
+	url: text(),
+	status: varchar({ length: 30 }).notNull(),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	amountPaise: bigint("amount_paise", { mode: "number" }).notNull(),
+	currency: varchar({ length: 3 }).default('INR').notNull(),
+	expiresAt: timestamp("expires_at", { withTimezone: true, mode: 'string' }),
+	issuedAt: timestamp("issued_at", { withTimezone: true, mode: 'string' }),
+	paidAt: timestamp("paid_at", { withTimezone: true, mode: 'string' }),
+	idempotencyKey: varchar("idempotency_key", { length: 255 }).notNull(),
+	rawPayload: jsonb("raw_payload").default({}).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("idx_payment_documents_order_id").using("btree", table.orderId.asc().nullsLast().op("uuid_ops")),
+	index("idx_payment_documents_status").using("btree", table.status.asc().nullsLast().op("text_ops"), table.createdAt.asc().nullsLast().op("timestamptz_ops")),
+	foreignKey({
+			columns: [table.orderId],
+			foreignColumns: [orders.id],
+			name: "payment_documents_order_id_fkey"
+		}).onDelete("restrict"),
+	foreignKey({
+			columns: [table.paymentIntentId],
+			foreignColumns: [paymentIntents.id],
+			name: "payment_documents_payment_intent_id_fkey"
+		}).onDelete("restrict"),
+	unique("payment_documents_provider_provider_document_id_key").on(table.provider, table.providerDocumentId),
+	unique("payment_documents_payment_intent_id_document_type_key").on(table.documentType, table.paymentIntentId),
+	unique("payment_documents_idempotency_key_key").on(table.idempotencyKey),
+	check("payment_documents_amount_paise_check", sql`amount_paise > 0`),
+	check("payment_documents_document_type_check", sql`(document_type)::text = ANY ((ARRAY['payment_invoice'::character varying, 'gst_invoice'::character varying, 'credit_note'::character varying])::text[])`),
+	check("payment_documents_status_check", sql`(status)::text = ANY ((ARRAY['draft'::character varying, 'issued'::character varying, 'partially_paid'::character varying, 'paid'::character varying, 'expired'::character varying, 'cancelled'::character varying, 'failed'::character varying])::text[])`),
 ]);
 
 export const rolePermissions = pgTable("role_permissions", {

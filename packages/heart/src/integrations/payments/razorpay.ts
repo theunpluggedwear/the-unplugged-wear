@@ -3,14 +3,14 @@ import type { PaymentGateway, PaymentIntentInput, PaymentResult } from './adapte
 
 const BASE = 'https://api.razorpay.com/v1';
 
-function config(): { keyId: string; secret: string } | null {
+export function razorpayConfig(): { keyId: string; secret: string } | null {
   const keyId = (process.env.RAZORPAY_KEY_ID ?? '').trim();
   const secret = (process.env.RAZORPAY_KEY_SECRET ?? '').trim();
   return keyId && secret ? { keyId, secret } : null;
 }
 
-async function call<T>(path: string, init: RequestInit): Promise<T> {
-  const cfg = config();
+export async function razorpayCall<T>(path: string, init: RequestInit): Promise<T> {
+  const cfg = razorpayConfig();
   if (!cfg) throw new Error('Razorpay is not configured.');
   const auth = Buffer.from(`${cfg.keyId}:${cfg.secret}`).toString('base64');
   const res = await fetch(`${BASE}${path}`, {
@@ -35,10 +35,10 @@ async function call<T>(path: string, init: RequestInit): Promise<T> {
 
 export const razorpayGateway: PaymentGateway = {
   slug: 'razorpay',
-  liveReady: () => Boolean(config()),
+  liveReady: () => Boolean(razorpayConfig()),
 
   clientConfig() {
-    const cfg = config();
+    const cfg = razorpayConfig();
     return cfg ? { keyId: cfg.keyId } : null;
   },
 
@@ -46,7 +46,7 @@ export const razorpayGateway: PaymentGateway = {
     if (!Number.isSafeInteger(input.amountPaise) || input.amountPaise <= 0) {
       throw new RangeError('amountPaise must be a positive integer');
     }
-    const order = await call<{ id: string; status: string }>('/orders', {
+    const order = await razorpayCall<{ id: string; status: string }>('/orders', {
       method: 'POST',
       headers: { 'Idempotency-Key': input.reference },
       body: JSON.stringify({
@@ -60,13 +60,13 @@ export const razorpayGateway: PaymentGateway = {
   },
 
   async getPayment(providerPaymentId) {
-    const payment = await call<{ id: string; status: string; amount?: number; currency?: string; error_code?: string | null }>(
+    const payment = await razorpayCall<{ id: string; status: string; amount?: number; currency?: string; error_code?: string | null }>(
       `/payments/${encodeURIComponent(providerPaymentId)}`, { method: 'GET' });
     return { status: payment.status, amountPaise: payment.amount, currency: payment.currency };
   },
 
   async getOrderPayments(providerOrderId) {
-    const result = await call<{ items?: { id: string; status: string; amount?: number; currency?: string }[] }>(
+    const result = await razorpayCall<{ items?: { id: string; status: string; amount?: number; currency?: string }[] }>(
       `/orders/${encodeURIComponent(providerOrderId)}/payments`, { method: 'GET' });
     return (result.items ?? []).map((p) => ({ id: p.id, status: p.status, amountPaise: p.amount, currency: p.currency }));
   },
@@ -75,7 +75,7 @@ export const razorpayGateway: PaymentGateway = {
     if (!Number.isSafeInteger(input.amountPaise) || input.amountPaise <= 0) {
       throw new RangeError('amountPaise must be a positive integer');
     }
-    const refund = await call<{ id: string; status: string }>(`/payments/${encodeURIComponent(input.providerRef)}/refund`, {
+    const refund = await razorpayCall<{ id: string; status: string }>(`/payments/${encodeURIComponent(input.providerRef)}/refund`, {
       method: 'POST',
       headers: { 'Idempotency-Key': input.reference },
       body: JSON.stringify({ amount: input.amountPaise, notes: { reference: input.reference } }),

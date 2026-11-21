@@ -4,6 +4,7 @@ import { getDb, withTransaction } from '../../platform/db/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import { getWebhookProvider, type NormalizedWebhookEvent } from '../../integrations/webhooks/index.ts';
 import { confirmPaidOrder, markPaymentFailed as markPaymentFailedOrder } from '../orders/payment-confirmation.ts';
+import { markInvoiceExpired, markInvoicePaid } from '../invoices/service.ts';
 
 export interface IngestResult {
   status: 200 | 401 | 400 | 500;
@@ -75,6 +76,13 @@ export async function processWebhookEvent(event: NormalizedWebhookEvent): Promis
       break;
     case 'payment_failed':
       if (event.providerOrderId) await markPaymentFailedOrder(event.providerOrderId, event.status ?? 'failed');
+      break;
+    case 'invoice_paid':
+      if (event.status !== 'captured') break;
+      await markInvoicePaid(event);
+      break;
+    case 'invoice_expired':
+      if (event.providerDocumentId) await markInvoiceExpired(event.providerDocumentId);
       break;
     case 'refund_created':
     case 'refund_processed':

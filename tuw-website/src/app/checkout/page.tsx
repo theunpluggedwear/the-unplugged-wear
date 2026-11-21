@@ -13,9 +13,9 @@ import { useStore } from '@storefront/mocks/store';
 import { useSiteSettings } from '@storefront/lib/site-settings';
 import { placeOrderAction } from '@/server/order-actions';
 import { previewGiftCardAction } from '@/server/gift-card-actions';
-import { createPaymentIntentAction, confirmPaymentAction, getCheckoutStatusAction, getCheckoutQuoteAction } from '@/server/payment-actions';
+import { getCheckoutQuoteAction } from '@/server/payment-actions';
+import { createInvoiceCheckoutAction } from '@/server/invoice-actions';
 import { usePaymentConfig } from '@storefront/lib/payment-config';
-import { openRazorpayCheckout } from '@storefront/lib/razorpay-checkout';
 import { useSession } from '@storefront/lib/session';
 import { useAccount } from '@storefront/lib/account';
 import { RETURN_WINDOW_DAYS, deliveryEstimate, variantLabelOf } from '@storefront/lib/product';
@@ -278,36 +278,17 @@ export default function CheckoutPage() {
         giftCardCode: giftCard?.code,
       };
 
-      if (paymentConfig?.provider === 'razorpay' && paymentConfig.keyId && method !== 'cod') {
-        const intent = await createPaymentIntentAction(orderInput);
-        if (!intent.ok) throw new Error(intent.error.message);
-        const paid = await openRazorpayCheckout({
-          keyId: intent.data.keyId,
-          orderId: intent.data.providerOrderId,
-          amountPaise: intent.data.amountPaise,
-          name: 'The Unplugged Wear',
-          email: email.trim() || undefined,
-          phone: phone.trim() || undefined,
-        });
-        const confirmed = await confirmPaymentAction({
-          checkoutKey,
-          providerPaymentId: paid.razorpay_payment_id,
-          signature: paid.razorpay_signature,
-        });
-        if (!confirmed.ok) {
-          let status = null;
-          for (let i = 0; i < 8 && !status; i += 1) {
-            const polled = await getCheckoutStatusAction({ orderNumber: intent.data.orderNumber, receipt: intent.data.receipt });
-            if (polled.ok && polled.data.paymentStatus === 'paid') status = polled.data;
-            else await new Promise((r) => setTimeout(r, 1000));
-          }
-          if (!status) throw new Error(confirmed.error.message);
-        }
-        removePromo();
-        setGiftCard(null);
-        setGiftCardMessage(null);
-        router.push(`/checkout/success?order=${encodeURIComponent(intent.data.orderNumber)}&t=${encodeURIComponent(intent.data.receipt)}`);
-        setTimeout(() => void refreshBag(), 500);
+      if (paymentConfig?.available && method !== 'cod') {
+        const invoice = await createInvoiceCheckoutAction(orderInput);
+        if (!invoice.ok) throw new Error(invoice.error.message);
+        if (!invoice.data.invoiceUrl) throw new Error('The payment invoice is not ready yet. Please try again.');
+        // Keep the order/receipt in the URL so a customer who returns can open
+        // the streaming success page even if the hosted provider has no return URL.
+        sessionStorage.setItem('tuw_last_checkout', JSON.stringify({
+          orderNumber: invoice.data.orderNumber,
+          receipt: invoice.data.receipt,
+        }));
+        window.location.assign(invoice.data.invoiceUrl);
         return;
       }
 

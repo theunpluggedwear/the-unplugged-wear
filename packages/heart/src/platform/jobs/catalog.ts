@@ -5,6 +5,7 @@ import { notifyRestocked } from '../../modules/inventory/index.ts';
 import { submitDueOrders, syncOpenFulfillment } from '../../modules/fulfillment/index.ts';
 import { expireDue } from '../../modules/gift-cards/index.ts';
 import { reconcilePendingPayments, retryFailedWebhooks } from '../../modules/payments/index.ts';
+import { reconcileInvoiceDocuments } from '../../modules/invoices/index.ts';
 import { sweepRateLimits } from '../ratelimit/index.ts';
 
 // Every job the system runs, registered in one place so any trigger (Cron
@@ -51,6 +52,15 @@ export function loadJobs(): void {
     name: 'payments.reconcileRazorpay',
     description: 'Poll provider status for pending payment intents and expire abandoned orders.',
     run: reconcilePendingPayments,
+  });
+
+  registerJob({
+    name: 'invoices.reconcileDocuments',
+    description: 'Poll hosted payment invoices for paid/expired status (webhook safety net).',
+    run: async () => {
+      const r = await reconcileInvoiceDocuments(20);
+      return { processed: r.paid + r.expired, failed: r.failed, note: `paid=${r.paid} expired=${r.expired}` };
+    },
   });
 
   registerJob({

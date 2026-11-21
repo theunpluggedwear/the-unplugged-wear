@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '@storefront/components/layout/Header';
 import Footer from '@storefront/components/layout/Footer';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
@@ -14,8 +14,7 @@ import { useSession } from '@storefront/lib/session';
 import type { Order } from '@storefront/lib/types';
 import { formatPaise, formatShortDate } from '@storefront/lib/format';
 import { RETURN_WINDOW_DAYS, deliveryEstimate } from '@storefront/lib/product';
-import { downloadInvoicePdf } from '@storefront/lib/invoice';
-import { useSiteSettings } from '@storefront/lib/site-settings';
+
 import { AlertCircle, ArrowRight, Check, Clock, Download, Info, Mail } from 'lucide-react';
 
 const STEPS = ['Order placed', 'Printing', 'Shipped', 'Delivered'] as const;
@@ -29,11 +28,25 @@ const linePaise = (item: Order['items'][number]) =>
 
 function OrderSuccessContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const orderNumber = searchParams.get('order') || searchParams.get('id');
   const receipt = searchParams.get('t') ?? undefined;
   const { products } = useStore();
   const { session } = useSession();
-  const { supportEmail } = useSiteSettings();
+
+  // Hosted invoices do not reliably return to a merchant URL. If the shopper
+  // comes back to /checkout/success, recover the last checkout from sessionStorage.
+  useEffect(() => {
+    if (orderNumber || typeof window === 'undefined') return;
+    const raw = window.sessionStorage.getItem('tuw_last_checkout');
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw) as { orderNumber?: string; receipt?: string };
+      if (saved.orderNumber) {
+        router.replace(`/checkout/success?order=${encodeURIComponent(saved.orderNumber)}${saved.receipt ? `&t=${encodeURIComponent(saved.receipt)}` : ''}`);
+      }
+    } catch { /* ignore malformed saved checkout */ }
+  }, [orderNumber, router]);
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -247,13 +260,18 @@ function OrderSuccessContent() {
               <dt className="text-xs">Payment</dt>
               <dd className="text-right text-xs">{order.paymentMethod}</dd>
             </dl>
-            <button
-              type="button"
-              onClick={() => void downloadInvoicePdf(order, session?.email, supportEmail)}
-              className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-store-charcoal underline-offset-4 decoration-store-gold hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
-            >
-              <Download size={14} aria-hidden="true" /> Download invoice PDF (demo)
-            </button>
+            {order.invoiceUrl ? (
+              <a
+                href={order.invoiceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-store-charcoal underline-offset-4 decoration-store-gold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
+              >
+                <Download size={14} aria-hidden="true" /> View payment invoice
+              </a>
+            ) : (
+              <p className="mt-5 text-xs text-store-text-secondary">No payment invoice was issued for this order.</p>
+            )}
           </section>
 
           <section aria-labelledby="address-heading" className="p-6 bg-store-surface border border-store-card-border text-sm">

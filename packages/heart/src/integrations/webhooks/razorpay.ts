@@ -28,6 +28,9 @@ export function verifyRazorpayPaymentSignature(orderId: string, paymentId: strin
 const kindFor = (eventType: string): WebhookKind => {
   if (eventType === 'order.paid' || eventType === 'payment.captured') return 'payment_captured';
   if (eventType === 'payment.failed') return 'payment_failed';
+  if (eventType === 'invoice.paid') return 'invoice_paid';
+  if (eventType === 'invoice.partially_paid') return 'invoice_partially_paid';
+  if (eventType === 'invoice.expired') return 'invoice_expired';
   if (eventType === 'refund.created') return 'refund_created';
   if (eventType === 'refund.processed') return 'refund_processed';
   if (eventType === 'refund.failed') return 'refund_failed';
@@ -73,6 +76,7 @@ export const razorpayWebhookProvider: WebhookProvider = {
     const payment = sub('payment');
     const order = sub('order');
     const refund = sub('refund');
+    const invoice = sub('invoice');
 
     const event: NormalizedWebhookEvent = {
       provider: 'razorpay',
@@ -80,12 +84,14 @@ export const razorpayWebhookProvider: WebhookProvider = {
       eventType,
       kind: kindFor(eventType),
       raw: parsed,
-      providerOrderId: typeof order.id === 'string' ? order.id : typeof payment.order_id === 'string' ? payment.order_id : undefined,
-      providerPaymentId: typeof payment.id === 'string' ? payment.id : undefined,
+      providerOrderId: typeof order.id === 'string' ? order.id : typeof payment.order_id === 'string' ? payment.order_id : typeof invoice.order_id === 'string' ? invoice.order_id : undefined,
+      providerPaymentId: typeof payment.id === 'string' ? payment.id : typeof invoice.payment_id === 'string' ? invoice.payment_id : undefined,
       providerRefundId: typeof refund.id === 'string' ? refund.id : undefined,
-      amountPaise: numbers(refund.amount) ?? numbers(payment.amount),
-      currency: typeof payment.currency === 'string' ? payment.currency : typeof refund.currency === 'string' ? refund.currency : undefined,
-      status: typeof payment.status === 'string' ? payment.status : typeof refund.status === 'string' ? refund.status : undefined,
+      providerDocumentId: typeof invoice.id === 'string' ? invoice.id : undefined,
+      documentStatus: typeof invoice.status === 'string' ? invoice.status : undefined,
+      amountPaise: numbers(refund.amount) ?? numbers(payment.amount) ?? numbers(invoice.amount),
+      currency: typeof payment.currency === 'string' ? payment.currency : typeof refund.currency === 'string' ? refund.currency : typeof invoice.currency === 'string' ? invoice.currency : undefined,
+      status: typeof payment.status === 'string' ? payment.status : typeof refund.status === 'string' ? refund.status : typeof invoice.status === 'string' ? invoice.status : undefined,
       occurredAt: typeof parsed.created_at === 'number' ? new Date(parsed.created_at * 1000).toISOString() : undefined,
     };
     return event;
