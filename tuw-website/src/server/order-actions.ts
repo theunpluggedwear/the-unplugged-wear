@@ -21,6 +21,10 @@ export const placeOrderAction = guards.action({ access: 'customer', input: s.pla
 export const previewDiscountAction = guards.action({ access: 'public', input: s.discountPreview }, async ({ input, ctx }) => {
   const owner: cart.CartOwner | null = ctx.user ? { userId: ctx.user.id } : ctx.guestSessionId ? { sessionId: ctx.guestSessionId } : null;
   const bag = owner ? await cart.getCart(owner) : { lines: [] };
+  if (bag.lines.length && await orders.isQaDemoCart(bag.lines)) {
+    const code = input.code.trim().toUpperCase();
+    return { code, discountPaise: 0, rule: { type: 'fixed' as const, paise: 0 }, minOrderPaise: null };
+  }
   const subtotal = bag.lines.reduce((n, l) => n + l.unitPaise * l.qty, 0);
   return orders.previewDiscount(input.code, subtotal);
 });

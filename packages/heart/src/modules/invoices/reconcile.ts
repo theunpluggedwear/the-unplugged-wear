@@ -2,6 +2,7 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 import { getDb } from '../../platform/db/index.ts';
 import { findInvoiceProvider } from '../../integrations/invoices/index.ts';
+import { QA_DEMO_INVOICE_PROVIDER } from '../../platform/qa-demo-product/index.ts';
 import { expirePendingPayment } from '../orders/payment-confirmation.ts';
 import { markDocumentStatus, markInvoicePaid } from './service.ts';
 
@@ -20,6 +21,7 @@ export async function reconcileInvoiceDocuments(limit = 20): Promise<{ paid: num
 
   let paid = 0, expired = 0, failed = 0;
   for (const doc of rows) {
+    if (doc.provider === QA_DEMO_INVOICE_PROVIDER) continue;
     const adapter = findInvoiceProvider(doc.provider);
     if (!adapter?.capabilities.fetch) continue;
     try {

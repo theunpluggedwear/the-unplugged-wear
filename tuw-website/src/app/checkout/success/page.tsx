@@ -125,6 +125,7 @@ function OrderSuccessContent() {
   // The total the server charged (includes any tax or cash-on-delivery fee).
   const total = Math.round(order.totalINR * 100);
   const hasShipped = order.fulfillmentStatus === 'shipped' || order.fulfillmentStatus === 'delivered';
+  const isQaDemo = Boolean(order.invoiceUrl?.startsWith('/demo-invoice'));
   const address = order.shippingAddress;
 
   return (
@@ -132,8 +133,10 @@ function OrderSuccessContent() {
       {/* Truthful payment notice: simulated checkouts stay clearly labelled. */}
       <p className="flex items-start gap-2 text-sm text-store-text-secondary border-l-2 border-store-gold pl-3 mb-10">
         <Info size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
-        {order.paymentMethod === 'COD (Demo)'
-          ? 'Demo checkout — payment is collected on delivery and nothing is printed or shipped in this environment.'
+        {isQaDemo
+          ? 'Demo payment completed - no real money was collected and nothing will be printed or shipped.'
+          : order.paymentMethod === 'COD (Demo)'
+          ? 'Demo checkout - payment is collected on delivery and nothing is printed or shipped in this environment.'
           : isPaid && testMode
             ? 'Razorpay test payment captured — no real money was collected. Fulfilment submission is disabled in local dev.'
             : isPaid
@@ -150,7 +153,9 @@ function OrderSuccessContent() {
         </h1>
         <p className="mt-3 text-base text-store-text-secondary leading-relaxed">
           Order <strong className="font-medium text-store-charcoal">{order.orderNumber}</strong> is confirmed.{' '}
-          {isPending
+          {isQaDemo
+            ? 'This demo order stays in our test records only. Nothing will be printed or shipped.'
+            : isPending
             ? 'Payment is due on delivery.'
             : 'We’ll print it in 2–3 business days and send you tracking as soon as it ships.'}
         </p>

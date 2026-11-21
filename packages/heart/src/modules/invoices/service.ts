@@ -3,7 +3,8 @@ import { sql } from 'drizzle-orm';
 import { getDb, withTransaction, type Transaction } from '../../platform/db/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
-import { getInvoiceProvider } from '../../integrations/invoices/index.ts';
+import { getInvoiceProvider, qaDemoInvoiceProvider } from '../../integrations/invoices/index.ts';
+import { containsQaDemoSku, QA_DEMO_INVOICE_PROVIDER } from '../../platform/qa-demo-product/index.ts';
 import type { CreateInvoiceInput, InvoiceStatus, NormalizedInvoiceEvent } from '../../integrations/invoices/index.ts';
 import { createPendingOrder } from '../orders/checkout.ts';
 import { confirmPaidOrder, expirePendingPayment as expireByOrder } from '../orders/payment-confirmation.ts';
@@ -32,6 +33,7 @@ export interface InvoiceDocument {
   provider: string;
   providerDocumentId: string;
   providerOrderId: string | null;
+  orderNumber: string;
   url: string | null;
   status: InvoiceStatus;
   amountPaise: number;
@@ -40,35 +42,49 @@ export interface InvoiceDocument {
 
 type Row = {
   id: string; payment_intent_id: string; order_id: string; provider: string;
-  provider_document_id: string; provider_order_id: string | null; url: string | null;
+  provider_document_id: string; provider_order_id: string | null; order_number: string; url: string | null;
   status: InvoiceStatus; amount_paise: string; currency: string;
 };
 
 const toDocument = (r: Row): InvoiceDocument => ({
   id: r.id, paymentIntentId: r.payment_intent_id, orderId: r.order_id, provider: r.provider,
-  providerDocumentId: r.provider_document_id, providerOrderId: r.provider_order_id, url: r.url,
+  providerDocumentId: r.provider_document_id, providerOrderId: r.provider_order_id, orderNumber: r.order_number, url: r.url,
   status: r.status, amountPaise: Number(r.amount_paise), currency: r.currency,
 });
 
 async function readDocument(tx: Transaction, intentId: string): Promise<InvoiceDocument | null> {
   const { rows } = await tx.execute<Row>(sql`
-    SELECT id, payment_intent_id, order_id, provider, provider_document_id, provider_order_id, url, status, amount_paise, currency
-    FROM payment_documents WHERE payment_intent_id = ${intentId}::uuid ORDER BY created_at DESC LIMIT 1`);
+    SELECT d.id, d.payment_intent_id, d.order_id, d.provider, d.provider_document_id, d.provider_order_id, o.order_number, d.url, d.status, d.amount_paise, d.currency
+    FROM payment_documents d JOIN orders o ON o.id = d.order_id WHERE d.payment_intent_id = ${intentId}::uuid ORDER BY d.created_at DESC LIMIT 1`);
   return rows[0] ? toDocument(rows[0]) : null;
 }
 
 export async function getDocumentByIntent(intentId: string): Promise<InvoiceDocument | null> {
   const { rows } = await getDb().execute<Row>(sql`
-    SELECT id, payment_intent_id, order_id, provider, provider_document_id, provider_order_id, url, status, amount_paise, currency
-    FROM payment_documents WHERE payment_intent_id = ${intentId}::uuid ORDER BY created_at DESC LIMIT 1`);
+    SELECT d.id, d.payment_intent_id, d.order_id, d.provider, d.provider_document_id, d.provider_order_id, o.order_number, d.url, d.status, d.amount_paise, d.currency
+    FROM payment_documents d JOIN orders o ON o.id = d.order_id WHERE d.payment_intent_id = ${intentId}::uuid ORDER BY d.created_at DESC LIMIT 1`);
   return rows[0] ? toDocument(rows[0]) : null;
 }
 
 export async function getDocumentByOrder(orderId: string): Promise<InvoiceDocument | null> {
   const { rows } = await getDb().execute<Row>(sql`
-    SELECT id, payment_intent_id, order_id, provider, provider_document_id, provider_order_id, url, status, amount_paise, currency
-    FROM payment_documents WHERE order_id = ${orderId}::uuid ORDER BY created_at DESC LIMIT 1`);
+    SELECT d.id, d.payment_intent_id, d.order_id, d.provider, d.provider_document_id, d.provider_order_id, o.order_number, d.url, d.status, d.amount_paise, d.currency
+    FROM payment_documents d JOIN orders o ON o.id = d.order_id WHERE d.order_id = ${orderId}::uuid ORDER BY d.created_at DESC LIMIT 1`);
   return rows[0] ? toDocument(rows[0]) : null;
+}
+
+export async function getDocumentById(id: string): Promise<InvoiceDocument | null> {
+  const { rows } = await getDb().execute<Row>(sql`
+    SELECT d.id, d.payment_intent_id, d.order_id, d.provider, d.provider_document_id, d.provider_order_id, o.order_number, d.url, d.status, d.amount_paise, d.currency
+    FROM payment_documents d JOIN orders o ON o.id = d.order_id
+    WHERE d.id::text = ${id} OR d.provider_document_id = ${id} LIMIT 1`);
+  return rows[0] ? toDocument(rows[0]) : null;
+}
+
+async function orderIsQaDemo(orderId: string): Promise<boolean> {
+  const { rows } = await getDb().execute<{ sku: string }>(sql`
+    SELECT oi.sku FROM order_items oi WHERE oi.order_id = ${orderId}::uuid`);
+  return containsQaDemoSku(rows.map((r) => r.sku));
 }
 
 function buildInput(pending: Awaited<ReturnType<typeof createPendingOrder>>, input: PlaceOrderInput): CreateInvoiceInput {
@@ -105,7 +121,8 @@ function buildInput(pending: Awaited<ReturnType<typeof createPendingOrder>>, inp
  */
 export async function prepareInvoiceCheckout(buyer: Buyer, input: PlaceOrderInput): Promise<PreparedInvoiceCheckout> {
   const pending = await createPendingOrder(buyer, input);
-  const provider = await getInvoiceProvider();
+  const isQaDemo = await orderIsQaDemo(pending.orderId);
+  const provider = isQaDemo ? qaDemoInvoiceProvider : await getInvoiceProvider();
 
   if (pending.replayed) {
     const intent = await getIntentByCheckoutKey(input.checkoutKey);
@@ -179,8 +196,8 @@ export async function markInvoicePaid(event: NormalizedInvoiceEvent): Promise<vo
 
   const doc = await withTransaction(async (tx) => {
     const { rows } = await tx.execute<Row & { amount_paise: string }>(sql`
-      SELECT id, payment_intent_id, order_id, provider, provider_document_id, provider_order_id, url, status, amount_paise, currency
-      FROM payment_documents WHERE provider_document_id = ${event.providerDocumentId} FOR UPDATE`);
+      SELECT d.id, d.payment_intent_id, d.order_id, d.provider, d.provider_document_id, d.provider_order_id, o.order_number, d.url, d.status, d.amount_paise, d.currency
+      FROM payment_documents d JOIN orders o ON o.id = d.order_id WHERE d.provider_document_id = ${event.providerDocumentId} FOR UPDATE OF d`);
     const found = rows[0];
     if (!found) return null;
     if (Number(found.amount_paise) !== event.amountPaise) throw new Error(`Invoice amount ${event.amountPaise} does not match document ${found.amount_paise}`);
@@ -203,8 +220,8 @@ export async function markInvoicePaid(event: NormalizedInvoiceEvent): Promise<vo
 export async function markInvoiceExpired(providerDocumentId: string): Promise<void> {
   const doc = await withTransaction(async (tx) => {
     const { rows } = await tx.execute<Row>(sql`
-      SELECT id, payment_intent_id, order_id, provider, provider_document_id, provider_order_id, url, status, amount_paise, currency
-      FROM payment_documents WHERE provider_document_id = ${providerDocumentId} FOR UPDATE`);
+      SELECT d.id, d.payment_intent_id, d.order_id, d.provider, d.provider_document_id, d.provider_order_id, o.order_number, d.url, d.status, d.amount_paise, d.currency
+      FROM payment_documents d JOIN orders o ON o.id = d.order_id WHERE d.provider_document_id = ${providerDocumentId} FOR UPDATE OF d`);
     const found = rows[0];
     if (!found || found.status === 'paid') return null;
     await tx.execute(sql`UPDATE payment_documents SET status='expired', updated_at=now() WHERE id=${found.id}::uuid`);

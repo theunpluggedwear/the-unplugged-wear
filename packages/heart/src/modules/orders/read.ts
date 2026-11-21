@@ -2,7 +2,7 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 import { getDb } from '../../platform/db/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
-import { isTestSku } from '../../platform/test-sku/index.ts';
+import { containsQaDemoSku, onlyQaDemoSku, qaDemoShippingRates, qaDemoTotals } from '../../platform/qa-demo-product/index.ts';
 import { verifyReceipt } from '../auth/tokens.ts';
 import { findDiscount } from './discounts.ts';
 import { orderLineFacts } from '../catalog/index.ts';
@@ -136,6 +136,11 @@ export async function quoteCheckout(
 ): Promise<{ payablePaise: number; totalPaise: number; discountPaise: number; giftCardPaise: number }> {
   const db = getDb();
   const facts = await orderLineFacts(db, lines.map((l) => l.variantId!).filter(Boolean));
+  const skus = [...facts.values()].map((f) => f.sku);
+  const isQa = containsQaDemoSku(skus);
+  if (isQa && !onlyQaDemoSku(skus)) throw new AppError('RULE_VIOLATION', 'The demo product must be ordered by itself.');
+  if (isQa) return { payablePaise: 100, totalPaise: 100, discountPaise: 0, giftCardPaise: 0 };
+
   const settings = await getSettings(db);
   const subtotal = lines.reduce((n, l) => n + l.unitPaise * l.qty, 0);
   const discount = input.discountCode ? await findDiscount(db, input.discountCode, subtotal) : null;
@@ -143,12 +148,6 @@ export async function quoteCheckout(
     freeThresholdPaise: settings['shipping.free_threshold'], standardFeePaise: settings['shipping.standard_fee'],
     expressFeePaise: settings['shipping.express_fee'], codFeePaise: settings['shipping.cod_fee'],
   };
-  if (process.env.CHECKOUT_TEST_MODE === 'true' && [...facts.values()].some((f) => isTestSku(f.sku))) {
-    rates.freeThresholdPaise = 0;
-    rates.standardFeePaise = 0;
-    rates.expressFeePaise = 0;
-    rates.codFeePaise = 0;
-  }
   const totals = priceOrder({
     lines: lines.map((l) => ({ unitPaise: l.unitPaise, qty: l.qty, taxRate: facts.get(l.variantId!)?.taxRate ?? null })),
     discount: discount?.rule ?? null,
@@ -166,6 +165,11 @@ export async function quoteCheckout(
     discountPaise: totals.discountPaise,
     giftCardPaise,
   };
+}
+
+export async function isQaDemoCart(lines: { variantId: string | null }[]): Promise<boolean> {
+  const facts = await orderLineFacts(getDb(), lines.map((l) => l.variantId!).filter(Boolean));
+  return containsQaDemoSku([...facts.values()].map((f) => f.sku));
 }
 
 export async function previewDiscount(code: string, subtotalPaise: number): Promise<{ code: string; discountPaise: number; rule: DiscountRule; minOrderPaise: number | null }> {
