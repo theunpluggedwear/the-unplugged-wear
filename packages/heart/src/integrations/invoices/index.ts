@@ -7,6 +7,7 @@ export * from './types.ts';
 export * from './adapters.ts';
 export { parseRazorpayInvoiceWebhook } from './razorpay.ts';
 export { parseMockInvoiceWebhook } from './mock.ts';
+export { qaDemoInvoiceProvider, parseQaDemoInvoiceWebhook } from './qa-demo.ts';
 
 /** Invoice provider is independent of the payment gateway. */
 export async function getInvoiceProvider(): Promise<(typeof invoiceAdapters)[number]> {

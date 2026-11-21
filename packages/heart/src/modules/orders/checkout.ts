@@ -6,7 +6,7 @@ import { AppError } from '../../platform/errors/index.ts';
 import { emit } from '../../platform/events/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import { toRupees, toPaise } from '../../platform/money/index.ts';
-import { isTestSku } from '../../platform/test-sku/index.ts';
+import { containsQaDemoSku, onlyQaDemoSku, qaDemoShippingRates, qaDemoTotals } from '../../platform/qa-demo-product/index.ts';
 import { getPaymentGateway } from '../../integrations/payments/index.ts';
 import { signReceipt } from '../auth/tokens.ts';
 import { checkoutBlockers, lockForCheckout, markConverted, type CartOwner } from '../cart/index.ts';
@@ -226,17 +226,14 @@ export interface PendingOrder {
   replayed: boolean;
 }
 
-function testCheckoutRates(settings: Awaited<ReturnType<typeof getSettings>>, facts: Awaited<ReturnType<typeof orderLineFacts>>) {
-  const rates = {
+function checkoutRates(settings: Awaited<ReturnType<typeof getSettings>>, facts: Awaited<ReturnType<typeof orderLineFacts>>) {
+  if (containsQaDemoSku([...facts.values()].map((f) => f.sku))) return qaDemoShippingRates();
+  return {
     freeThresholdPaise: settings['shipping.free_threshold'],
     standardFeePaise: settings['shipping.standard_fee'],
     expressFeePaise: settings['shipping.express_fee'],
     codFeePaise: settings['shipping.cod_fee'],
   };
-  if (process.env.CHECKOUT_TEST_MODE === 'true' && [...facts.values()].some((f) => isTestSku(f.sku))) {
-    return { freeThresholdPaise: 0, standardFeePaise: 0, expressFeePaise: 0, codFeePaise: 0 };
-  }
-  return rates;
 }
 
 /** Create the order before any provider call. Payment stays pending until confirmed. */
@@ -247,7 +244,6 @@ export async function createPendingOrder(buyer: Buyer, input: PlaceOrderInput): 
   const guestEmail = isGuest ? input.email!.toLowerCase() : undefined;
   const ref = buyerRef(buyer, guestEmail);
   const owner: CartOwner = isGuest ? { sessionId: buyer.sessionId } : { userId: buyer.userId };
-  const gateway = await getPaymentGateway();
 
   let placed: { order: Omit<PendingOrder, 'intentId' | 'replayed'>; intentId: string; replayed: boolean };
   try {
@@ -266,15 +262,23 @@ export async function createPendingOrder(buyer: Buyer, input: PlaceOrderInput): 
     if (blockers.length) throw new AppError('STOCK_INSUFFICIENT', blockers[0]!.reason, blockers.map((b) => ({ field: b.lineId, message: b.reason })));
 
     const facts = await orderLineFacts(tx, bag.lines.map((l) => l.variantId!));
+    const skus = [...facts.values()].map((f) => f.sku);
+    const isQa = containsQaDemoSku(skus);
+    if (isQa && !onlyQaDemoSku(skus)) throw new AppError('RULE_VIOLATION', 'The demo product must be ordered by itself.');
+    if (isQa && bag.lines.some((l) => l.qty !== 1)) throw new AppError('RULE_VIOLATION', 'The demo product can only be ordered one at a time.');
+
     const subtotal = bag.lines.reduce((n, l) => n + l.unitPaise * l.qty, 0);
-    const discount = input.discountCode ? await findDiscount(tx, input.discountCode, subtotal) : null;
+    const discount = !isQa && input.discountCode ? await findDiscount(tx, input.discountCode, subtotal) : null;
     const settings = await getSettings(tx);
-    const totals = priceOrder({
+    const totals = isQa ? qaDemoTotals() : priceOrder({
       lines: bag.lines.map((l) => ({ unitPaise: l.unitPaise, qty: l.qty, taxRate: facts.get(l.variantId!)?.taxRate ?? null })),
       discount: discount?.rule ?? null,
-      rates: testCheckoutRates(settings, facts),
+      rates: checkoutRates(settings, facts),
       speed: input.speed, cashOnDelivery: input.method === 'cod', taxIncluded: settings['tax.included'],
     });
+    // QA demo orders use the existing mock provider row so the DB foreign key
+    // stays valid; the invoice document itself is qa_demo_invoice.
+    const paymentProviderSlug = isQa ? 'mock' : (await getPaymentGateway()).slug;
 
     const orderId = uuidv7();
     const orderNumber = await nextOrderNumber(tx);
@@ -292,7 +296,11 @@ export async function createPendingOrder(buyer: Buyer, input: PlaceOrderInput): 
         ${toRupees(totals.subtotalPaise)}, ${toRupees(totals.shippingPaise)}, ${toRupees(totals.taxPaise)}, ${toRupees(totals.discountPaise)}, 0,
         ${toRupees(totals.grandTotalPaise)}, 'pending', ${address}::jsonb, ${address}::jsonb, ${discount?.id ?? null}, ${input.checkoutKey}, ${cancellableUntil})`);
 
-    const items = bag.lines.map((l) => ({ id: uuidv7(), line: l, facts: facts.get(l.variantId!)! }));
+    const items = bag.lines.map((l) => ({
+      id: uuidv7(),
+      line: isQa ? { ...l, qty: 1, unitPaise: 100 } : l,
+      facts: facts.get(l.variantId!)!,
+    }));
     await tx.execute(sql`INSERT INTO order_items (id, order_id, product_id, variant_id, product_name, sku, unit_price, qty, line_total, options, exchange_policy, personalization, preview_image_url, preview_approved_at)
       SELECT x.id, ${orderId}, x.product_id, x.variant_id, x.name, x.sku, x.unit_price, x.qty, x.line_total, x.options, x.policy, x.personalization, x.preview, CASE WHEN x.personalization IS NULL THEN NULL ELSE now() END
       FROM jsonb_to_recordset(${JSON.stringify(items.map(({ id, line, facts: f }) => ({
@@ -304,16 +312,16 @@ export async function createPendingOrder(buyer: Buyer, input: PlaceOrderInput): 
     await reserve(tx, { orderId, lines: items.map((i) => ({ orderItemId: i.id, variantId: i.line.variantId!, qty: i.line.qty })) });
     if (discount) await redeemDiscount(tx, discount.id);
     let giftCardPaise = 0;
-    if (input.giftCardCode) {
+    if (!isQa && input.giftCardCode) {
       const redeemed = await giftCards.redeem(tx, { code: input.giftCardCode, amountPaise: totals.grandTotalPaise, orderId });
       giftCardPaise = redeemed.appliedPaise;
     }
-    const payablePaise = totals.grandTotalPaise - giftCardPaise;
+    const payablePaise = isQa ? qaDemoTotals().grandTotalPaise : totals.grandTotalPaise - giftCardPaise;
     await tx.execute(sql`INSERT INTO payments (id, order_id, provider, method, amount, status, transaction_id)
-      VALUES (${uuidv7()}, ${orderId}::uuid, ${gateway.slug}, ${input.method}, ${toRupees(payablePaise)}, 'pending', NULL)`);
+      VALUES (${uuidv7()}, ${orderId}::uuid, ${paymentProviderSlug}, ${input.method}, ${toRupees(payablePaise)}, 'pending', NULL)`);
     const { rows: intents } = await tx.execute<{ id: string }>(sql`
       INSERT INTO payment_intents (id, checkout_key, provider, order_id, amount_paise, currency, status, payload, created_at, updated_at)
-      VALUES (${uuidv7()}, ${input.checkoutKey}::uuid, ${gateway.slug}, ${orderId}::uuid, ${payablePaise}, 'INR', 'created',
+      VALUES (${uuidv7()}, ${input.checkoutKey}::uuid, ${paymentProviderSlug}, ${orderId}::uuid, ${payablePaise}, 'INR', 'created',
         ${JSON.stringify({ buyer, input, cartId: bag.id })}::jsonb, now(), now())
       ON CONFLICT (checkout_key) DO UPDATE SET updated_at=now()
       RETURNING id`);

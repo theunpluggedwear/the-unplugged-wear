@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "storefront",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "tuw-website", "exec", "next", "dev", "-p", "3024"],
+      "port": 3024
+    },
+    {
+      "name": "admin",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "tuw-admin", "exec", "next", "dev", "-p", "3025"],
+      "port": 3025
+    }
+  ]
+}

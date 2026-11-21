@@ -4,7 +4,7 @@ import { getDb, withTransaction } from '../../platform/db/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import { toRupees } from '../../platform/money/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
-import { isTestSku } from '../../platform/test-sku/index.ts';
+import { containsQaDemoSku, qaDemoFulfillmentSkipReason } from '../../platform/qa-demo-product/index.ts';
 import { getFulfillmentPartner } from '../../integrations/fulfillment/index.ts';
 import { notifyStaff } from '../notifications/index.ts';
 import { getSetting } from '../settings/index.ts';
@@ -86,8 +86,8 @@ export async function sendPlanned(orderId: string, force = false): Promise<Submi
   // manual sends; the SKU comes from env, not a hard-coded QA fixture.
   const { rows: orderSkus } = await getDb().execute<{ order_number: string; sku: string }>(sql`
     SELECT o.order_number, oi.sku FROM orders o JOIN order_items oi ON oi.order_id = o.id WHERE o.id = ${orderId}`);
-  if (orderSkus.some((r) => isTestSku(r.sku))) {
-    return { orderNumber: orderSkus[0]?.order_number ?? '', groups: [], skipped: [{ slug: '*', reason: 'Test product — fulfilment submission is blocked.' }] };
+  if (containsQaDemoSku(orderSkus.map((r) => r.sku))) {
+    return { orderNumber: orderSkus[0]?.order_number ?? '', groups: [], skipped: [{ slug: '*', reason: qaDemoFulfillmentSkipReason() }] };
   }
 
   if (process.env.FULFILLMENT_SUBMIT_ENABLED === 'false') {

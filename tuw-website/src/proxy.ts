@@ -10,7 +10,11 @@ export const proxy = createAuthProxy({
     pathname === '/account' ||
     pathname.startsWith('/account/') ||
     pathname === '/checkout' ||
-    (pathname.startsWith('/checkout/') && pathname !== '/checkout/success'),
+    (pathname.startsWith('/checkout/') && pathname !== '/checkout/success') ||
+    pathname === '/demo-invoice' ||
+    pathname.startsWith('/demo-invoice/'),
 });
 
-export const config = { matcher: ['/account', '/account/:path*', '/checkout', '/checkout/:path*'] };
+export const config = {
+  matcher: ['/account', '/account/:path*', '/checkout', '/checkout/:path*', '/demo-invoice', '/demo-invoice/:path*'],
+};

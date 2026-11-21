@@ -16,6 +16,7 @@ const invoices = await import('./index.ts');
 const { mockInvoiceProvider } = await import('../../integrations/invoices/mock.ts');
 const { getDb } = await import('../../platform/db/index.ts');
 const { uuidv7 } = await import('../../platform/ids/index.ts');
+const { QA_DEMO_INVOICE_PROVIDER } = await import('../../platform/qa-demo-product/index.ts');
 
 const skip = !hasTestDatabase() && 'no DATABASE_URL_UNPOOLED';
 let drop: (() => Promise<void>) | undefined;
@@ -30,18 +31,25 @@ const one = async <T extends Record<string, unknown>>(q: ReturnType<typeof sql>)
 const count = async (q: ReturnType<typeof sql>) => Number((await one<{ n: number }>(q)).n);
 
 let seq = 0;
-async function product(stock = 10, price = 500) {
+async function product(stock = 10, price = 500, over: Record<string, unknown> = {}) {
   seq += 1;
   return catalog.adminCreateProduct(S.productFields.parse({
     name: `Invoice Product ${seq}`, slug: `invoice-product-${seq}`, category: 'Tees', price,
     colors: ['Black'], sizes: ['M'], partner: 'Custom Atelier', publicationStatus: 'published',
-    description: 'QA fixture', variants: [{ color: 'Black', size: 'M', price, stock }],
+    description: 'QA fixture', variants: [{ color: 'Black', size: 'M', price, stock }], ...over,
   }), actor);
+}
+const add = (owner: Parameters<typeof cart.addLine>[0], p: { id: string }, qty = 1) =>
+  cart.addLine(owner, { productRef: p.id, color: 'Black', size: 'M', qty });
+async function qaDemoProduct(price = 999) {
+  const suffix = seq + 1;
+  const sku = `TUW-TEST-PRODUCT-49F1AA-${suffix}`;
+  return product(5, price, { sku, variants: [{ color: 'Black', size: 'M', price, stock: 5, sku: `${sku}-BLACK-M` }] });
 }
 async function ready() {
   const p = await product(8, 500);
   const g = guest();
-  await cart.addLine(g, { productRef: p.id, color: 'Black', size: 'M', qty: 1 });
+  await add(g, p, 1);
   return { p, g, input: form() };
 }
 
@@ -152,6 +160,41 @@ test('provider failure compensates the pending order and releases stock', { skip
   assert.equal(made.status, 'cancelled');
   assert.equal((await one<{ stock: number }>(sql`SELECT stock FROM product_variants WHERE product_id=${p.id}`)).stock, 8);
   assert.equal(await count(sql`SELECT count(*)::int AS n FROM payment_documents WHERE order_id=${made.id}::uuid`), 0);
+});
+
+test('QA demo product checkout is fixed at ₹1 and uses the local demo invoice', { skip }, async () => {
+  const p = await qaDemoProduct(999);
+  const g = guest();
+  await add(g, p, 1);
+  const made = await invoices.prepareInvoiceCheckout(g, form());
+  assert.equal(made.amountPaise, 100);
+  assert.equal(made.provider, QA_DEMO_INVOICE_PROVIDER);
+  assert.match(made.invoiceUrl, /^\/demo-invoice\//);
+  const doc = (await invoices.getDocumentByOrder(made.orderId))!;
+  assert.equal(doc.provider, QA_DEMO_INVOICE_PROVIDER);
+  assert.equal(doc.amountPaise, 100);
+
+  await invoices.markInvoicePaid({
+    provider: QA_DEMO_INVOICE_PROVIDER,
+    providerDocumentId: doc.providerDocumentId,
+    providerOrderId: doc.providerOrderId ?? undefined,
+    providerPaymentId: `demo_pay_${doc.providerDocumentId}`,
+    status: 'paid',
+    paymentStatus: 'captured',
+    amountPaise: 100,
+    currency: 'INR',
+    raw: { mode: 'qa_demo' },
+  });
+  assert.equal((await one<{ payment_status: string }>(sql`SELECT payment_status FROM orders WHERE id=${made.orderId}::uuid`)).payment_status, 'paid');
+});
+
+test('QA demo product cannot be mixed with normal products', { skip }, async () => {
+  const qa = await qaDemoProduct(999);
+  const normal = await product(5, 500);
+  const g = guest();
+  await add(g, qa, 1);
+  await add(g, normal, 1);
+  await assert.rejects(orders.createPendingOrder(g, form()), /by itself/);
 });
 
 test('invoice DB invariants', { skip }, async () => {
