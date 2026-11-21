@@ -58,7 +58,7 @@ export function createAppSession(app: AuthApp, opts: { loginPath?: string } = {}
     // Only a cookie we signed counts; anything else is treated as no guest.
     const guest = app === 'storefront' ? verifyGuestCookie((await cookies()).get(GUEST_COOKIE)?.value) : null;
     return {
-      user: claims ? { id: claims.sub, roles: claims.roles, permissions: claims.perms } : null,
+      user: claims ? { id: claims.sub, email: claims.email, roles: claims.roles, permissions: claims.perms } : null,
       guestSessionId: guest,
     };
   }

@@ -18,6 +18,7 @@ import { useStore } from '@storefront/mocks/store';
 import { useSession } from '@storefront/lib/session';
 import { useAccount } from '@storefront/lib/account';
 import { useMyOrders } from '@storefront/lib/my-orders';
+import { resendVerificationEmailAction } from '@/server/auth-actions';
 import AccountProfileSection from '@storefront/components/commerce/AccountProfileSection';
 import { formatPaise, formatShortDate } from '@storefront/lib/format';
 import { downloadInvoicePdf } from '@storefront/lib/invoice';
@@ -229,9 +230,12 @@ export default function AccountPage() {
   // AccountGate only renders this page once a demo session exists.
   const { session, signOut } = useSession();
   // Orders are real (TL-BE-08); returns are still demo until TL-BE-10.
-  const { orders, claimable, claim } = useMyOrders();
+  const { orders, claimable, reload, claim } = useMyOrders();
   const [claimNote, setClaimNote] = useState<{ ok: boolean; text: string } | null>(null);
   const [claiming, setClaiming] = useState(false);
+  const [resendNote, setResendNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const [resending, setResending] = useState(false);
+  const [verifyDevLink, setVerifyDevLink] = useState<string | null>(null);
   const { supportEmail } = useSiteSettings();
   // Real address book, profile and household (TL-BE-03).
   const accountState = useAccount();
@@ -245,6 +249,39 @@ export default function AccountPage() {
   const handleSignOut = () => {
     signOut();
     router.push('/');
+  };
+
+  const handleResendVerification = async () => {
+    if (resending) return;
+    setResending(true);
+    setResendNote(null);
+    setVerifyDevLink(null);
+    try {
+      const result = await resendVerificationEmailAction({});
+      if (!result.ok) {
+        setResendNote({ ok: false, text: result.error.message });
+        return;
+      }
+      if (result.data.alreadyVerified) {
+        // Verified in another tab — refresh so the claim button takes over.
+        await reload();
+        setResendNote({ ok: true, text: 'Your email is verified. You can now add your guest orders.' });
+        return;
+      }
+      setVerifyDevLink(result.data.devLink);
+      setResendNote({
+        ok: true,
+        text: result.data.devLink
+          ? 'Demo verification link ready - open it to confirm your email, then come back to add your guest orders.'
+          : result.data.delivered
+            ? 'We sent a verification link to your email. Open it, then come back to add your guest orders.'
+            : 'Demo mode: no email was sent. Open the verification link printed in the dev server log, then come back to add your guest orders.',
+      });
+    } catch {
+      setResendNote({ ok: false, text: 'Could not send the verification email just now. Please try again.' });
+    } finally {
+      setResending(false);
+    }
   };
 
   const [activeSection, setActiveSection] = useState<AccountSection>('orders');
@@ -485,9 +522,11 @@ export default function AccountPage() {
                   <div className="p-4 border border-store-card-border bg-store-cream text-sm text-store-charcoal space-y-2">
                     <p>
                       You have {claimable.count} order{claimable.count === 1 ? '' : 's'} placed as a guest with this email.
-                      {claimable.verified ? ' Add them here to track and manage them.' : ' Verify your email first, so we know they are yours.'}
+                      {claimable.verified
+                        ? ' Add them here to track and manage them.'
+                        : ' These are legacy guest orders from before you had an account. Confirm your email first, so we know they are yours.'}
                     </p>
-                    {claimable.verified && (
+                    {claimable.verified ? (
                       <Button
                         variant="dark"
                         size="sm"
@@ -507,6 +546,25 @@ export default function AccountPage() {
                       >
                         {claiming ? 'Adding…' : 'Add them to my account'}
                       </Button>
+                    ) : (
+                      <Button variant="dark" size="sm" disabled={resending} onClick={() => void handleResendVerification()}>
+                        {resending ? 'Sending…' : 'Resend verification email'}
+                      </Button>
+                    )}
+                    {resendNote && (
+                      <p role={resendNote.ok ? 'status' : 'alert'} className={`text-sm ${resendNote.ok ? 'text-store-charcoal' : 'text-red-700'}`}>
+                        {resendNote.text}
+                      </p>
+                    )}
+                    {verifyDevLink && (
+                      <p>
+                        <a
+                          href={verifyDevLink}
+                          className="font-medium text-store-charcoal underline underline-offset-4 decoration-store-gold hover:decoration-store-charcoal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
+                        >
+                          Open verification link (demo)
+                        </a>
+                      </p>
                     )}
                   </div>
                 )}

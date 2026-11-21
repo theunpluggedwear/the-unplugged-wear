@@ -61,7 +61,7 @@ const address = (input: CreateInvoiceInput, kind: 'billingAddress' | 'shippingAd
     line2: (a.line2 ?? '').slice(0, 100),
     city: a.city.slice(0, 60),
     state: a.state.slice(0, 60),
-    postalCode: a.postalCode.slice(0, 20),
+    zipcode: a.postalCode.slice(0, 20),
     country: 'IN',
   };
 };

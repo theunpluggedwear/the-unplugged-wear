@@ -4,6 +4,7 @@ import * as auth from '@tuw/heart/modules/auth';
 import { mergeGuestCart } from '@tuw/heart/modules/cart';
 import { authSchemas } from '@tuw/heart/modules/auth';
 import { safeNext } from '@tuw/heart/next/session';
+import { z } from 'zod';
 import { guards, session } from './session';
 
 // Storefront auth actions. Each is declared with a guard (server-actions
@@ -49,6 +50,12 @@ export const resetPasswordAction = guards.action({ access: 'public', input: auth
 export const verifyEmailAction = guards.action({ access: 'public', input: authSchemas.verify }, async ({ input }) => {
   await auth.verifyEmail(input.token);
   return { done: true };
+});
+
+/** Signed-in customer asks for a fresh confirmation link (legacy guest orders). */
+export const resendVerificationEmailAction = guards.action({ access: 'customer', input: z.object({}) }, async ({ ctx }) => {
+  const { alreadyVerified, devLink, delivered } = await auth.resendVerificationEmail(ctx.user!.id, await session.requestMeta());
+  return { alreadyVerified, devLink: devLink ?? null, delivered };
 });
 
 export const logoutAction = guards.action({ access: 'public', input: authSchemas.forgot.partial() }, async () => {

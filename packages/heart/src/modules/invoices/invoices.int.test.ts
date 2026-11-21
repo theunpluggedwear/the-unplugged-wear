@@ -79,6 +79,17 @@ test('same checkout key replays the same invoice and document', { skip }, async 
   assert.equal(await count(sql`SELECT count(*)::int AS n FROM payment_documents WHERE order_id=${a.orderId}::uuid`), 1);
 });
 
+test('failed first invoice attempt becomes retryable instead of a dead-end replay', { skip }, async () => {
+  const { g, input } = await ready();
+  mock.method(mockInvoiceProvider, 'create', async () => { throw new Error('invoice API down'); });
+  await assert.rejects(invoices.prepareInvoiceCheckout(g, input), /invoice API down/);
+  mock.restoreAll();
+  const retry = await invoices.prepareInvoiceCheckout(g, input);
+  assert.equal(retry.retryable, true);
+  assert.equal(retry.invoiceUrl, '');
+  assert.equal(retry.reason, 'PREVIOUS_ATTEMPT_FAILED');
+});
+
 test('invoice.paid webhook confirms paid order exactly once', { skip }, async () => {
   const { g, input } = await ready();
   const result = await invoices.prepareInvoiceCheckout(g, input);

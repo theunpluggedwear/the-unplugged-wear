@@ -11,6 +11,7 @@ export {
   requestPasswordReset,
   resetPassword,
   verifyEmail,
+  resendVerificationEmail,
   changePassword,
   listStaff,
   usersWithPermission,

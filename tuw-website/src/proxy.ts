@@ -4,7 +4,13 @@ import { createAuthProxy } from '@tuw/heart/next/proxy';
 // Every action and data read re-checks through the guards / DAL.
 export const proxy = createAuthProxy({
   app: 'storefront',
-  isProtected: (pathname) => pathname === '/account' || pathname.startsWith('/account/'),
+  // Checkout needs a session; /checkout/success stays public so receipt links
+  // still work. Every action re-checks through guards / the DAL.
+  isProtected: (pathname) =>
+    pathname === '/account' ||
+    pathname.startsWith('/account/') ||
+    pathname === '/checkout' ||
+    (pathname.startsWith('/checkout/') && pathname !== '/checkout/success'),
 });
 
-export const config = { matcher: ['/account', '/account/:path*'] };
+export const config = { matcher: ['/account', '/account/:path*', '/checkout', '/checkout/:path*'] };

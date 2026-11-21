@@ -14,7 +14,7 @@ export type StorefrontAccess = 'public' | 'guestOrCustomer' | 'customer';
 
 export interface RequestContext {
   requestId: string;
-  user: { id: string; roles: string[]; permissions: string[] } | null;
+  user: { id: string; email: string; roles: string[]; permissions: string[] } | null;
   guestSessionId: string | null;
 }
 

@@ -20,6 +20,9 @@ export interface PreparedInvoiceCheckout {
   provider: string;
   providerDocumentId: string;
   replayed: boolean;
+  /** True when a prior attempt failed and the shopper must start a fresh one. */
+  retryable: boolean;
+  reason?: string;
 }
 
 export interface InvoiceDocument {
@@ -107,11 +110,19 @@ export async function prepareInvoiceCheckout(buyer: Buyer, input: PlaceOrderInpu
   if (pending.replayed) {
     const intent = await getIntentByCheckoutKey(input.checkoutKey);
     const existing = intent ? await getDocumentByIntent(intent.id) : null;
-    if (!existing?.url) throw new AppError('RULE_VIOLATION', 'This checkout is still being prepared. Please wait and try again.');
+    const usable = existing?.url && existing.status !== 'expired' && existing.status !== 'cancelled' && existing.status !== 'failed';
+    if (!usable) {
+      return {
+        orderId: pending.orderId, orderNumber: pending.orderNumber, receipt: pending.receipt,
+        amountPaise: pending.amountPaise, invoiceUrl: '', provider: existing?.provider ?? '',
+        providerDocumentId: existing?.providerDocumentId ?? '', replayed: true,
+        retryable: true, reason: 'PREVIOUS_ATTEMPT_FAILED',
+      };
+    }
     return {
       orderId: pending.orderId, orderNumber: pending.orderNumber, receipt: pending.receipt,
-      amountPaise: pending.amountPaise, invoiceUrl: existing.url, provider: existing.provider,
-      providerDocumentId: existing.providerDocumentId, replayed: true,
+      amountPaise: pending.amountPaise, invoiceUrl: existing!.url!, provider: existing!.provider,
+      providerDocumentId: existing!.providerDocumentId, replayed: true, retryable: false,
     };
   }
 
@@ -149,7 +160,7 @@ export async function prepareInvoiceCheckout(buyer: Buyer, input: PlaceOrderInpu
     return {
       orderId: pending.orderId, orderNumber: pending.orderNumber, receipt: pending.receipt,
       amountPaise: pending.amountPaise, invoiceUrl: url ?? '', provider: provider.slug,
-      providerDocumentId: created.providerDocumentId, replayed: false,
+      providerDocumentId: created.providerDocumentId, replayed: false, retryable: false,
     };
   } catch (error) {
     // Best-effort cancellation if the provider invoice exists but was not stored.
