@@ -9,15 +9,15 @@
   },
   "summary": {
     "total": 458,
-    "done": 400,
+    "done": 401,
     "in_progress": 2,
-    "backlog": 56
+    "backlog": 55
   },
   "session": {
     "branch": "feat/dharmil-admin",
     "tip": "4922066",
     "unpushed": [],
-    "next_up": "TL-UI-ADM-INR",
+    "next_up": "TL-UI-ADM-MONO",
     "pending_verifications": [
       "admin journal editor + list full keyboard/focus/Reset Demo pass at 360/768/1024/1440 (CDP route-load check passed; interactive pass pending)",
       "SQL dry-run: apply 001 + 002 + 006-cms.sql against a real PostgreSQL instance; verify generated blogs.search_vector, slug/CHECK constraints, FK RESTRICT/CASCADE behavior, and partial indexes. psql remains unavailable locally.",
@@ -4573,11 +4573,11 @@
     {
       "id": "TL-UI-ADM-INR",
       "title": "INR label sweep — remaining $ signs in refunds, orders refund dialog, shipments, customers",
-      "status": "backlog",
-      "owner": "unassigned",
-      "log": "Parked 2026-10-19 with the table wave: refunds/page.tsx, orders/_components/OrdersView.tsx (refund dialog + product picker), shipments/page.tsx order select, customers/_components/CustomersView.tsx; collections/page.tsx is covered by TL-UI-COL-EDIT",
-      "design_match": "pending",
-      "verified": false,
+      "status": "done",
+      "owner": "agent",
+      "log": "Verified already satisfied on feat/dharmil-admin: git grep found no $/USD/dollar currency labels in tuw-admin/src; ₹ formatters present in refunds, orders, customers and fulfilment money views. Browser QA on /refunds, /orders paid order drawer, /shipments and /customers showed no $ labels. No source change needed.",
+      "design_match": "yes",
+      "verified": true,
       "pushed": false,
       "follow_ups": []
     },
