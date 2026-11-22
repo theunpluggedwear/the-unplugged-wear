@@ -1,5 +1,11 @@
 export const instant = false;
-import { adminGetDashboard } from '@tuw/heart/modules/analytics';
+import {
+  adminGetDashboardInventory,
+  adminGetDashboardKpis,
+  adminGetDashboardProducts,
+  adminGetDashboardRecent,
+  adminGetDashboardSales,
+} from '@tuw/heart/modules/analytics';
 import DashboardLiveView from '../_components/DashboardLiveView';
 import { session } from '@/server/session';
 import { isSalesRange, rangeToParams } from '@/lib/dashboard';
@@ -18,10 +24,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     ? rangeToParams(preset)
     : params.from ? { from: params.from, to: params.to } : rangeToParams('This week');
   const label = preset ?? (params.from ? labelFor(params.from, params.to) : 'This week');
-  const summary = await adminGetDashboard(claims.sub, range);
   return (
     <DashboardLiveView
-      summary={summary}
+      kpis={adminGetDashboardKpis(claims.sub, range)}
+      trend={adminGetDashboardSales(claims.sub, range)}
+      products={adminGetDashboardProducts(claims.sub, range)}
+      inventory={adminGetDashboardInventory(claims.sub)}
+      orders={adminGetDashboardRecent(claims.sub, range)}
       userName={claims.name}
       initialLabel={label}
       rangeLabel={preset ?? (params.from ? 'Custom range' : 'This week')}
