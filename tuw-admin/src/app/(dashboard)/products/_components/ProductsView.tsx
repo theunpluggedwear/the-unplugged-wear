@@ -2,11 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Plus, Filter, Search, Edit3, Trash2, CheckCircle2, Eye, AlertTriangle, LayoutGrid, List, Tag, ChevronDown, Download, Archive, GripVertical, Upload, Images, Focus, Library, RotateCcw, X } from 'lucide-react';
 import DashboardShell from '@/components/layout/DashboardShell';
-import { StatCard, ContentCard, SurfaceCard, UpliftSurface, Button, Badge, IconButton, Input, Drawer, Modal, Pagination, FilterPills, PageHeader, ViewToggle, DropdownMenu, Checkbox, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, MediaFrame, FormTextarea, Tabs, Stepper, Switch, DrawerSection, DrawerCard, SearchableSelect, Disclosure, Carousel, LinkButton } from '@/components/ui';
+import { StatCard, ContentCard, SurfaceCard, UpliftSurface, Button, Badge, IconButton, Input, Drawer, Modal, Pagination, FilterPills, PageHeader, ViewToggle, DropdownMenu, Checkbox, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, MediaFrame, FormTextarea, Tabs, Stepper, Switch, DrawerSection, DrawerCard, SearchableSelect, Disclosure, Carousel, LinkButton, ImageWithFallback } from '@/components/ui';
 import { useToast } from '@/components/providers/ToastProvider';
 import { resolveVariants, variantStockTotal, buildVariantSku, deriveVariantPrice, recomputeVariants, minFromPrice, pruneAdjustments, roundPrice, hasPriceSpread, adjustmentKey, sumAdjustments } from '@tuw/heart/modules/catalog/variants';
 import type { LibraryAttribute, SizeChart } from '@tuw/heart/modules/catalog';
@@ -1804,6 +1803,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
           aria-label={`Preview asset ${i + 1} of ${gallerySlides.length}`}
           onClick={() => setStageIndex(i)}
           style={{
+            position: 'relative',
             padding: 0,
             borderRadius: 8,
             overflow: 'hidden',
@@ -1815,8 +1815,15 @@ export default function ProductsView({ initialProducts, categories, perms, store
             aspectRatio: photoAspect,
           }}
         >
-          {}
-          <img src={s.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <ImageWithFallback
+            src={s.src}
+            alt={`Gallery image ${i + 1}`}
+            optimized
+            fill
+            sizes="200px"
+            fallbackTone="neutral"
+            style={{ objectFit: 'cover' }}
+          />
         </button>
       ))}
     </div>
@@ -1865,7 +1872,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
       </span>
       <MediaFrame height={40} width={40} radius={8} style={{ flexShrink: 0 }}>
         {}
-        <img src={assetSrc(im.src)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <ImageWithFallback src={assetSrc(im.src)} alt="" optimized fill sizes="40px" fallbackTone="neutral" style={{ objectFit: 'cover' }} />
       </MediaFrame>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--tuw-text-primary, #262626)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1941,8 +1948,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
           style={{ alignItems: 'center', minWidth: 0 }}
         >
           <MediaFrame height={72} width={72} radius={8} style={{ flexShrink: 0 }}>
-            {}
-            <img src={assetSrc(im.src)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <ImageWithFallback src={assetSrc(im.src)} alt="" optimized fill sizes="72px" fallbackTone="neutral" style={{ objectFit: 'cover' }} />
           </MediaFrame>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tuw-text-primary, #262626)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -2358,12 +2364,13 @@ export default function ProductsView({ initialProducts, categories, perms, store
                   }}
                 >
                   {p.images[0] ? (
-                    <Image
+                    <ImageWithFallback
                       src={assetSrc(p.images[0])}
-                      unoptimized
                       alt={p.name}
+                      optimized
                       fill
                       sizes="(max-width: 768px) 100vw, 320px"
+                      fallbackTone="neutral"
                       style={{ objectFit: 'cover' }}
                     />
                   ) : (
@@ -2519,7 +2526,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', position: 'relative', flexShrink: 0, background: 'var(--tuw-bg-canvas, #F7F8F9)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--tuw-border-subtle, #E5E7EB)' }}>
                         {p.images[0] ? (
-                          <Image src={assetSrc(p.images[0])} unoptimized alt={p.name} fill sizes="80px" style={{ objectFit: 'cover' }} />
+                          <ImageWithFallback src={assetSrc(p.images[0])} alt={p.name} optimized fill sizes="80px" fallbackTone="neutral" style={{ objectFit: 'cover' }} />
                         ) : (
                           <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--tuw-text-secondary, #5D6772)' }}>
                             {p.name.slice(0, 2).toUpperCase()}

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import ImageWithFallback from './ImageWithFallback';
 
 export interface CarouselSlide {
   type: 'image' | 'video';
@@ -75,10 +76,14 @@ export default function Carousel({ slides, ariaLabel = 'Gallery', aspect = '4 / 
           />
         ) : (
           
-          <img
+          <ImageWithFallback
             src={slide.src}
             alt={slide.alt}
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            optimized
+            fill
+            sizes="(max-width: 768px) 100vw, 800px"
+            fallbackTone="neutral"
+            style={{ objectFit: 'contain' }}
           />
         )}
         {slides.length > 1 ? (
@@ -146,7 +151,7 @@ export default function Carousel({ slides, ariaLabel = 'Gallery', aspect = '4 / 
                   </span>
                 ) : (
                   
-                  <img src={s.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <ImageWithFallback src={s.src} alt="" optimized fill sizes="56px" fallbackTone="neutral" style={{ objectFit: 'cover' }} />
                 )}
                 {i === 0 && s.type === 'image' ? (
                   <span
