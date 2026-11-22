@@ -1,4 +1,5 @@
 import React from 'react';
+import { buildSparkPath } from '@/lib/dashboard';
 
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'home-' + String(p) });
 
@@ -7,14 +8,13 @@ export type SparklineTone = 'up' | 'down';
 interface SparklineProps {
   tone: SparklineTone;
   label?: string;
+  values?: number[];
 }
 
-export function Sparkline({ tone, label }: SparklineProps) {
+export function Sparkline({ tone, label, values }: SparklineProps) {
   const gradId = React.useId();
   const isUp = tone === 'up';
-  const linePath = isUp
-    ? 'M 0 26 C 12 26, 18 10, 28 16 C 38 22, 44 26, 52 14 C 60 4, 68 8, 76 2 C 82 -2, 86 4, 90 2'
-    : 'M 0 10 C 12 10, 16 2, 24 4 C 32 6, 38 18, 48 14 C 58 10, 64 22, 74 18 C 80 15, 84 22, 90 20';
+  const linePath = values ? buildSparkPath(values, tone) : buildSparkPath([], tone);
   const stroke = isUp ? '#00CB75' : '#E94845';
   const wash = isUp ? '#C6EAA0' : '#E94845';
   const washOpacity = isUp ? '0.7' : '0.4';

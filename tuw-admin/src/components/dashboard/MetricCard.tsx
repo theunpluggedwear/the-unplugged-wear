@@ -13,6 +13,7 @@ interface MetricCardProps {
   deltaTone?: 'up' | 'down';
   vsText?: string;
   sparkTone: SparklineTone;
+  sparkValues?: number[];
 }
 
 export function MetricCard({
@@ -23,6 +24,7 @@ export function MetricCard({
   deltaTone = 'up',
   vsText = 'vs yesterday',
   sparkTone,
+  sparkValues,
 }: MetricCardProps) {
   return (
     <SurfaceCard padding="20px 24px" gap="8px" hoverable className={styles.kpiCard}>
@@ -31,7 +33,7 @@ export function MetricCard({
         <span className={tabular ? `${styles.kpiValue} tuw-tabular-nums` : styles.kpiValue}>
           {value}
         </span>
-        <Sparkline tone={sparkTone} label={`${label} trend`} />
+        <Sparkline tone={sparkTone} label={`${label} trend`} values={sparkValues} />
       </div>
       <div className={styles.kpiBottomRow}>
         <TrendBadge value={delta} tone={deltaTone} />

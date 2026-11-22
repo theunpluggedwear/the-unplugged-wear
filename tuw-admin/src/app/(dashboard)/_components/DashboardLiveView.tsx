@@ -74,6 +74,7 @@ export default function DashboardLiveView({ summary, userName, initialLabel, ran
           deltaTone={revenue.tone}
           vsText={revenue.vs}
           sparkTone={revenue.tone}
+          sparkValues={summary.kpiSeries.revenue}
         />
         <MetricCard
           label="Orders"
@@ -83,6 +84,7 @@ export default function DashboardLiveView({ summary, userName, initialLabel, ran
           deltaTone={orders.tone}
           vsText={orders.vs}
           sparkTone={orders.tone}
+          sparkValues={summary.kpiSeries.orders}
         />
         <MetricCard
           label="Average order"
@@ -91,6 +93,7 @@ export default function DashboardLiveView({ summary, userName, initialLabel, ran
           deltaTone={average.tone}
           vsText={average.vs}
           sparkTone={average.tone}
+          sparkValues={summary.kpiSeries.averageOrder}
         />
         <MetricCard
           label="Conversion rate"
@@ -99,6 +102,7 @@ export default function DashboardLiveView({ summary, userName, initialLabel, ran
           deltaTone={conversion.tone}
           vsText={conversion.vs}
           sparkTone={conversion.tone}
+          sparkValues={summary.kpiSeries.conversion}
         />
       </section>
 
