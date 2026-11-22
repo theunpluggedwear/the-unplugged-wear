@@ -9,13 +9,13 @@
   },
   "summary": {
     "total": 467,
-    "done": 419,
-    "in_progress": 19,
+    "done": 421,
+    "in_progress": 17,
     "backlog": 29
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "295da0c",
+    "tip": "7725074",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -7384,7 +7384,7 @@
       "parent": "TL-BE-CORE",
       "started": null,
       "finished": null,
-      "log": "Not started. Scope: Page/product/cart events, sessions, abandoned carts, daily rollups, admin dashboard + reports. PARTIAL: Dashboard/reports/abandoned wired live; event ingest, scheduled rollups and per-card Suspense remain",
+      "log": "Not started. Scope: Page/product/cart events, sessions, abandoned carts, daily rollups, admin dashboard + reports. PARTIAL: Dashboard/reports/abandoned wired live; event ingest, scheduled rollups and per-card Suspense remain. UPDATE: Dashboard/reports/abandoned live, jobs scheduled and recovery lifecycle complete; event ingest (TL-BE-15.01) remains.",
       "wiring": "modules/analytics ingest route (beacon) on the storefront; jobs analytics.detectAbandoned / analytics.rollupDaily; admin cards cached with report:<name> tags.",
       "done_when": "Dashboard and reports show real numbers (empty states before data, never fabricated).",
       "depends_on": [
@@ -7420,16 +7420,17 @@
     {
       "id": "TL-BE-15.02",
       "title": "Abandoned-cart detection + daily rollup jobs",
-      "status": "in_progress",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-15",
       "started": null,
       "finished": null,
-      "log": "Not started. PARTIAL: Detection and rollup jobs registered; cron schedules and conversion lifecycle remain",
+      "log": "Not started. PARTIAL: Detection and rollup jobs registered; cron schedules and conversion lifecycle remain. Detection and rollup jobs are scheduled in vercel.json and verified by authenticated cron calls: detection inserted 6 rows, rollupDaily upserted today. Conversion lifecycle implemented (detected→converted, reminded→recovered, idempotent) via analytics.markAbandonedConverted called in checkout.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
+      "finished": "2026-11-22",
       "follow_ups": []
     },
     {
@@ -7440,7 +7441,7 @@
       "parent": "TL-BE-15",
       "started": null,
       "finished": null,
-      "log": "Not started. PARTIAL: Live data wired on all three pages; one-Suspense-per-card rendering remains",
+      "log": "Live data wired on /dashboard, /reports and /abandoned; per-card Suspense is still NOT implemented (one server fetch per page). PARTIAL: split each page into one Suspense per card.",
       "design_match": null,
       "key_decisions": [],
       "verified": false,
@@ -7512,7 +7513,7 @@
       "parent": "TL-BE-CORE",
       "started": null,
       "finished": null,
-      "log": "Not started. Scope: Environments, CI, crons, demo-mode removal, docs — so the team can ship each module safely. PARTIAL: Nine cron entries and some config done; CI, env matrix, go-live and cron gaps remain",
+      "log": "Not started. Scope: Environments, CI, crons, demo-mode removal, docs — so the team can ship each module safely. PARTIAL: Nine cron entries and some config done; CI, env matrix, go-live and cron gaps remain. UPDATE: All 11 cron entries configured; env matrix, CI, demo-mode removal for storefront and go-live checklist remain.",
       "wiring": "Vercel projects (admin, storefront) env vars; Neon branches dev/preview/prod; CI runs typecheck/test/build and migrations on a throwaway schema.",
       "done_when": "Preview deploys use a Neon preview branch; production migration checklist documented; no screen still on demo data without a TL-BE task.",
       "depends_on": [
@@ -7561,16 +7562,17 @@
     {
       "id": "TL-BE-17.03",
       "title": "Vercel cron schedule (submitDue, syncOpen, sendQueued, notifyRestocked, expireDue, rollups)",
-      "status": "in_progress",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-17",
       "started": null,
       "finished": null,
-      "log": "Not started. PARTIAL: Nine of eleven registered jobs scheduled; detectAbandoned and rollupDaily remain",
+      "log": "Not started. PARTIAL: Nine of eleven registered jobs scheduled; detectAbandoned and rollupDaily remain. All 11 registered jobs now have daily Vercel cron entries; verify cron secret on the route.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
+      "finished": "2026-11-22",
       "follow_ups": []
     },
     {
