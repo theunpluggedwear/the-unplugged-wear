@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 export interface SelectOption {
@@ -24,8 +26,11 @@ export default function Select({
   className = '',
   style = {},
   disabled,
+  onFocus,
+  onBlur,
   ...props
 }: SelectProps) {
+  const [focused, setFocused] = useState(false);
   return (
     <div
       style={{
@@ -51,6 +56,8 @@ export default function Select({
       <div style={{ position: 'relative', width: '100%' }}>
         <select
           disabled={disabled}
+          onFocus={(event) => { setFocused(true); onFocus?.(event); }}
+          onBlur={(event) => { setFocused(false); onBlur?.(event); }}
           style={{
             width: '100%',
             height: '42px',
@@ -59,8 +66,16 @@ export default function Select({
             border: `1px solid ${
               error
                 ? 'var(--tuw-text-error, #C91818)'
+                : focused
+                ? 'var(--tuw-action-primary, #7539FF)'
                 : 'var(--tuw-border-control, #D1D5DB)'
             }`,
+            boxShadow: error
+              ? '0 0 0 3px rgba(201, 24, 24, 0.12)'
+              : focused
+              ? '0 0 0 3px rgba(117, 57, 255, 0.12)'
+              : 'none',
+            transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
             backgroundColor: disabled ? 'var(--tuw-bg-canvas, #F7F8F9)' : 'var(--tuw-bg-surface, #FFFFFF)',
             color: 'var(--tuw-text-primary, #262626)',
             fontSize: '14px',
