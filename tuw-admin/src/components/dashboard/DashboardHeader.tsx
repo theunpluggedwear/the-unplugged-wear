@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calendar } from 'lucide-react';
 import { Calendar as DateRangeCalendar } from '@/components/calendar';
@@ -19,6 +19,7 @@ export function DashboardHeader({ title, subtitle, initialLabel = 'Today' }: Das
   const [rangeLabel, setRangeLabel] = useState(initialLabel);
   const [pickerOpen, setPickerOpen] = useState(false);
   const pickerAnim = usePopoverAnimation(pickerOpen, () => setPickerOpen(false));
+  useEffect(() => setRangeLabel(initialLabel), [initialLabel]);
   const isFiltered = rangeLabel !== initialLabel;
 
   function applyRange(range: DateRange, label: string) {

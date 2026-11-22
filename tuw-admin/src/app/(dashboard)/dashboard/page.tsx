@@ -2,6 +2,7 @@ export const instant = false;
 import { adminGetDashboard } from '@tuw/heart/modules/analytics';
 import DashboardLiveView from '../_components/DashboardLiveView';
 import { session } from '@/server/session';
+import { isSalesRange, rangeToParams } from '@/lib/dashboard';
 
 function labelFor(from?: string, to?: string): string {
   if (!from) return 'Today';
@@ -9,9 +10,22 @@ function labelFor(from?: string, to?: string): string {
   return to ? `${format(from)} - ${format(to)}` : format(from);
 }
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string; preset?: string }> }) {
   const claims = await session.requireStaff(undefined, '/dashboard');
   const params = await searchParams;
-  const summary = await adminGetDashboard(claims.sub, { from: params.from, to: params.to });
-  return <DashboardLiveView summary={summary} userName={claims.name} initialLabel={labelFor(params.from, params.to)} />;
+  const preset = isSalesRange(params.preset) ? params.preset : undefined;
+  const range = preset
+    ? rangeToParams(preset)
+    : params.from ? { from: params.from, to: params.to } : rangeToParams('This week');
+  const label = preset ?? (params.from ? labelFor(params.from, params.to) : 'This week');
+  const summary = await adminGetDashboard(claims.sub, range);
+  return (
+    <DashboardLiveView
+      summary={summary}
+      userName={claims.name}
+      initialLabel={label}
+      rangeLabel={preset ?? (params.from ? 'Custom range' : 'This week')}
+      storefrontOrigin={process.env.STOREFRONT_URL ?? ''}
+    />
+  );
 }
