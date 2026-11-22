@@ -11,10 +11,10 @@ interface CalendarProps {
   onClose: () => void;
 }
 
-/**
- * Date-range popover: preset rail + two month panels + footer with live
- * range label, red Cancel (reverts) and dark Apply (commits).
- */
+
+
+
+
 export default function Calendar({ onApply, onClose }: CalendarProps) {
   const cal = useCalendarRange();
   const [leftMonth, rightMonth] = cal.months;

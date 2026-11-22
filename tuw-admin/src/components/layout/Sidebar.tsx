@@ -40,7 +40,7 @@ interface SidebarProps {
   onCloseMobileMenu?: () => void;
 }
 
-// Module-level cache to persist open group state across Next.js client-side page transitions
+
 let globalOpenGroups: Set<string> | null = null;
 const STORAGE_KEY = 'tuw_admin_open_groups';
 
@@ -89,8 +89,8 @@ interface NavGroupDef {
   items: SidebarNavItemDef[];
 }
 
-// Single source of truth for sidebar navigation (pixel-identical rendering;
-// groups and items below map over this config — no hand-written repeats).
+
+
 const NAV_GROUPS: NavGroupDef[] = [
   {
     key: 'core',
@@ -160,7 +160,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
 
-  // Close mobile drawer when pressing Escape
+  
   React.useEffect(() => {
     if (!mobileMenuOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -172,7 +172,7 @@ export default function Sidebar({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [mobileMenuOpen, onCloseMobileMenu]);
 
-  // When clicking any link inside mobile sidebar, close drawer smoothly
+  
   const handleSidebarClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest('a') && mobileMenuOpen && onCloseMobileMenu) {
@@ -180,11 +180,11 @@ export default function Sidebar({
     }
   };
 
-  // User-controlled accordion state: persists across route transitions & page loads.
-  // Hydration-safe: the module cache is null on both server and first client render,
-  // so both derive ONLY from pathname (identical output → no SSR mismatch).
-  // Client-side navigations reuse the live cache with no flash; stored groups
-  // apply in the client-only effect below.
+  
+  
+  
+  
+  
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     if (globalOpenGroups !== null) {
       return new Set(globalOpenGroups);
@@ -209,23 +209,23 @@ export default function Sidebar({
         }
       }
     } catch {
-      // fallback: keep pathname-derived default
+      
     }
   }, []);
 
-  // Fade-mask scroll indicators were removed: their flex items added phantom gaps
-  // and zoom-fragile overlap math. Nav scrolls clean without indicators.
+  
+  
 
   const toggleGroup = (key: string) => {
     setOpenGroups((prev) => {
-      // Single-accordion: opening one section closes others; clicking open section collapses it
+      
       const next = prev.has(key) ? new Set<string>() : new Set<string>([key]);
       globalOpenGroups = next;
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(next)));
         } catch {
-          // ignore
+          
         }
       }
       return next;
@@ -241,9 +241,9 @@ export default function Sidebar({
     return pathname.startsWith(path);
   };
 
-  // Index of the active child per group (-1 = none): drives the segmented dark stem.
+  
   const childActiveIndex = (activeFlags: boolean[]) => activeFlags.findIndex(Boolean);
-  // Route-based active parent group (independent of open state) for parent highlighting.
+  
   const activeGroup = getActiveGroupForPath(pathname);  const coreFlags = [getIsActive('/dashboard'), getIsActive('/orders'), getIsActive('/products'), getIsActive('/customers'), getIsActive('/reports') || getIsActive('/analytics')];
   const opsFlags = [getIsActive('/fulfillment'), getIsActive('/shipments'), getIsActive('/returns'), getIsActive('/refunds'), getIsActive('/payments')];
   const merchFlags = [getIsActive('/collections'), getIsActive('/designs'), getIsActive('/content')];
@@ -258,7 +258,7 @@ export default function Sidebar({
       className={cn('sidebar', 'fixed left-0 top-0 z-50 flex shrink-0 flex-col overflow-hidden border-r border-subtle bg-canvas transition-[width] duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]', isCollapsed ? 'w-20 min-w-20 px-[10px] pb-[14px]' : 'w-60 min-w-60 md:w-55 md:min-w-55 lg:w-60 lg:min-w-60 px-[14px] pb-[10px]', mobileMenuOpen ? 'max-md:translate-x-0' : 'max-md:-translate-x-full', 'max-md:bottom-0 max-md:z-[100] max-md:max-w-[86vw] max-md:w-[290px] max-md:min-w-auto max-md:overflow-y-auto max-md:overflow-x-hidden max-md:px-[14px] max-md:pb-4 max-md:shadow-[4px_0_24px_rgba(0,0,0,0.15)] max-md:transition-transform')}
       onClick={handleSidebarClick}
     >
-      {/* Brand Header */}
+      {}
       <div className={cn('flex w-full shrink-0 items-center bg-canvas border-b border-subtle mb-2 z-10 h-20 min-h-20', isCollapsed ? 'justify-center p-0' : 'justify-between px-1')}>
         <Link href="/" className="flex items-center gap-2.5 no-underline text-primary">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-primary shadow-nav-logo">
@@ -274,7 +274,7 @@ export default function Sidebar({
           {!isCollapsed && <span className="text-[20px] font-bold tracking-auth-hero text-primary whitespace-nowrap">TUW Admin</span>}
         </Link>
 
-        {/* Mobile Close Button */}
+        {}
         <button
           type="button"
           className="hidden size-7.5 shrink-0 cursor-pointer items-center justify-center rounded-control border border-subtle bg-surface text-primary transition-all duration-[180ms] hover:border-action-primary hover:bg-selected hover:text-action-primary ml-auto max-md:flex focus-visible:outline-2 focus-visible:outline-action-primary focus-visible:outline-offset-2"
@@ -286,7 +286,7 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* Navigation Sections */}
+      {}
       <div className={cn('flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain mt-0.5 pb-6 pr-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden', isCollapsed ? 'gap-0' : 'gap-2.5')}>
         {NAV_GROUPS.map((group) => {
           const actives = group.items.map((item) => item.match.some((p) => getIsActive(p)));
@@ -313,7 +313,7 @@ export default function Sidebar({
         })}
       </div>
 
-      {/* Footer Controls */}
+      {}
       <div className="flex flex-col gap-0.5 border-t border-subtle bg-canvas pt-2 pb-0 mt-auto shrink-0 z-10">
         <ul className="list-none flex flex-col gap-[3px]">
           {FOOTER_ITEMS.map((item) => {
@@ -326,10 +326,10 @@ export default function Sidebar({
           })}
         </ul>
 
-        {/* ================================================================
-            BOTTOM DOCKING TOOLBAR (NIGHT / THEME / SIDEBAR)
-            ================================================================ */}
-        {/* Bottom docking toolbar (night / contrast / collapse) */}
+        {
+
+}
+        {}
         <SidebarDock isCollapsed={isCollapsed} onToggleCollapse={onToggleCollapse} />
       </div>
     </aside>

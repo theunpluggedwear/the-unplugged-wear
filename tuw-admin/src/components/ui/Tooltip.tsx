@@ -7,23 +7,23 @@ import { computeTooltipPosition } from '@/lib/tooltipPosition';
 import type { TooltipPosition, TooltipSide } from '@/lib/tooltipPosition';
 
 export interface TooltipProps {
-  /** Short, supplementary copy. Do not use for validation or essential instructions. */
+  
   content: React.ReactNode;
-  /** The focusable trigger. A native button is recommended. */
+  
   children: React.ReactNode;
-  /** Preferred side; flips automatically when the viewport is tight. */
+  
   position?: TooltipSide;
-  /** Hover delay in ms. Focus opens immediately. */
+  
   delay?: number;
-  /** Maximum width in px. */
+  
   maxWidth?: number;
 }
 
-// Shared tooltip (TT1): a portal-based, token-only hint. Portaling escapes
-// DrawerCard's overflow clipping; fixed positioning keeps it attached to the
-// trigger without taking layout space. Hover/focus/tap all open it, and the
-// trigger keeps its native accessible name. The tooltip itself is never
-// interactive, so it stays out of the tab order and cannot trap focus.
+
+
+
+
+
 export default function Tooltip({
   content,
   children,
@@ -68,7 +68,7 @@ export default function Tooltip({
 
   React.useEffect(() => () => clearShowTimer(), []);
 
-  // Measure after mount so the tooltip can flip before it becomes visible.
+  
   React.useEffect(() => {
     if (!anim.visible) {
       setPlacement(null);
@@ -101,7 +101,7 @@ export default function Tooltip({
     measure();
   }, [anim.visible, content, maxWidth, position]);
 
-  // Dismiss on scroll, resize, outside press, or Escape while visible.
+  
   React.useEffect(() => {
     if (!anim.visible) return;
 
@@ -166,8 +166,8 @@ export default function Tooltip({
   };
 
   const handlePointerUp = (event: React.PointerEvent<HTMLSpanElement>) => {
-    // Touch has no hover; a tap pins the hint so it can be read and dismissed
-    // with a second tap/outside press. Mouse and pen keep hover/focus behaviour.
+    
+    
     if (event.pointerType === 'touch') handleClick();
   };
 

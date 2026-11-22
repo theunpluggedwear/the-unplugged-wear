@@ -7,10 +7,10 @@ import { Badge, Button, ContentCard, EmptyState, Input, Select, Table, TableBody
 import type { ToastMessage } from '@/mocks/state';
 import { getCodAction, recordRemittanceAction } from '@/server/fulfillment-actions';
 
-// Cash-on-delivery money (DOC/backend/16 §5). The courier collects cash, the
-// partner pays it back as one transfer per cycle; every delivered COD parcel
-// points at the transfer that settled it, so chasing a missing payment is a
-// filter, not an investigation.
+
+
+
+
 
 const inr = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }) : '—');
@@ -41,7 +41,7 @@ export default function CodPanel({ onToast, canManage }: { onToast: (t: Omit<Toa
       onToast({ type: 'warning', title: 'Could Not Load COD', description: result.error.message });
     }
   };
-  useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => { void load();  }, []);
 
   const pendingTotal = pending.reduce((sum, p) => sum + p.codPaise, 0);
 

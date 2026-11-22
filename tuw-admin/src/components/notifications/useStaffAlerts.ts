@@ -14,7 +14,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(minutes / 1440)} d`;
 }
 
-/** Real alerts from the database, refreshed whenever the bell opens. */
+
 export function useStaffAlerts(open: boolean): { items: Notification[]; remote: RemoteReadState } {
   const [items, setItems] = React.useState<Notification[]>([]);
   const [readIds, setReadIds] = React.useState<ReadonlySet<string>>(new Set());

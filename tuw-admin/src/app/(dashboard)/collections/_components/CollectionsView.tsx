@@ -29,8 +29,8 @@ import CollectionFormDrawer, { type CollectionSaveResult } from './collections/C
 import CollectionDetailDrawer from './collections/CollectionDetailDrawer';
 import { MONO_ID_STYLE } from '@/lib/format';
 
-// Collections on real data (TL-BE-05): the server page reads them, this view
-// renders and calls the guarded actions.
+
+
 export default function CollectionsView({ initialCollections, products, canManage }: { initialCollections: CollectionItem[]; products: ProductItem[]; canManage: boolean }) {
   const { showToast } = useAdminState();
   const [collections, setCollections] = useState(initialCollections);
@@ -50,8 +50,8 @@ export default function CollectionsView({ initialCollections, products, canManag
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
 
-  // Drawers & confirm dialog. Detail/edit are id-driven so the open surface
-  // always reflects live state (no stale snapshots after a save).
+  
+  
   const [selectedColId, setSelectedColId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -98,7 +98,7 @@ export default function CollectionsView({ initialCollections, products, canManag
   };
 
   const handleSaved = (id: string) => {
-    // Edited from the detail drawer → reopen it with the fresh data.
+    
     if (returnToDetailId === id) setSelectedColId(id);
     setReturnToDetailId(null);
   };

@@ -1,9 +1,9 @@
 import 'server-only';
 
-// Admin → storefront cache refresh (route-handlers skill). The storefront is a
-// separate deployment, so after a write that changes what shoppers see the
-// admin asks it to expire those cache tags. A failed call never fails the
-// save: the storefront's own cache lifetime (hours) still picks it up.
+
+
+
+
 
 export type StorefrontRefresh = { ok: true } | { ok: false; reason: string };
 

@@ -11,8 +11,8 @@ import { useAdminState } from '@/mocks/state';
 import { listPaymentsAction, markCodCollectedAction } from '@/server/money-actions';
 import { MONO_ID_STYLE } from '@/lib/format';
 
-// Payments from the database (TL-BE-09). Only the demo gateway exists until
-// the integrations phase, so no money moves; every figure is still real data.
+
+
 
 type ListResult = { rows: PaymentRow[]; total: number; stats: { capturedPaise: number; pendingPaise: number; pendingCount: number; refundedPaise: number } };
 type ProviderCard = { slug: string; name: string; environment: 'sandbox' | 'live'; isActive: boolean; hasAdapter: boolean };
@@ -50,7 +50,7 @@ export default function PaymentsView({ initial, providers, perms }: { initial: L
     if (first.current) { first.current = false; return; }
     const t = setTimeout(() => void load(), searchTerm ? 300 : 0);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [searchTerm, status, currentPage, pageSize]);
   useEffect(() => { setCurrentPage(1); }, [searchTerm, status]);
 

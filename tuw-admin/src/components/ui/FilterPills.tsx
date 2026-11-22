@@ -12,12 +12,12 @@ export interface FilterPillsProps {
   value: string;
   onChange: (value: string) => void;
   ariaLabel?: string;
-  /** rail: tinted container with white active pill (panel tabs); pills: borderless filter chips. */
+  
   variant?: 'rail' | 'pills';
 }
 
-// Shared pill-tabs (N0): dumb, data-driven, mock/live agnostic. One change
-// here propagates to notification categories and every page filter group.
+
+
 export default function FilterPills({
   options,
   value,

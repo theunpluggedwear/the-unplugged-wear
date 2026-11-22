@@ -14,10 +14,10 @@ interface SearchModalProps {
   onClose: () => void;
 }
 
-// Island spotlight modal (S5): pill input row (dot + Ctrl+K badge + X),
-// prefix shortcut chips, sectioned tile rows with Jump pills. Query state
-// lives here; results come from the search adapter (local store today,
-// database tomorrow). Overlay + entrance motion untouched.
+
+
+
+
 export function SearchModal({ onNavigate, onClose }: SearchModalProps) {
   const [query, setQuery] = React.useState('');
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -28,7 +28,7 @@ export function SearchModal({ onNavigate, onClose }: SearchModalProps) {
     return () => clearTimeout(t);
   }, []);
 
-  // Database search, debounced; an older answer never replaces a newer one.
+  
   const [hits, setHits] = React.useState<ServerHits | null>(null);
   const [searching, setSearching] = React.useState(false);
   const latest = React.useRef(0);
@@ -53,7 +53,7 @@ export function SearchModal({ onNavigate, onClose }: SearchModalProps) {
   const matchTerm = parseScopedQuery(query).term;
   const hasFrequent = frequent.topQueries.length > 0 || frequent.frequentJumps.length > 0;
 
-  // Shared section heading: sticky over the scroll list with surface blur.
+  
   const sectionTitle: React.CSSProperties = {
     fontSize: '11px',
     fontWeight: 600,
@@ -72,9 +72,9 @@ export function SearchModal({ onNavigate, onClose }: SearchModalProps) {
     onClose();
   };
 
-  // Arrow-key navigation across result rows (S6): moves DOM focus so the
-  // focus-visible wash marks the active row; Enter jumps. Escape is
-  // handled by the global header shortcut.
+  
+  
+  
   const handleResultsKeyDown = (e: React.KeyboardEvent) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Enter') return;
     const root = resultsRef.current;

@@ -8,8 +8,8 @@ interface ShortcutChipsProps {
   onPick: (token: string) => void;
 }
 
-// Prefix scope chips (S4): one config entry per scope, rendered by map.
-// Clicking a chip seeds the query with its token; the parser scopes results.
+
+
 export function ShortcutChips({ prefixes, onPick }: ShortcutChipsProps) {
   return (
     <div

@@ -25,10 +25,10 @@ import {
 import WalletPanel from './WalletPanel';
 import CodPanel from './CodPanel';
 
-// Fulfilment board (TL-BE-11). The provider is only ever spoken to through the
-// server: submit, retry, sync, cancel, re-ship and claims all round-trip.
-// While Qikink has no API keys the adapter is the simulator, and the page says
-// so in the footer instead of pretending a parcel really moved.
+
+
+
+
 
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'sub-' + String(p) });
 
@@ -124,7 +124,7 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
     if (first.current) { first.current = false; return; }
     const t = setTimeout(() => void load(), searchTerm ? 300 : 0);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [tab, searchTerm, page, perPage]);
   useEffect(() => { setPage(1); }, [tab, searchTerm]);
 
@@ -139,8 +139,8 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
   const openRequest = useRef(0);
   const openingInFlight = useRef(false);
 
-  // The decision draft belongs to one claim. Switching claims starts clean so
-  // an earlier resolution or credit cannot leak into the next decision.
+  
+  
   const chooseDecisionClaim = (claimId: string | null) => {
     setDecisionClaim(claimId);
     if (claimId !== null) {
@@ -180,7 +180,7 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
 
   const closeDrawer = () => { setOpenRow(null); setDetail(null); };
 
-  // A rejected server call must not leave every action stuck on "Sending…".
+  
   const withBusy = async <T,>(run: () => Promise<T>, failureTitle: string): Promise<T | null> => {
     setBusy(true);
     try {
@@ -328,7 +328,7 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
     a.href = url;
     a.download = `fulfillment-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
-    // Give the browser a tick to start the download before releasing the URL.
+    
     setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 

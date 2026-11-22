@@ -11,9 +11,9 @@ import { useAdminState } from '@/mocks/state';
 import { saveSettingsAction, updateProviderAction } from '@/server/settings-actions';
 import { SETTINGS_TABS, type SettingsTab } from './tabs';
 
-// Store settings on real data (TL-BE-04). Each tab is a route; this view
-// renders the tab's fields from the database values, saves through the
-// guarded action and reports truthfully whether the storefront refreshed.
+
+
+
 
 type FieldKind = 'text' | 'email' | 'money' | 'int' | 'bool' | 'select' | 'color' | 'textarea' | 'fixed';
 interface Field {
@@ -130,7 +130,7 @@ export default function SettingsView({ tab, values, providers: initialProviders 
 
   const isDirty = fields.some((f) => draft[f.key] !== initial[f.key]);
 
-  // Unsaved input survives nothing outside this page — warn before leaving.
+  
   useEffect(() => {
     if (!isDirty) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
@@ -150,7 +150,7 @@ export default function SettingsView({ tab, values, providers: initialProviders 
     const result = await saveSettingsAction({ group: tab as Exclude<SettingsTab, 'payments' | 'fulfillment'>, values: draft });
     setSaving(false);
     if (!result.ok) {
-      // Values stay as typed; each field shows its own problem.
+      
       setFieldErrors(Object.fromEntries(result.error.details.filter((d) => d.field).map((d) => [d.field!, d.message])));
       setNotice({ tone: 'error', text: result.error.message });
       return;
@@ -266,7 +266,7 @@ export default function SettingsView({ tab, values, providers: initialProviders 
         </div>
       )}
 
-      {/* Errors stay visible while the typed values are being fixed; success notes clear on the next edit. */}
+      {}
       {notice && (notice.tone !== 'ok' || !isDirty) && (
         <div role={notice.tone === 'error' ? 'alert' : 'status'} style={{ padding: '12px 16px', borderRadius: 8, fontSize: 13, background: notice.tone === 'error' ? 'var(--tuw-bg-error, #FEF4F4)' : notice.tone === 'warn' ? 'var(--tuw-bg-warning, #FEFBF5)' : 'var(--tuw-bg-success, #F3FAF6)', color: notice.tone === 'error' ? 'var(--tuw-text-error, #C91818)' : notice.tone === 'warn' ? 'var(--tuw-text-warning, #856300)' : 'var(--tuw-text-success, #187343)' }}>
           {notice.text}

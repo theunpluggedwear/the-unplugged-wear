@@ -71,15 +71,15 @@ function ValuePreview({ attr, value }: { attr: LibraryAttribute; value: string }
   );
 }
 
-// Attribute library (settings manager): global starter definitions that
-// product drafts copy values from. Copy semantics — drafts diverge after
-// copy. Delete guards read persisted products; disable always allowed.
+
+
+
 export default function AttributesView({ initialLibrary, canManage }: { initialLibrary: LibraryAttribute[]; canManage: boolean }) {
   const { showToast } = useAdminState();
   const [libraryAttributes, setLibrary] = useState(initialLibrary);
   const [busy, setBusy] = useState(false);
 
-  /** Runs one guarded action; the server's answer replaces the list. */
+  
   const apply = async (work: () => Promise<{ ok: true; data: LibraryAttribute[] } | { ok: false; error: { message: string } }>): Promise<boolean> => {
     if (!canManage) {
       showToast({ type: 'warning', title: 'Action Restricted', description: 'You do not have permission to change the attribute library.' });

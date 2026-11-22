@@ -6,38 +6,38 @@ import { usePopoverAnimation } from '@/hooks/usePopoverAnimation';
 export interface DropdownMenuItem {
   value: string;
   label: string;
-  /** Destructive actions render in error ink (Cancel / Refund). */
+  
   danger?: boolean;
 }
 
 export interface DropdownMenuProps {
-  /** Caller-owned trigger (e.g. a small Button with a chevron), rendered verbatim. */
+  
   trigger: React.ReactNode;
   items: DropdownMenuItem[];
   onSelect: (value: string) => void;
   ariaLabel?: string;
-  /** Menu alignment relative to the trigger. */
+  
   align?: 'left' | 'right';
-  /**
-   * Open direction. 'down' drops below the trigger (default — Mark-as).
-   * 'up' rises above it (pagination Rows, which sits at the page bottom).
-   */
+  
+
+
+
   direction?: 'down' | 'up';
-  /**
-   * Value-picker mode (e.g. page-size): the matching item renders the
-   * FilterMenu selected treatment (selected wash + primary ink + 600) with
-   * menuitemradio semantics. Omitted for pure action menus (Mark-as).
-   */
+  
+
+
+
+
   selectedValue?: string;
-  /** Stretches the anchor to its parent (form-grid pickers). Default false:
-   * all existing shrink-to-fit callers behave byte-identically. */
+  
+
   fullWidth?: boolean;
 }
 
-// Shared action menu (DM1): dumb, props-fed, mock/live agnostic. Follows the
-// FilterMenu popover contract (overlay closer, stopPropagation, popoverIn/Out,
-// reduced-motion instant) but with action semantics — no value state, the menu
-// closes on every selection. Lives in ui/ so any page can attach it.
+
+
+
+
 export default function DropdownMenu({
   trigger,
   items,
@@ -77,8 +77,8 @@ export default function DropdownMenu({
     setMenuOpen((v) => !v);
   };
 
-  // Fixed menus can't ride scrolling — close on outside scroll/resize while
-  // open. Scrolling inside the menu itself (overflowing item lists) keeps it open.
+  
+  
   React.useEffect(() => {
     if (!anim.visible) return;
     const handleScroll = (event: Event) => {
@@ -113,8 +113,8 @@ export default function DropdownMenu({
             aria-label={ariaLabel}
             onClick={(e) => e.stopPropagation()}
             style={{
-              // Fixed (not absolute): escapes overflow containers so the menu
-              // is never clipped and always paints above page content.
+              
+              
               position: 'fixed',
               ...(anchor
                 ? opensUp

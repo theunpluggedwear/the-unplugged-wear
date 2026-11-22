@@ -4,12 +4,12 @@ import { useMemo, useState } from 'react';
 import { useAdminState } from '@/mocks/state';
 import type { OrderItem } from '@/mocks/fixtures';
 
-// ---------------------------------------------------------------------------
-// Dashboard data layer (D1).
-// UI components consume `useDashboardData()` only. Live values derive from
-// the demo store today; `DashboardAdapter` lets a future phase swap the
-// static trend/alert/conversion feeds for real endpoints without touching JSX.
-// ---------------------------------------------------------------------------
+
+
+
+
+
+
 
 export interface SalesTrendPoint {
   day: string;
@@ -39,8 +39,8 @@ export interface SalesTrendFeed {
   compareLabel: string;
 }
 
-// Whole-rupee en-IN formatting shared by every revenue readout
-// (reproduces Figma strings: 39190 -> ₹39,190; 131000 -> ₹1,31,000).
+
+
 export function formatINRWhole(value: number): string {
   return `₹${Math.round(value).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 }
@@ -66,14 +66,14 @@ export interface TopProduct {
   alt: string;
 }
 
-// Curated demo display order for the default 'By revenue' view (Figma Frame 1:20300).
+
 const curatedTopProducts: TopProduct[] = [
   { name: 'Boyfriend Poplin Shirt', priceLabel: '₹3,490', sold: 492, soldTotal: 500, stockLabel: 'Stock: 8 units', progressPct: 92, image: '/products/1.jpeg', alt: 'Boyfriend Poplin Shirt' },
   { name: 'Tailored Blazer Suit', priceLabel: '₹6,890', sold: 369, soldTotal: 450, stockLabel: 'Stock: 34 units', progressPct: 82, image: '/products/2.jpeg', alt: 'Tailored Blazer Suit' },
   { name: 'Belted Safari Ensemble', priceLabel: '₹5,490', sold: 592, soldTotal: 800, stockLabel: 'Stock: 26 units', progressPct: 74, image: '/products/3.jpeg', alt: 'Belted Safari Ensemble' },
 ];
 
-// Mock adapter: deterministic demo feeds (Figma Frame 1:20300 values for This week).
+
 export const mockDashboardAdapter: DashboardAdapter = {
   getSalesTrend: (range: string) => {
     if (range === 'Last week') {

@@ -4,24 +4,24 @@ import React, { useId } from 'react';
 import InfoTooltip from './InfoTooltip';
 
 export interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  /** Label above the control. Inside DrawerCard it inherits 14/600; legacy default 13/500. */
+  
   label?: string;
-  /** Supplementary label hint rendered as an info icon + tooltip. */
+  
   labelTooltip?: string;
-  /** Helper copy below the control (12/18/secondary). */
+  
   helperText?: React.ReactNode;
-  /** Control font size. Sites use 13 (default) or 14. */
+  
   fontSize?: number;
-  /** Horizontal padding. Sites use 10 (default) or 12. */
+  
   padX?: number;
 }
 
-// 40px native-select treatment (DW0): the exact metrics raw <select>s use
-// across drawers and modals (height 40, radius 8, control border). Deliberately
-// distinct from ui/Select (42px) — each keeps its consumers pixel-identical.
-// Border resolves through the shared token, so fallback variance in old
-// call sites collapses to one value. Cards that pair selects with 44px Inputs
-// may override height through style so labels and helper copy stay aligned.
+
+
+
+
+
+
 export default function FormSelect({
   label,
   labelTooltip,

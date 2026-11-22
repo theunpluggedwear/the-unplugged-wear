@@ -14,16 +14,16 @@ export interface ViewToggleProps {
   value: string;
   onChange: (value: string) => void;
   ariaLabel?: string;
-  /** Segment treatment. 'icon' (default, 32px squares — all existing
-   * callers byte-identical); 'labeled' (full-width, icon + text with
-   * dividers between segments). */
+  
+
+
   variant?: 'icon' | 'labeled';
 }
 
-// Segmented grid/table view switch (VT1): dumb, props-fed, mock/live
-// agnostic. Rail aesthetics (tinted container, white active pill) so it sits
-// naturally beside FilterPills. Reusable anywhere a dense/relaxed view pair
-// exists (products table, media grid later).
+
+
+
+
 export default function ViewToggle({
   options,
   value,

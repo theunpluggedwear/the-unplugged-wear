@@ -8,8 +8,8 @@ import { getMappingsAction, saveMappingsAction } from '@/server/catalog-actions'
 type Draft = VariantMapping & { costText: string };
 const toDraft = (v: VariantMapping): Draft => ({ ...v, costText: v.unitCost === null ? '' : String(v.unitCost) });
 
-// Which partner SKU prints each variant, and what it costs us (doc 16 §6).
-// Saved separately from the product form; never shown to shoppers.
+
+
 export default function PartnerSkuPanel({ productId }: { productId: string }) {
   const [rows, setRows] = useState<Draft[] | null>(null);
   const [provider, setProvider] = useState<string | null>(null);

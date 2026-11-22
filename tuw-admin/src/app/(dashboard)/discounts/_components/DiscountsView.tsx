@@ -10,9 +10,9 @@ import type { ProductDiscountRow } from '@tuw/heart/modules/catalog';
 import { createDiscountAction, deleteDiscountAction, setDiscountActiveAction, setProductDiscountActiveAction } from '@/server/discount-actions';
 import { MONO_ID_STYLE } from '@/lib/format';
 
-// Discount codes and product discount schedules from the database
-// (TL-BE-08). Checkout reads the same rows; a used code can be switched off
-// but never deleted.
+
+
+
 export default function DiscountsView({ initialCodes, initialSchedules, perms }: { initialCodes: DiscountCode[]; initialSchedules: ProductDiscountRow[]; perms: string[] }) {
   const { showToast } = useAdminState();
   const canManage = perms.includes('discount.manage');
@@ -76,7 +76,7 @@ export default function DiscountsView({ initialCodes, initialSchedules, perms }:
     setFormError(null);
   };
 
-  // Dates are whole days in India: a code starts at 00:00 and ends at 23:59 IST.
+  
   const handleCreate = async () => {
     if (!canManage) return refused();
     const value = parseFloat(formValue);
@@ -95,7 +95,7 @@ export default function DiscountsView({ initialCodes, initialSchedules, perms }:
     });
     setSaving(false);
     if (!result.ok) {
-      // Keep everything typed; say what to fix.
+      
       setFormError(result.error.details[0]?.message ?? result.error.message);
       return;
     }

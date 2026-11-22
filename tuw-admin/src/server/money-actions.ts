@@ -5,9 +5,9 @@ import { orderSchemas as s } from '@tuw/heart/modules/orders';
 import { toPaise } from '@tuw/heart/platform/money';
 import { guards } from './session';
 
-// Payments and refunds (TL-BE-09). Reading needs order.view; anything that
-// moves money needs order.refund, checked here and inside the service's
-// transaction rules (amount ≤ what is left, one open payout, one key = one refund).
+
+
+
 
 export const listPaymentsAction = guards.action({ permission: 'order.view', input: s.moneyList }, async ({ input }) => orders.listPayments(input));
 

@@ -11,7 +11,7 @@ export const listPostsAction = guards.action({ permission: 'content.manage', inp
 
 export const savePostAction = guards.action({ permission: 'content.manage', input: s.savePost }, async ({ input, ctx }) => {
   const post = await marketing.adminSavePost(input, ctx.user!.id);
-  // Journal posts feed both the blog index and the homepage journal cards.
+  
   const storefront = await refreshStorefront([BLOG_TAG, CMS_TAGS.home]);
   return { post, storefront };
 });

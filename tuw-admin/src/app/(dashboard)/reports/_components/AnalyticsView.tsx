@@ -30,14 +30,14 @@ export default function AnalyticsView() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
 
-  // Compute live metrics from state
+  
   const paidOrders = orders.filter((o) => o.paymentStatus === 'paid');
   const totalRevenue = paidOrders.reduce((sum, o) => sum + o.paidAmount, 0);
   const totalOrdersCount = orders.length;
   const aov = paidOrders.length > 0 ? totalRevenue / paidOrders.length : 0;
   const totalRefundsSum = refunds.reduce((sum, r) => sum + r.amount, 0);
 
-  // Search demand (P1c): share of searches returning nothing.
+  
   const totalSearches = initialSearchTerms.reduce((sum, t) => sum + t.searches, 0);
   const totalZeroHits = initialSearchTerms.reduce((sum, t) => sum + t.zeroResults, 0);
   const totalZeroRate = totalSearches > 0 ? (totalZeroHits / totalSearches) * 100 : 0;
@@ -69,7 +69,7 @@ export default function AnalyticsView() {
 
   return (
     <DashboardShell pageTitle="Analytics" activeNav="analytics">
-      {/* Page Header */}
+      {}
       <PageHeader
         title="Analytics & Operational Reports"
         actions={
@@ -96,7 +96,7 @@ export default function AnalyticsView() {
         }
       />
 
-      {/* Top 4 KPI Metrics */}
+      {}
       <div className={styles.statGrid}>
         <StatCard
           label="Total Revenue"
@@ -128,7 +128,7 @@ export default function AnalyticsView() {
         />
       </div>
 
-      {/* Main Interactive Revenue Trend Chart Card */}
+      {}
       <div className={styles.contentCard}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
@@ -152,7 +152,7 @@ export default function AnalyticsView() {
           </div>
         </div>
 
-        {/* Pure SVG Revenue Trend Chart */}
+        {}
         <div style={{ width: '100%', height: '220px', marginTop: 12, position: 'relative' }}>
           <svg
             viewBox="0 0 900 200"
@@ -166,12 +166,12 @@ export default function AnalyticsView() {
               </linearGradient>
             </defs>
 
-            {/* Grid Horizontal Lines */}
+            {}
             <line x1="0" y1="40" x2="900" y2="40" stroke="var(--tuw-border-subtle, #E2E4E6)" strokeDasharray="4 4" />
             <line x1="0" y1="90" x2="900" y2="90" stroke="var(--tuw-border-subtle, #E2E4E6)" strokeDasharray="4 4" />
             <line x1="0" y1="140" x2="900" y2="140" stroke="var(--tuw-border-subtle, #E2E4E6)" strokeDasharray="4 4" />
 
-            {/* Prior Period Trend (Muted Gray) */}
+            {}
             <path
               d="M0,150 Q150,130 300,120 T600,80 T900,110"
               fill="none"
@@ -180,13 +180,13 @@ export default function AnalyticsView() {
               strokeDasharray="5 5"
             />
 
-            {/* Area Fill */}
+            {}
             <path
               d="M0,140 Q150,110 300,90 T600,45 T900,60 L900,200 L0,200 Z"
               fill="url(#analyticsGrad)"
             />
 
-            {/* Main Trend Line */}
+            {}
             <path
               d="M0,140 Q150,110 300,90 T600,45 T900,60"
               fill="none"
@@ -195,12 +195,12 @@ export default function AnalyticsView() {
               strokeLinecap="round"
             />
 
-            {/* Data Point Marker */}
+            {}
             <circle cx="600" cy="45" r="5" fill="#7539FF" stroke="#FFFFFF" strokeWidth="2.5" />
           </svg>
         </div>
 
-        {/* X-Axis Labels */}
+        {}
         <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', fontSize: '12px', marginTop: '8px' }}>
           <span>Wk 1</span>
           <span>Wk 2</span>
@@ -209,7 +209,7 @@ export default function AnalyticsView() {
         </div>
       </div>
 
-      {/* Product Merchandising Breakdown */}
+      {}
       <ContentCard>
         <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--tuw-text-primary, #262626)', marginBottom: 4 }}>
           Top Searches
@@ -254,7 +254,7 @@ export default function AnalyticsView() {
         </Table>
       </ContentCard>
 
-      {/* Product Merchandising Breakdown */}
+      {}
       <ContentCard>
         <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--tuw-text-primary, #262626)', marginBottom: 12 }}>
           Product Merchandising Sales Summary

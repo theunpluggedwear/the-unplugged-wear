@@ -12,10 +12,10 @@ export interface LinkButtonProps
   icon?: React.ReactNode;
 }
 
-// Navigational sibling of Button: renders Next's <Link> wearing the identical
-// button skin from getButtonStyle — real link semantics (middle-click, open
-// in new tab, prefetch, keyboard) with zero copied styles. Same visual props
-// as Button; className still passes through for opt-in hover treatments.
+
+
+
+
 export default function LinkButton({
   href,
   children,

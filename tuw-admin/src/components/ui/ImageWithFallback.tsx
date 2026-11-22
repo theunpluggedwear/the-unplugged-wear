@@ -6,13 +6,13 @@ import { ImageOff } from 'lucide-react';
 export interface ImageWithFallbackProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallbackSrc?: string;
   fallbackText?: string;
-  /** Failure-face treatment. neutral keeps the current grey wash; info uses a light-blue wash with error text. */
+  
   fallbackTone?: 'neutral' | 'info';
 }
 
-/**
- * ImageWithFallback component that gracefully displays a fallback when images fail to load.
- */
+
+
+
 export default function ImageWithFallback({
   src,
   alt = '',

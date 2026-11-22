@@ -11,9 +11,9 @@ interface NotificationPanelProps {
   onNavigate: (href: string) => void;
 }
 
-// Notification center panel (N2): header count + mark-all-read, category
-// rail tabs, tone-washed item cards. Plug-and-play: drop it anywhere with
-// a repository; mock items today, database feed tomorrow.
+
+
+
 export function NotificationPanel({ repo, onNavigate }: NotificationPanelProps) {
   const [category, setCategory] = React.useState<NotificationCategory>(() => {
     const firstUnread = repo.all.find((n) => !repo.isRead(n.id));

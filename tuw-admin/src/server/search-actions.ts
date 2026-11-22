@@ -8,9 +8,9 @@ import { adminListShipments } from '@tuw/heart/modules/fulfillment';
 import { AppError } from '@tuw/heart/platform/errors';
 import { guards } from './session';
 
-// Spotlight search (TL-BE-08.09). One request searches every area the staff
-// member may read, in parallel; an area they lack permission for is simply
-// left out. Five hits per area keeps it fast.
+
+
+
 
 const LIMIT = 5;
 

@@ -3,18 +3,18 @@ import React from 'react';
 export interface SurfaceCardProps extends React.HTMLAttributes<HTMLDivElement> {
   padding?: string;
   gap?: string;
-  /** Layout direction. Default 'column' — existing consumers byte-identical. */
+  
   direction?: 'row' | 'column';
-  /** Opt-in hover treatment (border tint + wash). Default false. */
+  
   hoverable?: boolean;
-  /** Forces width 100% (block contexts). Default false: grid/flex parents size the card. */
+  
   fullWidth?: boolean;
 }
 
-// Single canonical card surface (C1): white bg, subtle border, 12px
-// radius, subtle shadow. Every card in the admin (ContentCard, StatCard,
-// dashboard variants, MetricCard) delegates here with its own layout
-// values — one definition, zero visual change at any call site.
+
+
+
+
 export default function SurfaceCard({
   children,
   padding = '20px 24px',

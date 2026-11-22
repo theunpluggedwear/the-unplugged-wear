@@ -65,9 +65,9 @@ import {
 } from '@/lib/blog';
 import { normalizeCollection, nextCollectionId, type LegacyCollection } from '@tuw/heart/modules/catalog/rules';
 
-/** Legacy single-value print placement → the workbook's multi-select
- * Placements attribute. Unknown values are preserved as product-local values
- * rather than dropped. */
+
+
+
 const LEGACY_PLACEMENT_VALUES: Record<string, string[]> = {
   'Chest (45mm)': ['Front'],
   'Back Oversized': ['Back'],
@@ -123,10 +123,10 @@ interface AdminStateContextType {
   showToast: (toast: Omit<ToastMessage, 'id'>) => void;
   dismissToast: (id: string) => void;
 
-  // Mutations
+  
   createProduct: (product: Omit<ProductItem, 'id' | 'soldCount' | 'rating'>, silent?: boolean) => boolean;
-  /** Batch create in one state commit — import staging needs this so a 150-row
-   * workbook does not overwrite itself through stale closures. */
+  
+
   createProducts: (
     products: Array<Omit<ProductItem, 'id' | 'soldCount' | 'rating'>>,
     silent?: boolean
@@ -206,7 +206,7 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
   const [blogRevisions, setBlogRevisions] = useState<BlogRevision[]>(initialBlogRevisions);
   const [blogSlugHistory, setBlogSlugHistory] = useState<BlogSlugHistoryEntry[]>(initialBlogSlugHistory);
 
-  // Load from localStorage on mount
+  
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -214,9 +214,9 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
         const parsed = JSON.parse(saved);
         if (parsed.activeRole) setActiveRoleState(parsed.activeRole);
         if (parsed.products) {
-          // One-time gallery + placement migration: legacy hero `image`
-          // becomes the first ordered gallery entry (cover); the old
-          // single-value `placement` folds into the Placements attribute.
+          
+          
+          
           setProducts(
             (parsed.products as Array<ProductItem & { image?: string; placement?: string }>).map((p) => {
               const legacy = p as ProductItem & {
@@ -277,10 +277,10 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
         if (parsed.customers) setCustomers(parsed.customers);
         if (parsed.supportTickets) setSupportTickets(parsed.supportTickets);
         if (parsed.collections) {
-          // One-time migration: legacy rows carried a fabricated productCount.
-          // Keep real productIds when present (deduped, unknown ids pruned);
-          // otherwise [] — links are never invented. Reset Demo restores the
-          // baseline fixture links.
+          
+          
+          
+          
           const validProductIds = new Set<string>(
             ((parsed.products as ProductItem[] | undefined) ?? initialProducts).map((p) => p.id)
           );
@@ -302,11 +302,11 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
         if (parsed.blogSlugHistory) setBlogSlugHistory(parsed.blogSlugHistory);
       }
     } catch {
-      // Local storage fallback
+      
     }
   }, []);
 
-  // Save to localStorage whenever state changes
+  
   const persistState = useCallback(
     (newState: {
       activeRole?: StaffRole;
@@ -358,15 +358,15 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
       } catch {
-        // Storage quota / privacy protection
+        
       }
     },
     [activeRole, products, orders, shipments, refunds, returns, customers, supportTickets, collections, designs, team, stockMovements, discountCodes, abandonedCarts, blogCategories, blogAuthors, blogTags, blogMedia, blogPosts, blogRevisions, blogSlugHistory]
   );
 
-  // Auto-dismiss timers are tracked per toast so dismissing one cannot leave a
-  // stale timer behind, and no timer can call setToasts after the provider
-  // unmounts.
+  
+  
+  
   const toastTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const clearToastTimer = useCallback((id: string) => {
@@ -409,7 +409,7 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
     });
   };
 
-  // Role check helper
+  
   const canPerformAction = (actionCategory: 'orders' | 'products' | 'refunds' | 'team' | 'settings' | 'fulfillment' | 'cms'): boolean => {
     if (activeRole === 'Read-only') {
       showToast({
@@ -442,12 +442,12 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
     return true;
   };
 
-  // -------------------------------------------------------------
-  // MUTATION IMPLEMENTATIONS
-  // -------------------------------------------------------------
+  
+  
+  
 
-  // Stable, collision-free ID. The old random 10–99 range duplicated quickly
-  // once a workbook staged more than a handful of products.
+  
+  
   const nextProductId = (list: ProductItem[]): string => {
     let nextNumber =
       list.reduce((max, product) => {
@@ -462,9 +462,9 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
     return id;
   };
 
-  // Explicit variants (import) win; manual creates synthesize from the flat
-  // color×size fields. IDs and SKUs are always regenerated in the seam so
-  // callers cannot persist placeholder or duplicate identities.
+  
+  
+  
   const buildProduct = (
     p: Omit<ProductItem, 'id' | 'soldCount' | 'rating'>,
     id: string
@@ -525,9 +525,9 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
   ) => {
     if (!canPerformAction('products') || drafts.length === 0) return 0;
 
-    // One commit for the whole workbook. Calling createProduct in a loop reads
-    // the same pre-import `products` closure every time, so only the last row
-    // would survive.
+    
+    
+    
     let list = products;
     for (const draft of drafts) {
       list = [buildProduct(draft, nextProductId(list)), ...list];
@@ -550,8 +550,8 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
     const next = products.map((p) => {
       if (p.id !== id) return p;
       const merged = { ...p, ...updates };
-      // Variants are the source of truth: keep display lists derived so
-      // colors/sizes can never drift from the matrix.
+      
+      
       if (updates.variants) {
         merged.colors = deriveColors(updates.variants);
         merged.sizes = deriveSizes(updates.variants);
@@ -559,8 +559,8 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
       }
       return merged;
     });
-    // Ledger truthfulness (P1b): every variant stock delta in a save appends
-    // an admin_adjustment movement, so the history view grows with edits.
+    
+    
     if (target && updates.variants) {
       const before = new Map(
         (target.variants ?? synthesizeVariants(target)).map((v) => [v.id, v.stock])
@@ -630,8 +630,8 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
     };
     const next = [newOrder, ...orders];
     setOrders(next);
-    // Recovery matcher: an order from the same email converts their
-    // open abandonment rows (detected/reminded only — never rewrites).
+    
+    
     const email = o.customerEmail.trim().toLowerCase();
     const converted = abandonedCarts.map((c) =>
       c.email?.toLowerCase() === email && (c.status === 'detected' || c.status === 'reminded')
@@ -834,8 +834,8 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
     return true;
   };
 
-  // Discount codes (Phase-2 discounts): used codes are history (delete
-  // refused); kill switch flips is_active reversibly.
+  
+  
   const createDiscountCode = (input: Omit<DiscountCode, 'id' | 'usesCount'>) => {
     if (!canPerformAction('orders')) return false;
     const code = input.code.trim().toUpperCase();
@@ -879,7 +879,7 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
     return true;
   };
 
-  // Recovery: exactly-once reminder per cart (remindedAt set once).
+  
   const remindAbandonedCart = (id: string) => {
     if (!canPerformAction('orders')) return false;
     const target = abandonedCarts.find((c) => c.id === id);
@@ -900,11 +900,11 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
     return true;
   };
 
-  // Size charts: sparse-measure rows (columns vary by garment).
-  // Blog authoring (demo-backed model mirrors 006-cms.sql):
-  // validation/normalization live in one seam, so the editor and state
-  // cannot drift. Publishes snapshot a revision; slug changes on published
-  // posts append history for future 301 redirects.
+  
+  
+  
+  
+  
   const saveBlogPost = (
     draft: BlogDraft,
     mode: 'draft' | 'publish'
@@ -1167,9 +1167,9 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
     return id;
   };
 
-  // Recovery only clears the simulated banner error. Dataset restoration is
-  // exclusively the responsibility of resetDemoData — retry must never wipe
-  // the user's local changes.
+  
+  
+  
   const retryConnection = () => {
     setSimulatedError(null);
     showToast({
@@ -1182,10 +1182,10 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
   const resetDemoData = () => {
     try {
       localStorage.removeItem(STORAGE_KEY);
-      // search frequent counts live outside the demo snapshot (see search/useFrequentQueries)
+      
       localStorage.removeItem('tuw_search_frequent');
     } catch {
-      // storage clear
+      
     }
     setActiveRoleState('Owner');
     setSimulatedError(null);
@@ -1277,7 +1277,7 @@ export function AdminStateProvider({ children }: { children: React.ReactNode }) 
     >
       {children}
 
-      {/* Floating Toast Notification Container */}
+      {}
       <div
         style={{
           position: 'fixed',

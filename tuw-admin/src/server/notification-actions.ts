@@ -4,8 +4,8 @@ import { z } from 'zod';
 import * as notifications from '@tuw/heart/modules/notifications';
 import { guards } from './session';
 
-// Staff bell. Each person reads and marks only their own rows; the permission
-// matches who receives inventory alerts today (TL-BE-14 widens it).
+
+
 const permission = 'product.update';
 
 export const listNotificationsAction = guards.action({ permission, input: z.object({}) }, async ({ ctx }) => notifications.listNotifications(ctx.user!.id));

@@ -6,19 +6,19 @@ import Tooltip from './Tooltip';
 import type { TooltipSide } from '@/lib/tooltipPosition';
 
 export interface InfoTooltipProps {
-  /** Accessible name for the trigger, e.g. "More information about Style Code". */
+  
   label: string;
-  /** Supplementary copy shown in the tooltip. */
+  
   content: string;
-  /** Preferred side; the tooltip flips when the viewport is tight. */
+  
   position?: TooltipSide;
-  /** Icon size in px. Default 14. */
+  
   size?: number;
 }
 
-// Standard label hint (TT2): a quiet circular Info icon that reveals a
-// supplementary tooltip. It is a native button outside the <label> so it can
-// never submit the form or steal the label's htmlFor behaviour.
+
+
+
 export default function InfoTooltip({
   label,
   content,

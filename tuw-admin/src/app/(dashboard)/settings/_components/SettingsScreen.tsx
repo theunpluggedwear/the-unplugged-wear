@@ -4,8 +4,8 @@ import { session } from '@/server/session';
 import SettingsView from './SettingsView';
 import { PROVIDER_TABS, type SettingsTab } from './tabs';
 
-// Server Component for every /settings/<tab> route: guard, then read the
-// live values (staff always see the database, never a cache).
+
+
 export default async function SettingsScreen({ tab }: { tab: SettingsTab }) {
   await session.requireStaff('settings.manage', `/settings/${tab}`);
   const categories = tab in PROVIDER_TABS ? PROVIDER_TABS[tab as keyof typeof PROVIDER_TABS] : [];

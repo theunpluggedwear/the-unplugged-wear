@@ -13,9 +13,9 @@ import { useAdminState } from '@/mocks/state';
 import { addTrackingAction, getShipmentAction, listShipmentsAction, setShipmentStatusAction } from '@/server/fulfillment-actions';
 import { MONO_ID_STYLE } from '@/lib/format';
 
-// Parcels (TL-BE-11). Provider-synced parcels appear here on their own; a
-// Custom Atelier or off-platform courier is added by hand. Either way the
-// timeline the customer sees is the one written from this screen or the poll.
+
+
+
 
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' }) : '—');
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }) : '—');
@@ -78,7 +78,7 @@ export default function ShipmentsView({ initial, perms }: { initial: ListResult;
     if (first.current) { first.current = false; return; }
     const t = setTimeout(() => void load(), searchTerm ? 300 : 0);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [status, searchTerm, page, perPage]);
   useEffect(() => { setPage(1); }, [status, searchTerm]);
 

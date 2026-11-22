@@ -3,8 +3,8 @@
 import React from 'react';
 import type { Notification, NotificationRepository, RemoteReadState } from './types';
 
-// Repository (N1): demo items keep read state in a Set for the session;
-// database items also report to `remote`, so their state survives a reload.
+
+
 export function useNotifications(source: Notification[], remote?: RemoteReadState): NotificationRepository {
   const [readIds, setReadIds] = React.useState<ReadonlySet<string>>(new Set());
 

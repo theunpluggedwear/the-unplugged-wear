@@ -9,10 +9,10 @@ interface SidebarDockProps {
   onToggleCollapse: () => void;
 }
 
-/**
- * Bottom docking toolbar (night / contrast / collapse). Owns its theme-mode
- * state; active treatments live here as the single source.
- */
+
+
+
+
 export default function SidebarDock({ isCollapsed, onToggleCollapse }: SidebarDockProps) {
   const [activeThemeMode, setActiveThemeMode] = useState<'dark' | 'contrast' | 'default'>('dark');
 

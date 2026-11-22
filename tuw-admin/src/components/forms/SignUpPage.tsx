@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Mail, UserRound, ArrowLeft } from 'lucide-react';
 import { acceptInviteAction } from '@/server/auth-actions';
-// Class map - selectors live in src/app/globals.css (single app.css, signup- prefix).
-// Verbatim port of SignUpPage.module.css; JSX untouched for zero pixel drift.
+
+
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'signup-' + String(p) });
 
 type SignUpStateMode = 'default' | 'filled' | 'verify-empty' | 'verify-filled';
@@ -20,7 +20,7 @@ export interface StaffInvite {
 
 interface SignUpPageProps {
   initialMode?: SignUpStateMode;
-  /** Staff join only by invitation (TL-BE-02); null = no valid invite in the URL. */
+  
   invite?: StaffInvite | null;
 }
 
@@ -28,10 +28,10 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Active view: 'signup' or the truthful 'verify' fallback (design preview only)
+  
   const [view, setView] = useState<'signup' | 'verify'>('signup');
 
-  // Form Fields
+  
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,8 +42,8 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
   const [notice, setNotice] = useState('');
   const [pending, setPending] = useState(false);
 
-  // Apply state based on Figma frames (design preview only — never an auth bypass).
-  // A state transition always clears any stale notice from a previous view.
+  
+  
   const applyState = (mode: SignUpStateMode) => {
     setNotice('');
 
@@ -66,12 +66,12 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
       setShowConfirmPassword(false);
       setAgreeTerms(true);
     } else if (mode === 'verify-empty' || mode === 'verify-filled') {
-      // Verification is by invitation link, not a code — show the truthful fallback.
+      
       setView('verify');
     }
   };
 
-  // Synchronize state with URL query param ?state=... or initialMode prop
+  
   useEffect(() => {
     const stateParam = searchParams.get('state');
     if (stateParam === 'filled') {
@@ -89,7 +89,7 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
     }
   }, [searchParams, initialMode]);
 
-  // Handle Form Submit -> Goes to Verification
+  
   const handleSignUpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (pending) return;
@@ -101,14 +101,14 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
     setPending(true);
     void acceptInviteAction({ token: invite.token, password, firstName, lastName: rest.join(' ') || firstName }).then((result) => {
       setPending(false);
-      if (!result.ok) return setNotice(result.error.message); // typed values are kept
+      if (!result.ok) return setNotice(result.error.message); 
       setPassword('');
       setConfirmPassword('');
       router.push(result.data.next);
     });
   };
 
-  // The invitation fixes the email address.
+  
   useEffect(() => {
     if (invite) setEmail(invite.email);
   }, [invite]);
@@ -118,9 +118,9 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
 
   return (
     <main className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-white text-auth-ink relative max-[900px]:flex-col max-[900px]:overflow-y-auto">
-      {/* ==========================================================================
-          LEFT HERO SECTION (Frame 124 - Width 712px, Height 1024px)
-          ========================================================================== */}
+      {
+
+}
       <section className="relative flex h-full min-h-screen w-[49.444%] flex-[0_0_49.444%] flex-col justify-end overflow-hidden bg-auth-hero max-[900px]:h-[320px] max-[900px]:min-h-[320px] max-[900px]:w-full max-[900px]:flex-none">
         <Image
           src="/images/signup-hero.png"
@@ -130,10 +130,10 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
           sizes="(max-width: 900px) 100vw, 50vw"
           className="absolute inset-0 h-full w-full object-cover object-top"
         />
-        {/* Rectangle 96: Linear gradient overlay on bottom half */}
+        {}
         <div className={styles.heroOverlay} />
 
-        {/* Frame 60511: Brand Mark, Headline, Subtitle */}
+        {}
         <div className="relative z-2 flex flex-col gap-[clamp(8px,1.4vh,16px)] px-[clamp(24px,3.88vw,56px)] pb-[clamp(24px,4.5vh,68px)] max-w-[600px] max-[900px]:px-6 max-[900px]:pb-7">
           <div className="text-auth-signup-brand font-bold leading-auth-headline text-white">The Unplugged Wear</div>
           <h1 className="text-auth-signup-headline font-bold leading-auth-signup-headline tracking-auth-title text-white whitespace-pre-line max-w-auth-hero-copy m-0">
@@ -145,17 +145,17 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
         </div>
       </section>
 
-      {/* ==========================================================================
-          RIGHT AUTH SECTION (Frame 140 - Width 728px, Height 1024px)
-          ========================================================================== */}
+      {
+
+}
       <section className="relative flex h-screen w-[50.556%] flex-[0_0_50.556%] flex-col items-center justify-center overflow-y-auto overflow-x-hidden bg-white bg-no-repeat py-[clamp(16px,2.5vh,40px)] px-[clamp(20px,3vw,48px)] bg-[radial-gradient(circle_520px_at_78%_5%,rgba(229,245,211,0.6)_0%,rgba(255,255,255,0)_100%),radial-gradient(circle_420px_at_98%_8%,rgba(246,198,54,0.1)_0%,rgba(229,245,211,0.05)_50%,rgba(255,255,255,0)_100%)] max-[900px]:h-auto max-[900px]:min-h-auto max-[900px]:w-full max-[900px]:flex-none max-[900px]:px-5 max-[900px]:pt-9 max-[900px]:pb-15">
         <div className="flex w-full max-w-auth-form flex-col my-auto">
-          {/* ==========================================================================
-              VIEW 1: SIGN UP FORM (Figma 1:20984 & 1:20920)
-              ========================================================================== */}
+          {
+
+}
           {view === 'signup' && (
             <>
-              {/* Header: Frame 128 (Badge + Title + Subtitle) */}
+              {}
               <header className="flex flex-col items-center text-center gap-[clamp(8px,1.2vh,14px)] mb-[clamp(12px,2vh,24px)]">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-auth-button">
                   <Image
@@ -175,9 +175,9 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
                 </div>
               </header>
 
-                {/* Form Body: Frame 135 */}
+                {}
                 <div className="flex w-full flex-col gap-[clamp(12px,1.8vh,20px)]">
-                {/* Social Login Buttons: Apple & Google (Frame 139) */}
+                {}
                 <div className="grid grid-cols-2 gap-[clamp(12px,1.5vw,24px)]">
                   <button
                     type="button"
@@ -214,17 +214,17 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
                   </button>
                 </div>
 
-                {/* Divider: Or (Frame 136) */}
+                {}
                 <div className="flex items-center gap-4">
                   <div className="h-px flex-1 bg-auth-line" />
                   <span className="text-sm font-medium text-auth-divider">Or</span>
                   <div className="h-px flex-1 bg-auth-line" />
                 </div>
 
-                {/* Sign Up Form Inputs */}
+                {}
                 <form onSubmit={handleSignUpSubmit} id="signup-form">
                   <div className="flex flex-col gap-[clamp(8px,1.2vh,14px)]">
-                    {/* 1. Username Field */}
+                    {}
                     <div className="flex flex-col gap-[5px]">
                       <label htmlFor="signup-username" className="text-sm font-medium tracking-auth-social text-auth-ink">
                         Username
@@ -245,7 +245,7 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
                       </div>
                     </div>
 
-                    {/* 2. Email Field */}
+                    {}
                     <div className="flex flex-col gap-[5px]">
                       <label htmlFor="signup-email" className="text-sm font-medium tracking-auth-social text-auth-ink">
                         Email
@@ -268,7 +268,7 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
                       </div>
                     </div>
 
-                    {/* 3. Create Password Field */}
+                    {}
                     <div className="flex flex-col gap-[5px]">
                       <label htmlFor="signup-password" className="text-sm font-medium tracking-auth-social text-auth-ink">
                         Create password
@@ -301,7 +301,7 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
                       </div>
                     </div>
 
-                    {/* 4. Confirm Password Field */}
+                    {}
                     <div className="flex flex-col gap-[5px]">
                       <label htmlFor="signup-confirm-password" className="text-sm font-medium tracking-auth-social text-auth-ink">
                         Confirm your password
@@ -332,9 +332,9 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
                     </div>
                   </div>
 
-                  {/* Frame 1410130423: Checkbox & Submit Button */}
+                  {}
                   <div className="flex flex-col gap-[clamp(8px,1.2vh,12px)] mt-[clamp(6px,1vh,12px)]">
-                    {/* 5. Terms of Use & Privacy Checkbox */}
+                    {}
                     <div
                       className="flex items-center gap-2 select-none cursor-pointer"
                       onClick={() => setAgreeTerms(!agreeTerms)}
@@ -365,7 +365,7 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
 
                     {notice && <p role="alert" className="text-sm text-auth-error">{notice}</p>}
                     {invite && <p id="signup-email-note" className="text-sm text-auth-muted">Invited as {invite.role}. The email comes from your invitation.</p>}
-                    {/* 6. Primary Button: Sign Up */}
+                    {}
                     <button type="submit" disabled={pending} aria-busy={pending} className="flex h-12 w-full items-center justify-center rounded-xl bg-auth-button text-auth-btn font-bold text-white cursor-pointer transition-all duration-200 hover:bg-auth-pure active:scale-99 disabled:opacity-70" id="signup-submit-btn">
                       {pending ? 'Joining…' : invite ? 'Accept invitation' : 'Sign Up'}
                     </button>
@@ -375,12 +375,12 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
             </>
           )}
 
-          {/* ==========================================================================
-              VIEW 2: EMAIL VERIFICATION FALLBACK (design preview only)
-              ========================================================================== */}
+          {
+
+}
           {view === 'verify' && (
             <div className="flex w-full max-w-auth-verify flex-col items-center gap-[clamp(20px,3vh,32px)] m-auto">
-              {/* Header: Frame 128 (Badge + Title + Subtitle) */}
+              {}
               <header className="flex flex-col items-center text-center gap-3.5">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-auth-button">
                   <Image
@@ -397,7 +397,7 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
                 </p>
               </header>
 
-              {/* Truthful fallback: no code-entry step exists in invitation-based auth. */}
+              {}
               <Link href="/login" className="flex h-12 w-full max-w-auth-form items-center justify-center rounded-xl bg-auth-button text-auth-btn font-bold text-white cursor-pointer no-underline transition-all duration-200 hover:bg-auth-pure" id="back-to-login-btn">
                 Back to login
               </Link>

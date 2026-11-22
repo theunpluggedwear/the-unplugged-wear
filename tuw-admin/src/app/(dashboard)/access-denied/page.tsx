@@ -2,8 +2,8 @@ export const instant = false;
 import Link from 'next/link';
 import DashboardShell from '@/components/layout/DashboardShell';
 
-// Shown when a signed-in staff member opens a page their role does not
-// allow (session.requireStaff). The guard on every action still applies.
+
+
 const LABELS: Record<string, string> = {
   'user.manage': 'manage the team',
   'role.manage': 'manage roles',

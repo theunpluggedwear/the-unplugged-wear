@@ -11,13 +11,13 @@ export interface StepperProps {
   onChange: (value: number) => void;
   ariaLabel?: string;
   disabled?: boolean;
-  /** Opt-in click-to-type exact value (bulk corrections). Default false. */
+  
   editableValue?: boolean;
 }
 
-// Numeric quick-stepper (PE3): minus/value/plus in a 40px bordered control
-// matching the form family. Buttons are natively keyboard-operable; the
-// value display is tabular so digits never jitter while stepping.
+
+
+
 export default function Stepper({
   value,
   min = 0,
@@ -33,8 +33,8 @@ export default function Stepper({
     if (max !== undefined && n > max) return max;
     return n;
   };
-  // Click-to-type draft (ED1): opened from the value display, committed on
-  // Enter/blur (clamped), reverted on Escape or invalid input.
+  
+  
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState('');
   const startEdit = () => {
@@ -90,7 +90,7 @@ export default function Stepper({
           type="number"
           aria-label={`${ariaLabel} (type exact value, Enter to confirm, Escape to cancel)`}
           className="tuw-tabular-nums tuw-no-spinner"
-          // eslint-disable-next-line jsx-a11y/no-autofocus
+          
           autoFocus
           value={draft}
           min={min}
@@ -108,8 +108,8 @@ export default function Stepper({
             }
           }}
           style={{
-            // Shared 44×24 slot with the resting span below (border-box both)
-            // so entering edit mode never moves the stepper buttons.
+            
+            
             width: 44,
             height: 24,
             boxSizing: 'border-box',
@@ -153,8 +153,8 @@ export default function Stepper({
           ...(editableValue
             ? {
                 cursor: 'text',
-                // Transparent border reserves the input's purple-edge space so
-                // the shared 44×24 slot never shifts between modes.
+                
+                
                 border: '1px solid transparent',
                 borderRadius: 6,
                 width: 44,

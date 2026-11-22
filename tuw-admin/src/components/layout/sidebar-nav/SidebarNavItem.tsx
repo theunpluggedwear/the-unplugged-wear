@@ -27,13 +27,13 @@ interface SidebarNavItemProps {
   variant?: 'branch' | 'footer' | 'danger';
 }
 
-/**
- * Single sidebar navigation row — the reusable source for every nav row.
- * Owns active-card, hover, collapsed, and badge treatments per variant:
- * - branch: 13.5px rows with tree stems, wash/white-card actives.
- * - footer: 14px rows (settings/support black-card actives, purple hover).
- * - danger: logout row (error hover, never active).
- */
+
+
+
+
+
+
+
 export default function SidebarNavItem({ item, active, isCollapsed, variant = 'branch' }: SidebarNavItemProps) {
   const ItemIcon = item.icon;
   const iconSize = variant === 'branch' ? 17 : 18;
@@ -44,7 +44,7 @@ export default function SidebarNavItem({ item, active, isCollapsed, variant = 'b
       <Link
         href={item.href}
         onClick={(event) => {
-          // Log out = revoke this browser's session, then go to the login page.
+          
           event.preventDefault();
           void logoutAction({}).finally(() => {
             router.push(item.href);

@@ -8,7 +8,7 @@ export interface SwitchProps {
   label?: string;
   description?: string;
   disabled?: boolean;
-  /** Accessible name for label-less uses (the track carries role="switch"). */
+  
   ariaLabel?: string;
 }
 

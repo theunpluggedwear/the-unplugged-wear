@@ -4,9 +4,9 @@ import * as returns from '@tuw/heart/modules/returns';
 import { returnSchemas as s } from '@tuw/heart/modules/returns';
 import { guards } from './session';
 
-// Staff returns screens (TL-BE-10). Everyone with return.view reads; only
-// return.manage decides, restocks or refunds (warehouse/support can look).
-// Every call re-checks the transition rules in the service.
+
+
+
 
 export const listReturnsAction = guards.action({ permission: 'return.view', input: s.adminList }, async ({ input }) => returns.adminListReturns(input));
 

@@ -18,10 +18,10 @@ interface SidebarNavGroupProps {
   children: React.ReactNode;
 }
 
-/**
- * One accordion group: header button (icon + label + chevron), smooth
- * grid-rows expand wrapper, and the stem-hooked tree container.
- */
+
+
+
+
 export default function SidebarNavGroup({
   groupKey,
   label,

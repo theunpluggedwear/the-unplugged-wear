@@ -6,8 +6,8 @@ import { authSchemas } from '@tuw/heart/modules/auth';
 import { safeNext } from '@tuw/heart/next/session';
 import { guards, session } from './session';
 
-// Admin auth + team actions (server-actions skill). Sign-in is staff only;
-// team management needs the `user.manage` permission (admin role).
+
+
 
 export const loginAction = guards.action({ access: 'public', input: authSchemas.login }, async ({ input }) => {
   const tokens = await auth.login({ email: input.email, password: input.password, app: 'admin' }, await session.requestMeta());
@@ -38,7 +38,7 @@ export const logoutAction = guards.action({ access: 'public', input: authSchemas
   return { done: true };
 });
 
-// ------------------------------------------------------------------- team
+
 
 export const listTeamAction = guards.action({ permission: 'user.manage', input: authSchemas.forgot.partial() }, async () => auth.listStaff());
 

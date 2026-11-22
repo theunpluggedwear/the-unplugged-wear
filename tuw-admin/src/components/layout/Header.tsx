@@ -37,7 +37,7 @@ export default function Header({
   const [showNotifications, setShowNotifications] = useState(false);
   const notifAnim = usePopoverAnimation(showNotifications, () => setShowNotifications(false));
 
-  // Keyboard shortcut Ctrl+K / Cmd+K and Escape
+  
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -57,7 +57,7 @@ export default function Header({
     router.push(href);
   };
 
-  // Ops feed (N3): real inventory alerts plus demo order/support items.
+  
   const alerts = useStaffAlerts(showNotifications);
   const notificationItems = React.useMemo(
     () => [...alerts.items, ...buildNotifications({ orders, supportTickets })],
@@ -67,7 +67,7 @@ export default function Header({
 
   return (
     <>
-      {/* Simulated Service Error Alert Banner when error scenario is selected */}
+      {}
       {simulatedError && (
         <div
           style={{
@@ -106,7 +106,7 @@ export default function Header({
         </div>
       )}
 
-      {/* Main Top Header */}
+      {}
       <header className="topBar">
         <div className="topBarLeft">
           <button
@@ -120,10 +120,10 @@ export default function Header({
           <h1 className="pageTitle">{pageTitle}</h1>
         </div>
 
-        {/* Actions & Profile */}
+        {}
         <div className="topBarRight">
           <div className="actionIcons">
-            {/* Search Trigger Button beside Notification */}
+            {}
             <button
               type="button"
               className="searchTriggerBtn"
@@ -134,7 +134,7 @@ export default function Header({
               <Search size={18} />
             </button>
 
-            {/* Notification Bell */}
+            {}
             <div style={{ position: 'relative' }}>
               <button
                 type="button"
@@ -179,7 +179,7 @@ export default function Header({
             </div>
           </div>
 
-          {/* User Portrait with Role Label */}
+          {}
           <div className="userProfile" title={`Logged in as ${activeRole}`}>
             <div className="avatarCodeWrapper">
               <svg
@@ -214,7 +214,7 @@ export default function Header({
         </div>
       </header>
 
-      {/* Spotlight Search Modal (S5): island dialog, overlay untouched */}
+      {}
       {isSearchOpen && (
         <div
           className="commandPaletteOverlay"

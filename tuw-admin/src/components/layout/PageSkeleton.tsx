@@ -1,9 +1,9 @@
 import { Skeleton } from '@/components/ui';
 
-// Server-safe Suspense fallback for dashboard routes. It mirrors the shell
-// dimensions so navigation keeps the sidebar/header footprint while the
-// screen's data streams in, without rendering the client DashboardShell
-// (Sidebar/Header use usePathname and cannot appear inside a fallback).
+
+
+
+
 export default function PageSkeleton({ pageTitle }: { pageTitle: string }) {
   return (
     <div className="relative flex min-h-screen w-full items-stretch bg-canvas font-sans text-primary">

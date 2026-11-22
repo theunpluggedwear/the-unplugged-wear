@@ -2,7 +2,7 @@ import type { OrderStatus } from '@tuw/heart/modules/orders';
 
 export type ProductGender = 'Female' | 'Male' | 'Unisex' | 'Kids' | 'Boy' | 'Girl';
 
-/** One preserved workbook row. Mirrors product_source_rows. */
+
 export interface ProductSourceRow {
   sourceSerialNo?: number;
   sourceRowNo: number;
@@ -13,29 +13,29 @@ export interface ProductItem {
   id: string;
   name: string;
   slug: string;
-  /** Category names are data, not a hard-coded enum — imports can add them. */
+  
   category: string;
-  price: number; // in INR (or formatted display)
+  price: number; 
   compareAtPrice?: number;
-  /** Pricing anchor (R1). Derived cells = basePrice + Σ priceAdjustments;
-   * absent means `price` itself is the anchor (simple products). Mirrors
-   * products.base_price (DOC/backend/04-Catalog.md). */
+  
+
+
   basePrice?: number;
-  /** Additive per-value upcharges (R1), keyed "Attribute:Value" (e.g.
-   * "Size:XL"). Absent/0 = no effect; v1 allows upcharges only. Mirrors
-   * product_attribute_link_values.price_adjustment. */
+  
+
+
   priceAdjustments?: Record<string, number>;
   stock: number;
-  /** Partner prints to order: stock numbers do not apply (database products). */
+  
   madeToOrder?: boolean;
-  /** Sizes are priced differently, so the list shows "From". */
+  
   priceSpread?: boolean;
-  /** Row version for stale-edit protection. */
+  
   updatedAt?: string;
   exchangePolicy?: 'defects_only' | 'exchangeable' | 'none';
-  /** At or below this many units the product counts as low. */
+  
   lowStockAt?: number;
-  /** This product's own level; empty uses the store default. */
+  
   lowStockThreshold?: number;
   productKind?: 'physical' | 'gift_card';
   publicationStatus: 'published' | 'draft' | 'archived';
@@ -44,61 +44,61 @@ export interface ProductItem {
   sizes: string[];
   partner: 'Qikink Direct API' | 'Printrove Hub' | 'Custom Atelier';
   soldCount: number;
-  /** Ordered gallery URLs. Index 0 is the cover (hero); reorder or
-   * Set Cover in the editor. Never optional — empty array means no image. */
+  
+
   images: string[];
   rating: number;
-  /** Explicit per-variant inventory. Optional: absent means synthesize from
-   * colors/sizes/price/stock (see resolveVariants) — every existing fixture
-   * stays valid, and the future API returns explicit arrays. */
+  
+
+
   variants?: ProductVariant[];
-  /** Admin attribute drafts (names, values, display types, swatch colors).
-   * Optional: absent means the Color×Size builtins (see resolveVariants). */
+  
+
   attributes?: ProductAttribute[];
-  // Apparel metadata (all optional — existing fixtures stay valid)
+  
   fabricGsm?: string;
   cut?: string;
   modelDims?: string;
   care?: string;
-  // Catalog scalars (Y1 — all optional; every existing fixture stays valid).
-  // Single-valued import columns live here; multi-valued ones live in
-  // attributes[] (see ProductAttribute). REST: same names on the API.
+  
+  
+  
   styleCode?: string;
-  /** Internal workbook S.No — display/reference only, never the identity. */
+  
   internalSerialNo?: number;
-  /** Deterministic workbook group key; re-import identity. */
+  
   sourceGroupKey?: string;
   weight?: string;
   shippingWeight?: string;
   dimensions?: string;
   gender?: ProductGender;
   taxRate?: number;
-  /** HSN/SAC classification; admin/checkout only, never storefront copy. */
+  
   hsnCode?: string;
-  /** Preserved workbook rows that assembled this product. */
+  
   sourceRows?: ProductSourceRow[];
-  /** Linked measuring set (size-chart manager). Optional — absent means
-   * the legacy hardcoded guide. */
+  
+
   sizeChartId?: string;
-  /** Scheduled discounts (P1d): percent/fixed with window + kill switch.
-   * Optional — absent means none. Mirrors product_discounts intent. */
+  
+
   discounts?: ProductDiscount[];
   monogram?: { enabled: boolean; maxChars: number; upcharge: number };
-  /** Gallery presentation (P1a): layout + ratio + visibility for the PDP
-   * stage. Optional — absent means the drawer defaults (carousel/4:3/on). */
+  
+
   photoSettings?: PhotoSettings;
 }
 
-/** Per-product gallery presentation. Mirrors the DB photo_settings intent
- * (see DOC/backend/04-Catalog.md) in drawer-draft shape. */
+
+
 export interface PhotoSettings {
   layout: 'grid' | 'carousel' | 'spotlight';
   ratio: '1:1' | '4:3' | '16:9';
   showPhotos: boolean;
 }
 
-/** Scheduled product discount (P1d draft shape): percent/fixed with a
- * window and kill switch. Dates are ISO strings in the draft. */
+
+
 export interface ProductDiscount {
   id: string;
   discountType: 'percent' | 'fixed';
@@ -108,45 +108,45 @@ export interface ProductDiscount {
   isActive: boolean;
 }
 
-/** Per-size/color inventory unit. Prices follow ProductItem.price convention
- * (floats — matches the product domain; AGENTS minor-unit tension recorded
- * for later reconciliation, not silently converted). */
+
+
+
 export interface ProductVariant {
   id: string;
   color: string;
   size: string;
   sku: string;
-  /** Sorted axis-value signature; unique per product in the DB. */
+  
   variantKey?: string;
-  /** Stock when the editor opened; the save applies only the change from it. */
+  
   loadedStock?: number;
   price: number;
-  /** Explicit cell override (R1): true pins this price through recomputes
-   * until reset. Absent = derived pipeline value. Mirrors
-   * product_variants.price_overridden (DOC/backend/04-Catalog.md). */
+  
+
+
   priceOverridden?: boolean;
   stock: number;
-  /** Row-level shipping overrides; absent falls back to product defaults. */
+  
   weight?: string;
   shippingWeight?: string;
   dimensions?: string;
-  /** Workbook S.No of the row that generated this variant. */
+  
   sourceSerialNo?: number;
 }
 
-/** Admin-defined product attribute (AX3). Color + Size ship builtin;
- * customs append per product. displayType decides the storefront rendering;
- * swatchHex maps value → PDP dot color (unset values fall back to neutral).
- * REST: GET/PUT /products/:id/attributes → ProductAttribute[]. */
+
+
+
+
 export interface ProductAttribute {
   name: string;
   values: string[];
   builtin: boolean;
   displayType: 'pill' | 'swatch' | 'radio';
   swatchHex: Record<string, string>;
-  /** Library link (N1a): definition-level single record. Values stay
-   * strings (spelling may repeat); display/hex write through to the
-   * library at N1b. Visibility lives on the library record (global). */
+  
+
+
   libraryId?: string;
 }
 
@@ -175,7 +175,7 @@ export interface OrderItem {
   paidAmount: number;
   refundedAmount: number;
   paymentStatus: PaymentStatus;
-  // Field name retained for fixture compatibility; values use the SQL order-status vocabulary.
+  
   fulfillmentStatus: OrderStatus;
   paymentMethod: string;
   carrier?: string;
@@ -196,8 +196,8 @@ export interface ShipmentItem {
   events: { time: string; location: string; description: string }[];
 }
 
-/** Abandoned cart (Phase-2 abandonment): idle-cart snapshot + recovery
- * pipeline. Exactly-once reminder per cart (remindedAt set once). */
+
+
 export interface AbandonedCart {
   id: string;
   cartId: string;
@@ -209,8 +209,8 @@ export interface AbandonedCart {
   status: 'detected' | 'reminded' | 'converted' | 'recovered';
 }
 
-/** Storefront coupon (Phase-2 discounts): code-unique, percent/fixed with
- * caps, window, kill switch. Checkout validates; this screen governs. */
+
+
 export interface DiscountCode {
   id: string;
   code: string;
@@ -278,10 +278,10 @@ export interface CollectionItem {
   name: string;
   slug: string;
   season: string;
-  /** Ordered product links — the single source of truth for count + content. */
+  
   productIds: string[];
   visibility: 'published' | 'draft' | 'scheduled';
-  /** Drop date (required when scheduled). */
+  
   publishedAt?: string;
   updatedAt: string;
   description: string;
@@ -312,12 +312,12 @@ export interface TeamMember {
   avatarBg: string;
 }
 
-// -------------------------------------------------------------
-// BASELINE DETERMINISTIC FIXTURES
-// -------------------------------------------------------------
 
-/** Builtin Placements attribute carried by demo products. The library owns
- * the allowed values; each product keeps only its selected subset. */
+
+
+
+
+
 const placementAttribute = (values: string[]): ProductAttribute => ({
   name: 'Placements',
   values,
@@ -336,9 +336,9 @@ export const initialProducts: ProductItem[] = [
     price: 48.0,
     compareAtPrice: 58.0,
     basePrice: 48.0,
-    // Ladder demo data (R1): additive per-value upcharges — Washed Olive +4,
-    // XL +6 (combo cells +10). Lowest cell stays 48.0, so the list reads
-    // "From ₹48.00"; the v-shaped spread proves derivation without edits.
+    
+    
+    
     priceAdjustments: { 'Color:Washed Olive': 4, 'Size:XL': 6 },
     stock: 42,
     publicationStatus: 'published',
@@ -1163,9 +1163,9 @@ export const initialReturns: ReturnItem[] = [
   },
 ];
 
-/** Stock ledger row (P1b demo seam): signed delta + reason + balance
- * snapshot. The seam appends admin_adjustment rows whenever a save
- * changes variant stock, so history stays truthful after edits. */
+
+
+
 export interface StockMovement {
   id: string;
   productId: string;
@@ -1220,9 +1220,9 @@ export const initialStockMovements: StockMovement[] = [
   },
 ];
 
-/** Storefront search demand (P1c demo seed): what shoppers typed and how
- * often it returned nothing. Static fixture — nothing in demo writes
- * these; live tracking swaps the import with zero layout change. */
+
+
+
 export interface SearchTerm {
   term: string;
   searches: number;
@@ -1240,10 +1240,10 @@ export const initialSearchTerms: SearchTerm[] = [
   { term: 'kurta palazzo set', searches: 288, zeroResults: 288 },
 ];
 
-/** Garment measuring sets (size-chart manager): sparse per-row measures —
- * columns vary by garment (hoodies need sleeve, pants need waist/hip),
- * which is why rows are maps, not fixed columns (see file 04 jsonb note).
- * Transcribed from the storefront Fit & Sizing Guide. */
+
+
+
+
 export interface SizeChartRow {
   size: string;
   measures: Record<string, number>;
@@ -1255,18 +1255,18 @@ export interface SizeChart {
 }
 
 
-/** Global attribute library (settings manager): starter definitions products
- * copy values from. Copy semantics — drafts diverge after copy (documented).
- * Disabled attributes hide from the drawer picker but keep their data. */
+
+
+
 export interface LibraryAttribute {
   id: string;
   name: string;
   values: string[];
   displayType: 'pill' | 'swatch' | 'radio';
   enabled: boolean;
-  /** Global surfaces (X1a): applies to every product using this definition.
-   * pdp = shopper choices; checkout = money-affecting; admin = internal ops.
-   * At least one stays on — the UI refuses an attribute visible nowhere. */
+  
+
+
   showOnPdp: boolean;
   showOnCheckout: boolean;
   showOnAdmin: boolean;
@@ -1646,5 +1646,5 @@ export const initialTeam: TeamMember[] = [
   },
 ];
 
-// Store settings moved to the database (TL-BE-04: modules/settings).
+
 

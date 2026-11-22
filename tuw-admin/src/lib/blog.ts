@@ -1,9 +1,9 @@
-// Pure blog model helpers — no React, no UI, no storage.
-//
-// The admin demo mirrors the final PostgreSQL shape (006-cms.sql): one
-// primary category, one primary author, many tags, a versioned Tiptap/
-// ProseMirror JSON document, immutable revision snapshots, retired slugs
-// and an inline-media usage ledger. No HTML string is ever stored.
+
+
+
+
+
+
 
 export type BlogStatus = 'draft' | 'scheduled' | 'published' | 'archived';
 
@@ -18,7 +18,7 @@ export interface BlogCategory {
 
 export interface BlogAuthor {
   id: string;
-  /** Optional staff link; guest authors have none. */
+  
   userId?: string;
   name: string;
   slug: string;
@@ -85,7 +85,7 @@ export type BlogBlockNode =
     }
   | { type: 'horizontalRule' };
 
-/** Ordered, versioned rich-text document. This is the only editable body. */
+
 export type BlogContent = BlogBlockNode[];
 
 export interface BlogPost {
@@ -100,9 +100,9 @@ export interface BlogPost {
   ogMediaId?: string;
   content: BlogContent;
   contentSchemaVersion: 1;
-  /** Derived on save from the validated document. */
+  
   contentText: string;
-  /** Derived on save from `contentText`. */
+  
   readingTimeMinutes: number;
   status: BlogStatus;
   isFeatured: boolean;
@@ -167,7 +167,7 @@ const ALLOWED_STATUS = new Set<BlogStatus>([
   'archived',
 ]);
 
-/** URL slug from a display title: lowercase, diacritics stripped, dashes. */
+
 export function slugify(input: string): string {
   return input
     .toLowerCase()
@@ -210,7 +210,7 @@ function listItemText(items: BlogListItem[] | undefined): string {
   return items.map((item) => inlineText(item.content)).join(' ');
 }
 
-/** Plain text for search/reading time. Image alt/caption are searchable too. */
+
 export function extractBlogText(content: BlogContent): string {
   if (!Array.isArray(content)) return '';
   return content
@@ -246,7 +246,7 @@ export function blogWordCount(contentText: string): number {
   return text.split(/\s+/).length;
 }
 
-/** 200 words/minute; 0 for an empty document, 1 for any readable draft. */
+
 export function readingTimeMinutes(contentText: string): number {
   const words = blogWordCount(contentText);
   if (words === 0) return 0;
@@ -309,11 +309,11 @@ function normalizeListItems(value: unknown): BlogListItem[] | undefined {
   return items.length > 0 ? items : undefined;
 }
 
-/**
- * Tiptap JSON can carry unknown node shapes from extensions; the demo writer
- * accepts only the allowlisted document contract, so malformed/foreign nodes
- * are dropped rather than persisted.
- */
+
+
+
+
+
 export function normalizeBlogContent(value: unknown): BlogContent {
   if (!Array.isArray(value)) return [];
   const content: BlogContent = [];
@@ -390,11 +390,11 @@ function trimOrNull(value: string | undefined, max: number): string | undefined 
   return trimmed.slice(0, max);
 }
 
-/**
- * Single validation/dernormalization seam for the demo writer. The state
- * manager and the editor both call this, so form validation and persistence
- * can never drift.
- */
+
+
+
+
+
 export function validateBlogDraft(
   input: BlogDraft,
   context: {

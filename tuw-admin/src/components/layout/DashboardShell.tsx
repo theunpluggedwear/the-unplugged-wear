@@ -17,9 +17,9 @@ export default function DashboardShell({
   children,
   pageTitle = 'Dashboard',
 }: DashboardShellProps) {
-  // Hydration-safe: the module cache is false on both server and first client render
-  // (identical output → no SSR mismatch); stored preference applies client-only below.
-  // Client-side navigations reuse the live cache with no flash.
+  
+  
+  
   const [isCollapsed, setIsCollapsed] = useState(() => globalIsCollapsed);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -32,7 +32,7 @@ export default function DashboardShell({
         setIsCollapsed(val);
       }
     } catch {
-      // fallback: keep default
+      
     }
   }, []);
 
@@ -44,7 +44,7 @@ export default function DashboardShell({
         try {
           localStorage.setItem('tuw_admin_sidebar_collapsed', String(next));
         } catch {
-          // ignore
+          
         }
       }
       return next;
@@ -53,7 +53,7 @@ export default function DashboardShell({
 
   return (
     <div className="relative flex min-h-screen w-full items-stretch bg-canvas font-sans text-primary">
-      {/* Mobile Backdrop */}
+      {}
       {mobileMenuOpen && (
         <div
           onClick={() => setMobileMenuOpen(false)}
@@ -61,7 +61,7 @@ export default function DashboardShell({
         />
       )}
 
-      {/* Sidebar Navigation - Fixed, All-Time Visible */}
+      {}
       <Sidebar
         isCollapsed={isCollapsed}
         onToggleCollapse={handleToggleCollapse}
@@ -69,7 +69,7 @@ export default function DashboardShell({
         onCloseMobileMenu={() => setMobileMenuOpen(false)}
       />
 
-      {/* Main Container - Offsets cleanly for fixed sidebar */}
+      {}
       <div className={cn('flex min-h-screen min-w-0 flex-1 flex-col bg-canvas', isCollapsed ? 'ml-20' : 'ml-60 md:ml-55 lg:ml-60', 'max-md:ml-0')}>
         <Header
           pageTitle={pageTitle}
@@ -77,7 +77,7 @@ export default function DashboardShell({
           onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
         />
 
-        {/* Page Content Body */}
+        {}
         <main
           id="main-content"
           tabIndex={-1}

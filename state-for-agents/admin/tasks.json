@@ -8,10 +8,10 @@
     "reference": "Figma WmpPcdGcXerVgqNpgr6Q6S + production screenshots"
   },
   "summary": {
-    "total": 463,
+    "total": 464,
     "done": 407,
     "in_progress": 3,
-    "backlog": 53
+    "backlog": 54
   },
   "session": {
     "branch": "feat/dharmil-admin",
@@ -8151,7 +8151,7 @@
       "parent": null,
       "started": "2026-11-22",
       "finished": null,
-      "log": "Infrastructure done: scripts/check-comments.mjs, comment-ratchet.json, comment-audit.csv inventory, /delete-comment skill and ADR set. Batch 1 removed 57 dashboard component comments; three decision records moved to ADR 0006-0008. Audit CSV now preserves prior classifications on regeneration. Ratchet lowered 4273 -> 4213. Typecheck, build and lint pass.",
+      "log": "One-shot admin batch complete: 1472 comments removed from tuw-admin/src. Categories: 1116 Tautology, 58 Stale, 51 Excuse, 247 Decision Record. Decision records moved to ADR 0009-0013; grouped excuse issue TL-COMMENT-EXCUSE-ADMIN filed. Ratchet lowered. Other source areas remain.",
       "design_match": "n/a",
       "key_decisions": [
         "Ratchet must never increase.",
@@ -8178,6 +8178,26 @@
       "verified": true,
       "pushed": false,
       "follow_ups": []
+    },
+    {
+      "id": "TL-COMMENT-EXCUSE-ADMIN",
+      "title": "Resolve grouped excuse comments from admin source",
+      "status": "backlog",
+      "owner": "unassigned",
+      "parent": null,
+      "started": null,
+      "finished": null,
+      "log": "Comment audit found 51 admin comments justifying demo state, mock adapters, localStorage fixtures or deferred implementation. The comments were deleted; this task tracks the underlying code work grouped by theme.",
+      "design_match": "n/a",
+      "key_decisions": [],
+      "verified": false,
+      "pushed": false,
+      "follow_ups": [
+        "Remove remaining AdminStateProvider business data and toasts-only provider.",
+        "Remove demo notification entries from Header.",
+        "Delete mocks/fixtures.ts, blogFixtures.ts, variants.ts and Reset Demo after all screens are live.",
+        "Replace remaining mock/sandbox adapters only when credentials exist."
+      ]
     }
   ],
   "workflow": {

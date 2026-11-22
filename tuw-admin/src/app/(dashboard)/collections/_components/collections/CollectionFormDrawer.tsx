@@ -23,10 +23,10 @@ const visibilityOptions: SearchableSelectOption[] = [
 
 export interface CollectionFormDrawerProps {
   isOpen: boolean;
-  /** null = create mode; a collection = edit mode (prefilled). */
+  
   collection: CollectionItem | null;
   onClose: () => void;
-  /** Fired after a successful edit save with the collection id. */
+  
   onSaved?: (id: string) => void;
   collections: CollectionItem[];
   products: ProductItem[];
@@ -75,8 +75,8 @@ export default function CollectionFormDrawer({
     if (Object.keys(nextErrors).length > 0) return;
 
     const payload = draftToPayload(draft);
-    // A refused save keeps this drawer open with every input preserved —
-    // only a real success closes it.
+    
+    
     setSaving(true);
     const saved = await onSave(collection?.id, payload);
     setSaving(false);

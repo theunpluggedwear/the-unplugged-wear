@@ -5,10 +5,10 @@ import { contentSchemas as s, CMS_TAGS, FAQ_TAG } from '@tuw/heart/modules/conte
 import { guards } from './session';
 import { refreshStorefront } from './storefront-cache';
 
-// A write that changes what shoppers see asks the separately deployed
-// storefront to expire the matching tag. The refresh result is returned next
-// to the saved record (never silently discarded) so the UI can report a stale
-// storefront instead of claiming everything is up to date.
+
+
+
+
 const refresh = (tag: string) => refreshStorefront([tag]);
 
 export const listPagesAction = guards.action({ permission: 'content.manage', input: s.listPages }, ({ ctx }) =>

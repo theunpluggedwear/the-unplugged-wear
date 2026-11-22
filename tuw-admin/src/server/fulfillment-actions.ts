@@ -4,11 +4,11 @@ import * as fulfillment from '@tuw/heart/modules/fulfillment';
 import { fulfillmentSchemas as s } from '@tuw/heart/modules/fulfillment';
 import { guards } from './session';
 
-// Fulfilment board + shipments screens (TL-BE-11). Reading and acting both
-// need shipment.manage (warehouse and admin); every decision re-checks the
-// rules in the service, so a stale drawer cannot force a bad transition.
-// The Qikink adapter is real when keys exist and the simulator otherwise —
-// the footers say which one is talking.
+
+
+
+
+
 
 export const listFulfillmentAction = guards.action({ permission: 'shipment.manage', input: s.adminList }, ({ input }) =>
   fulfillment.adminListFulfillment(input));

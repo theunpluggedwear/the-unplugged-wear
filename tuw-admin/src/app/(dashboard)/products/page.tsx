@@ -4,8 +4,8 @@ import { session } from '@/server/session';
 import type { ProductItem } from '@/mocks/fixtures';
 import ProductsView from './_components/ProductsView';
 
-// Server Component: any staff member can read the catalog; each write checks
-// its own permission again in server/catalog-actions.ts.
+
+
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<{ open?: string }> }) {
   const claims = await session.requireStaff(undefined, '/products');
   const [products, categories, library, sizeCharts, params] = await Promise.all([adminListProducts(), adminListCategories(), listLibrary(), listSizeCharts(), searchParams]);

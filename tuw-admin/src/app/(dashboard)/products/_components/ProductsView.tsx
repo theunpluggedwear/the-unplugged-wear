@@ -20,8 +20,8 @@ import type { ImportProductGroup } from '@tuw/heart/modules/catalog/planner';
 
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'sub-' + String(p) });
 
-// SearchableSelect uses a real value for the selected row; keep the form's
-// empty-string "unspecified" state at the boundary only.
+
+
 const GENDER_OPTIONS = [
   { value: 'unspecified', label: 'Unspecified' },
   { value: 'Female', label: 'Female' },
@@ -55,8 +55,8 @@ const pairedFieldGrid: React.CSSProperties = {
   gap: 12,
 };
 
-// Flat bordered groups used inside PEDIT cards (attribute rows, size-chart
-// entries). Groups are not nested cards.
+
+
 const flatGroupStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
@@ -101,14 +101,14 @@ const attributeGroupLabelStyle: React.CSSProperties = {
   color: 'var(--tuw-text-secondary)',
 };
 
-// Per-product attribute draft (A1/AX2). Shape lives on ProductAttribute
-// (fixtures) so the seam persists it verbatim; see the REST note there.
-// swatch dots stay neutral until a value→hex map lands (recorded follow-up).
+
+
+
 
 export default function ProductsView({ initialProducts, categories, perms, storefrontOrigin, initialLibrary, initialSizeCharts, openId }: { initialProducts: ProductItem[]; categories: string[]; perms: string[]; storefrontOrigin: string; initialLibrary: LibraryAttribute[]; initialSizeCharts: SizeChart[]; openId?: string }) {
-  // Product photos with local paths are served by the storefront app.
+  
   const assetSrc = (url: string) => (url.startsWith('/') ? `${storefrontOrigin}${url}` : url);
-  // Everything here is real (TL-BE-05).
+  
   const { showToast } = useAdminState();
   const router = useRouter();
   const [products, setProducts] = useState<ProductItem[]>(initialProducts);
@@ -117,8 +117,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const [saving, setSaving] = useState(false);
   const [openingId, setOpeningId] = useState<string | null>(null);
 
-  // Attribute library: read-only here (/settings/attributes edits it). New
-  // names and values typed in a product are registered when the product saves.
+  
+  
   const [libraryAttributes, setLibraryAttributes] = useState<LibraryAttribute[]>(initialLibrary);
   const createLibraryAttribute = (name: string): string => {
     const id = `new:${name}`;
@@ -128,12 +128,12 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const addLibraryValue = (id: string, value: string) =>
     setLibraryAttributes((list) => list.map((a) => (a.id === id ? { ...a, values: [...a.values, value] } : a)));
 
-  // Size charts save themselves: structure at once, typed cells after a pause.
+  
   const [sizeCharts, setSizeCharts] = useState<SizeChart[]>(initialSizeCharts);
-  // Each pending autosave keeps its timer and its commit callback so the edit
-  // can be flushed when the drawer closes and cancelled on unmount.
+  
+  
   const chartTimers = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; commit: () => void }>());
-  // Cells hold what was typed; numbers are converted only when saving.
+  
   const cellValue = (v: number | string): number | string | null => {
     if (typeof v === 'number') return v;
     const text = v.trim();
@@ -146,7 +146,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     if (pending) clearTimeout(pending.timer);
     const commit = () => {
       chartTimers.current.delete(chart.id);
-      // A half-typed range waits until it is complete.
+      
       if (chart.rows.some((r) => Object.values(r.measures).some((v) => cellValue(v) === null))) return;
       const rows = chart.rows.map((r) => ({ ...r, measures: Object.fromEntries(Object.entries(r.measures).map(([k, v]) => [k, cellValue(v)!])) }));
       void saveSizeChartAction({ id: chart.id, name: chart.name, columns: chart.columns, rows }).then((r) => {
@@ -155,12 +155,12 @@ export default function ProductsView({ initialProducts, categories, perms, store
     };
     chartTimers.current.set(chart.id, { timer: setTimeout(commit, delay), commit });
   };
-  // Never let a debounced chart save fire after this screen is gone.
+  
   useEffect(() => () => {
     chartTimers.current.forEach(({ timer }) => clearTimeout(timer));
     chartTimers.current.clear();
   }, []);
-  // Closing the editor flushes valid pending cells instead of dropping them.
+  
   const flushChartTimers = () => {
     chartTimers.current.forEach(({ timer, commit }) => {
       clearTimeout(timer);
@@ -203,7 +203,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
       showToast({ type: 'warning', title: 'Duplicate Size', description: `"${trimmed}" is already in ${chart.name}.` });
       return false;
     }
-    // A new row starts with the chart's existing columns.
+    
     const blank = Object.fromEntries(chart.columns.map((k) => [k, 0]));
     return updateChart(chartId, (c) => ({ ...c, rows: [...c.rows, { size: trimmed, measures: blank }] }));
   };
@@ -225,11 +225,11 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const can = (permission: string) => perms.includes(permission);
   const libId = (name: string) => initialLibrary.find((l) => l.name.toLowerCase() === name.toLowerCase())?.id;
   const refused = (what: string) => showToast({ type: 'warning', title: 'Action Restricted', description: `You do not have permission to ${what}.` });
-  /** Honest save toast: says when the storefront could not be refreshed. */
+  
   const storefrontNote = (storefront: { ok: true } | { ok: false; reason: string }) =>
     storefront.ok ? 'The storefront now shows it.' : `${storefront.reason} Shoppers will see it within the hour.`;
 
-  // Real categories plus any name already on a product, and Uncategorized.
+  
   const categoryOptions = React.useMemo(() => {
     const names = [...new Set([...categories, ...products.map((product) => product.category), UNCATEGORIZED_CATEGORY])];
     return names.filter(Boolean).map((category) => ({ value: category, label: category }));
@@ -240,7 +240,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [view, setView] = useState<'grid' | 'table'>('grid');
-  // Row selection (table view only; cleared on view switch)
+  
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const changeView = (v: 'grid' | 'table') => {
     setView(v);
@@ -265,10 +265,10 @@ export default function ProductsView({ initialProducts, categories, perms, store
     }
   }, []);
 
-  // Drawers
+  
   const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
 
-  // Form State for Create/Edit
+  
   const [formName, setFormName] = useState('');
   const [formSlug, setFormSlug] = useState('');
   const [formCategory, setFormCategory] = useState<ProductItem['category']>(categories[0] ?? UNCATEGORIZED_CATEGORY);
@@ -276,7 +276,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const [formComparePrice, setFormComparePrice] = useState('');
   const [formCompareError, setFormCompareError] = useState<string | null>(null);
   const [formStock, setFormStock] = useState('30');
-  // Catalog scalars (Y1): single-valued fields, Input/picker-edited.
+  
   const [formStyleCode, setFormStyleCode] = useState('');
   const [formSerialNo, setFormSerialNo] = useState('');
   const [formWeight, setFormWeight] = useState('');
@@ -285,21 +285,21 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const [formGender, setFormGender] = useState<ProductGender | ''>('');
   const [formTax, setFormTax] = useState('');
   const [formHsn, setFormHsn] = useState('');
-  // Scheduled discounts draft (P1d): rows with type/value/window/switch.
+  
   const [formDiscounts, setFormDiscounts] = useState<ProductDiscount[]>([]);
-  // Per-product attributes (A1): the single source behind colors/sizes.
-  // REST: GET/PUT /products/:id/attributes → [{ name, values[], builtin }].
-  // Color + Size + Placements ship builtin (locked); customs append here.
-  // Placements is the only print-location source; card 4 has no duplicate
-  // select. The matrix still cross-products Color×Size until A2 generalizes it.
+  
+  
+  
+  
+  
   const [formAttributes, setFormAttributes] = useState<ProductAttribute[]>([]);
   const attrValues = (name: string) => formAttributes.find((a) => a.name === name)?.values ?? [];
   const colorValues = attrValues('Color');
   const sizeValues = attrValues('Size');
-  // Per-card value drafts + new-attribute draft (A1b chip editor).
+  
   const [attrDrafts, setAttrDrafts] = useState<Record<string, string>>({});
   const [newAttrName, setNewAttrName] = useState('');
-  // Size-chart drafts (specs manager): per-chart new-row size + new chart name.
+  
   const [chartRowDrafts, setChartRowDrafts] = useState<Record<string, string>>({});
   const [newChartName, setNewChartName] = useState('');
   const [formSizeChartId, setFormSizeChartId] = useState('');
@@ -311,21 +311,21 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const [formStatus, setFormStatus] = useState<ProductItem['publicationStatus']>('published');
   const [formDescription, setFormDescription] = useState('Pre-shrunk premium heavyweight combed cotton with reinforced seams.');
 
-  // Drawer create mode (PE5): blank-draft editing; the modal retires next.
+  
   const [isCreating, setIsCreating] = useState(false);
-  // Product-editor cards start collapsed; the state lives here so expanding a
-  // card survives tab switches and resets for each product.
+  
+  
   const [basicCardOpen, setBasicCardOpen] = useState(false);
-  // Pricing & stock (PEDIT card 2) is independently collapsible.
+  
   const [pricingCardOpen, setPricingCardOpen] = useState(false);
-  // Scheduled discounts (PEDIT card 3) is independently collapsible.
+  
   const [discountsCardOpen, setDiscountsCardOpen] = useState(false);
-  // Fulfillment & shipping (PEDIT card 4) is independently collapsible.
+  
   const [fulfillmentCardOpen, setFulfillmentCardOpen] = useState(false);
-  // Attributes & values (PEDIT card 5) is independently collapsible.
+  
   const [attributesCardOpen, setAttributesCardOpen] = useState(false);
-  // Clothing Specs cards follow the same independent, per-product collapse
-  // contract as the General cards.
+  
+  
   const [specsDisplayCardOpen, setSpecsDisplayCardOpen] = useState(false);
   const [specsClothingCardOpen, setSpecsClothingCardOpen] = useState(false);
   const [specsSizeChartCardOpen, setSpecsSizeChartCardOpen] = useState(false);
@@ -394,14 +394,14 @@ export default function ProductsView({ initialProducts, categories, perms, store
     setFormMonogramUpcharge('12.00');
   };
 
-  // Drawer tab + media draft state (elastic workspace; tabs grow per phase)
+  
   const [productTab, setProductTab] = useState<'general' | 'media' | 'variants' | 'specs' | 'partner'>('general');
-  // Gallery presentation draft (P1a): PDP stage layout + ratio + visibility.
+  
   const [formPhoto, setFormPhoto] = useState<PhotoSettings>({ layout: 'carousel', ratio: '4:3', showPhotos: true });
   const photoAspect = formPhoto.ratio === '1:1' ? '1 / 1' : formPhoto.ratio === '16:9' ? '16 / 9' : '4 / 3';
-  // Gallery draft: persisted URL list + session-only upload previews.
-  // Uploads preview instantly but never persist (blob URLs die on reload) —
-  // the save toast states this demo truth outright.
+  
+  
+  
   const [addImageUrl, setAddImageUrl] = useState('');
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -410,13 +410,13 @@ export default function ProductsView({ initialProducts, categories, perms, store
       try {
         URL.revokeObjectURL(u.url);
       } catch {
-        /* already revoked */
+        
       }
     });
   };
 
-  // Release every session-only upload preview currently held in the draft.
-  // The functional updater reads the latest list even across rapid exits.
+  
+  
   const releaseUploadPreviews = () => {
     setFormImages((prev) => {
       revokeUploads(prev.filter((im) => !im.persisted).map((im) => ({ url: im.src })));
@@ -424,9 +424,9 @@ export default function ProductsView({ initialProducts, categories, perms, store
     });
   };
 
-  // Unified asset list (MX2): persisted gallery URLs + session upload
-  // previews in one orderable list. Reorder/cover operate on the list;
-  // save splits it back (URLs persist, uploads drop with a toast).
+  
+  
+  
   const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
   const [formImages, setFormImages] = useState<
     Array<{ id: string; src: string; name: string; persisted: boolean }>
@@ -459,8 +459,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
     });
   };
 
-  // Stage + responsive dual-pane (MX2): carousel index, wide layout at
-  // >=700px container width, drag payload ref for HTML5 reorder.
+  
+  
   const [stageIndex, setStageIndex] = useState(0);
   const [mediaWide, setMediaWide] = useState(false);
   const [mediaCards, setMediaCards] = useState(false);
@@ -480,10 +480,10 @@ export default function ProductsView({ initialProducts, categories, perms, store
     return () => ro.disconnect();
   }, [productTab]);
 
-  // Elastic view ownership (W1) + expand-once (VPRICE-4): the first hop into
-  // Variants widens compact → matrix (never full) so the matrix fits; after
-  // that the width is the user's choice and tab switches never resize the
-  // drawer (no 520↔880 yoyo while hopping tabs).
+  
+  
+  
+  
   const [drawerView, setDrawerView] = useState<'compact' | 'matrix' | 'full'>('compact');
   const autoExpandedRef = useRef(false);
   const prevTab = useRef<'general' | 'media' | 'variants' | 'specs' | 'partner'>('general');
@@ -496,8 +496,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
     }
   }, [productTab, drawerView]);
 
-  // One exit path for the editor drawer: cancel, replace, save, delete and
-  // the Drawer's own onClose all release blob previews and pending autosaves.
+  
+  
   const closeEditor = () => {
     flushChartTimers();
     releaseUploadPreviews();
@@ -550,7 +550,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
       }
     });
   };
-  // Apparel draft state (specs tab; all optional — fixtures stay valid)
+  
   const [formFabricGsm, setFormFabricGsm] = useState('');
   const [formCut, setFormCut] = useState('');
   const [formModelDims, setFormModelDims] = useState('');
@@ -558,7 +558,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const [formMonogramEnabled, setFormMonogramEnabled] = useState(false);
   const [formMonogramChars, setFormMonogramChars] = useState('3');
   const [formMonogramUpcharge, setFormMonogramUpcharge] = useState('12.00');
-  // Section visibility (persisted demo pref; monogram visible by default)
+  
   const [visibleSections, setVisibleSections] = useState({ monogram: true });
   React.useEffect(() => {
     try {
@@ -568,30 +568,30 @@ export default function ProductsView({ initialProducts, categories, perms, store
         if (typeof saved.monogram === 'boolean') setVisibleSections({ monogram: saved.monogram });
       }
     } catch {
-      /* private mode — defaults stand */
+      
     }
   }, []);
   React.useEffect(() => {
     try {
       localStorage.setItem('tuw_admin_v2_product_editor', JSON.stringify(visibleSections));
     } catch {
-      /* private mode — session-only */
+      
     }
   }, [visibleSections]);
-  // Variant matrix draft (drawer only): General variant inputs mirror-write
-  // here so the matrix stays the single submit source.
+  
+  
   const [formVariants, setFormVariants] = useState<ProductVariant[]>([]);
-  // Per-value price adjustments draft (R1): "Attribute:Value" → additive
-  // upcharge (e.g. "Size:XL": 6). Sidecar only — cancelling the drawer
-  // discards it; submit prunes stale keys and persists what remains.
+  
+  
+  
   const [formAdjustments, setFormAdjustments] = useState<Record<string, number>>({});
-  // Raw strings while typing (VPRICE-2) so decimal keystrokes survive;
-  // commits are live, blur normalizes the display back to committed truth.
+  
+  
   const [adjustmentDrafts, setAdjustmentDrafts] = useState<Record<string, string>>({});
 
-  // Matrix price drafts (VPRICE-4): same raw-string pattern for the price
-  // column — text fields type decimals cleanly ("61." stays "61."), commits
-  // stay live (typing pins the cell), blur snaps back to the 2dp truth.
+  
+  
+  
   const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
 
   const setAdjustment = (key: string, amount: number | null) => {
@@ -603,8 +603,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
   };
 
   const writeAdjustment = (key: string, raw: string) => {
-    // Money keys only (VPRICE-4): the boxes are text fields now, so decimals
-    // type cleanly while letters and stray characters never enter state.
+    
+    
     if (!/^\d*\.?\d*$/.test(raw)) return;
     setAdjustmentDrafts((prev) => {
       const next = { ...prev };
@@ -618,7 +618,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     }
     const n = parseFloat(raw);
     if (Number.isFinite(n) && n > 0) setAdjustment(key, n);
-    // invalid or refused (≤ 0) — committed state untouched; blur snaps back
+    
   };
 
   const clearAdjustmentDraft = (key: string) => {
@@ -629,8 +629,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
     });
   };
 
-  // Price-cell draft clear (VPRICE-4): blur drops the raw string so the
-  // cell re-renders the committed 2dp value.
+  
+  
   const clearPriceDraft = (id: string) => {
     setPriceDrafts((prev) => {
       if (prev[id] === undefined) return prev;
@@ -640,12 +640,12 @@ export default function ProductsView({ initialProducts, categories, perms, store
     });
   };
 
-  // Base price write (R1): re-derives every unpinned cell from
-  // base + Σ adjustments; explicit overrides stay pinned. This replaces
-  // the old write-all that trampled per-cell overrides on every keystroke.
+  
+  
+  
   const writeBasePrice = (priceStr: string) => {
-    // Money keys only (VPRICE-4): the field is text now (clean decimals),
-    // so refuse anything that is not digits with at most one dot.
+    
+    
     if (!/^\d*\.?\d*$/.test(priceStr)) return;
     setFormPrice(priceStr);
     if (formCompareError) setFormCompareError(null);
@@ -678,7 +678,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
         sizes.forEach((size) => {
           const kept = byKey.get(`${color}|${size}`);
           if (kept) {
-            // Kept cells re-derive through the ladder unless pinned (R1).
+            
             out.push(
               kept.priceOverridden
                 ? kept
@@ -700,10 +700,10 @@ export default function ProductsView({ initialProducts, categories, perms, store
     });
   };
 
-  // Chip editor (A1b): one-by-one values, no comma parsing. Builtin
-  // Color/Size edits rebuild the matrix (kept cells keep stock; unpinned
-  // prices re-derive through the ladder);
-  // custom attributes store on the draft for A2's generalized matrix.
+  
+  
+  
+  
   const colorsSizesOf = (attrs: Array<{ name: string; values: string[] }>) => ({
     colors: attrs.find((a) => a.name === 'Color')?.values ?? [],
     sizes: attrs.find((a) => a.name === 'Size')?.values ?? [],
@@ -715,10 +715,10 @@ export default function ProductsView({ initialProducts, categories, perms, store
       setAttrDrafts((prev) => ({ ...prev, [name]: '' }));
     }
   };
-  // Core value commit (VALPICK): dup guard + append + conditional
-  // register-through + matrix rebuild. Picker and text input share it —
-  // one path, no drift. Existing library values are ASSIGNED, never
-  // re-registered (assign vs register — DOC/backend/04-Catalog.md).
+  
+  
+  
+  
   const commitAttrValue = (name: string, v: string): boolean => {
     const value = v.trim();
     if (!value) return false;
@@ -730,11 +730,11 @@ export default function ProductsView({ initialProducts, categories, perms, store
     }
     const next = formAttributes.map((a) => (a.name === name ? { ...a, values: [...a.values, value] } : a));
     setFormAttributes(next);
-    // Assign vs register: a value that already exists in the linked library
-    // row is a pure assignment — the card gains it, the library is
-    // untouched (calling the register seam on an existing spelling fired a
-    // false "Duplicate Value" on every picker click). Register-through
-    // fires only for genuinely new spellings.
+    
+    
+    
+    
+    
     if (attr.libraryId) {
       const lib = libraryAttributes.find((l) => l.id === attr.libraryId);
       const known = (lib?.values ?? []).some((x) => x.toLowerCase() === value.toLowerCase());
@@ -751,7 +751,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
       a.name === name ? { ...a, values: a.values.filter((x) => x !== value) } : a
     );
     setFormAttributes(next);
-    // Ladder hygiene (R1): a removed value takes its adjustment with it.
+    
     const pruned = pruneAdjustments(formAdjustments, next);
     setFormAdjustments(pruned.next);
     if (pruned.dropped.length > 0) {
@@ -773,8 +773,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
       showToast({ type: 'warning', title: 'Duplicate Attribute', description: `"${name}" already exists.` });
       return;
     }
-    // N1a auto-register: link when the library knows this name, else
-    // register it there first (disclosed) so one record always exists.
+    
+    
     const lib = libraryAttributes.find((l) => l.name.toLowerCase() === name.toLowerCase());
     const linkedId = lib?.id ?? createLibraryAttribute(name);
     if (!linkedId) return;
@@ -788,11 +788,11 @@ export default function ProductsView({ initialProducts, categories, perms, store
     setFormAttributes((prev) => prev.filter((a) => a.name !== name));
   };
 
-  // Copy from the global library (settings manager): missing values merge
-  // into the draft (new card when absent); drafts diverge after copy.
-  // Link a library attribute (N1a): adds a linked card carrying the
-  // library's current values (inheriting display type); already-linked
-  // attributes are skipped with an info toast. No copies, no merges.
+  
+  
+  
+  
+  
   const linkFromLibrary = (libId: string) => {
     const lib = libraryAttributes.find((a) => a.id === libId);
     if (!lib) return;
@@ -822,8 +822,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
     showToast({ type: 'success', title: 'Linked From Library', description: `"${lib.name}" linked with ${lib.values.length} values.` });
   };
 
-  // Scheduled discount rows (P1d): local composition, no new primitive.
-  // Kill switch flips isActive (reversible); trash removes the draft row.
+  
+  
   const addDiscount = () => {
     setFormDiscounts((prev) => [
       ...prev,
@@ -844,9 +844,9 @@ export default function ProductsView({ initialProducts, categories, perms, store
       prev.map((a) => (a.name === name ? { ...a, swatchHex: { ...a.swatchHex, [value]: hex } } : a))
     );
   };
-  // Shared attribute row (PEDIT card 5): flat bordered groups, value chips, and
-  // a read-only display type from the library. The library owns the showcase
-  // type; products only keep their own value list and swatch colours.
+  
+  
+  
   const libraryOf = (attr: ProductAttribute) =>
     libraryAttributes.find((l) => l.id === attr.libraryId) ??
     libraryAttributes.find((l) => l.name.toLowerCase() === attr.name.toLowerCase());
@@ -1022,12 +1022,12 @@ export default function ProductsView({ initialProducts, categories, perms, store
     );
   };
 
-  // The list is light (no variants); the full record loads when a product opens.
+  
   const openEditDrawer = async (summary: ProductItem) => {
     if (!can('product.update')) return refused('edit products');
     if (openingId) return;
-    // Leave create mode before the await: otherwise the create branch can run
-    // with isCreating still true while the product detail is loading.
+    
+    
     setIsCreating(false);
     setOpeningId(summary.id);
     try {
@@ -1046,19 +1046,19 @@ export default function ProductsView({ initialProducts, categories, perms, store
     }
   };
 
-  // Spotlight deep link (?open=<id>): open that product once on arrival.
+  
   const openedFromLink = useRef<string | null>(null);
   useEffect(() => {
     if (!openId || openedFromLink.current === openId) return;
     openedFromLink.current = openId;
     const summary = initialProducts.find((p) => p.id === openId);
     if (summary) void openEditDrawer(summary);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [openId]);
 
   const loadEditDrawer = (product: ProductItem) => {
-    // Replace any upload previews from the previous draft before the persisted
-    // gallery takes their place, so their object URLs are not orphaned.
+    
+    
     releaseUploadPreviews();
     setIsCreating(false);
     setEditingProduct(product);
@@ -1089,15 +1089,15 @@ export default function ProductsView({ initialProducts, categories, perms, store
     setFormMonogramChars(String(product.monogram?.maxChars ?? 3));
     setFormMonogramUpcharge(product.monogram ? product.monogram.upcharge.toFixed(2) : '12.00');
 
-    // Attribute draft (N1a link match) — built once: the ladder load below
-    // prunes adjustment keys against these values, and the drawer renders
-    // the same copy.
-    // Persisted rows may carry only overrides (for example a Placements
-    // attribute added to a fixture); Color, Size and Placements are always
-    // rebuilt from the product so the drawer never loses a builtin row.
+    
+    
+    
+    
+    
+    
     const savedAttributes: ProductAttribute[] = (product.attributes ?? []).map((a) => {
-      // N1a link: match persisted attrs to the library by name once, so
-      // every card carries its single-record id from here on.
+      
+      
       const lib = libraryAttributes.find((l) => l.name.toLowerCase() === a.name.toLowerCase());
       const copy = { ...a } as ProductAttribute & { visibleOn?: unknown };
       delete copy.visibleOn;
@@ -1128,9 +1128,9 @@ export default function ProductsView({ initialProducts, categories, perms, store
       ),
     ];
 
-    // Pricing ladder load (R1): sanitize the sidecar against these values;
-    // legacy cells whose price differs from the derived value become pinned
-    // overrides (their look is preserved — reset unpins them spotwise).
+    
+    
+    
     const basePrice = product.basePrice ?? product.price;
     const loadedAdjustments = pruneAdjustments(product.priceAdjustments, loadedAttributes).next;
     setFormAdjustments(loadedAdjustments);
@@ -1170,7 +1170,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     setFormDescription(product.description);
   };
 
-  /** Field errors from the server decide which tab the editor shows. */
+  
   const showSaveError = (error: { message: string; details: { field?: string }[] }) => {
     const fieldName = error.details[0]?.field ?? '';
     if (fieldName.startsWith('variants')) setProductTab('variants');
@@ -1183,8 +1183,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
     showToast({ type: 'warning', title: 'Not Saved', description: error.message });
   };
 
-  // Reset the in-flight flag even when a server call rejects, so one failed
-  // request can never leave a control stuck on "Saving…" or "Working…".
+  
+  
   const withGuard = async <T,>(
     setFlag: (value: boolean) => void,
     run: () => Promise<T>,
@@ -1267,7 +1267,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
           : undefined,
       }), 'Not Created');
       if (!created) return;
-      // A refused save keeps the drawer open with every input intact.
+      
       if (!created.ok) return showSaveError(created.error);
       setProducts((list) => [created.data.product as unknown as ProductItem, ...list]);
       showToast({ type: 'success', title: 'Product Created', description: `"${created.data.product.name}" was saved. ${created.data.product.publicationStatus === 'published' ? storefrontNote(created.data.storefront) : 'It stays hidden until published.'}` });
@@ -1288,10 +1288,10 @@ export default function ProductsView({ initialProducts, categories, perms, store
     const baseNum = roundPrice(
       !isNaN(parsedBase) && parsedBase >= 0 ? parsedBase : editingProduct.basePrice ?? editingProduct.price
     );
-    // The draft matrix is the submit source: colors/sizes/stock derive from
-    // it in the seam; prices re-derive through the ladder (R1:
-    // base + Σ adjustments, pinned cells stay), and the listed price is the
-    // lowest cell ("From ₹X"), materialized.
+    
+    
+    
+    
     const draftError = variantDraftError();
     if (draftError) {
       showToast({ type: 'warning', title: 'Check Variants', description: draftError });
@@ -1400,7 +1400,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  // Row selection helpers (header checkbox tri-states over the page)
+  
   const pageIds = paginatedProducts.map((p) => p.id);
   const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
   const somePageSelected = pageIds.some((id) => selectedIds.has(id));
@@ -1421,14 +1421,14 @@ export default function ProductsView({ initialProducts, categories, perms, store
     });
   };
 
-  // Matrix row patch (variants tab): single source stays the draft.
+  
   const updateVariant = (id: string, patch: Partial<ProductVariant>) => {
     setFormVariants((prev) => prev.map((v) => (v.id === id ? { ...v, ...patch } : v)));
   };
 
-  // Add / remove matrix rows (V1): new rows carry tmp- ids (same convention
-  // as rebuildMatrix fresh cells) with blank color/size rendered as inputs;
-  // touching color/size on a tmp- row regenerates its SKU.
+  
+  
+  
   const addVariant = () => {
     const basePrice = parseFloat(formPrice) || 0;
     setFormVariants((prev) => [
@@ -1454,7 +1454,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
           next.sku = next.color && next.size
             ? buildVariantSku(editingProduct?.id ?? 'PRD', known ? colors.indexOf(next.color) : colors.length, next.size)
             : '';
-          // Ladder (R1): typing a real color/size pulls its adjustments in.
+          
           if (!next.priceOverridden) {
             next.price = deriveVariantPrice(parseFloat(formPrice) || 0, formAdjustments, next.color, next.size);
           }
@@ -1467,8 +1467,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
     setFormVariants((prev) => prev.filter((v) => v.id !== id));
   };
 
-  // Save guard (V1): blank or duplicate color|size rows block the submit
-  // with a naming toast; all input is preserved (drawer stays open).
+  
+  
   const variantDraftError = (): string | null => {
     const seen = new Set<string>();
     for (const v of formVariants) {
@@ -1482,19 +1482,19 @@ export default function ProductsView({ initialProducts, categories, perms, store
     return null;
   };
 
-  // Ladder readout (R1): the lowest cell is the storefront "From" price.
+  
   const variantLowest = formVariants.length > 0 ? minFromPrice(formVariants) : null;
   const variantSpread = formVariants.length > 1 && new Set(formVariants.map((v) => v.price)).size > 1;
 
-  // Per-cell Σ adjustments (VPRICE-2): provenance chip + tooltip data.
+  
   const cellAdjustment = (color: string, size: string) =>
     sumAdjustments(formAdjustments, [
       { attr: 'Color', value: color },
       { attr: 'Size', value: size },
     ]);
 
-  // Tooltip copy for derived cells (VPRICE-3): names every contributing value
-  // upcharge so the +Δ chip explains itself without opening the editor.
+  
+  
   const cellPriceBreakdown = (color: string, size: string, effective: number) => {
     const base = parseFloat(formPrice) || 0;
     const parts: string[] = [];
@@ -1507,14 +1507,14 @@ export default function ProductsView({ initialProducts, categories, perms, store
       : `Base ₹${base.toFixed(2)}`;
   };
 
-  // CSV import pipeline (X1b): Final Listing workbooks re-saved as CSV.
-  // Parses the workbook title row, groups listing rows into products, and
-  // stages one draft per group (not one per row). Row errors preserve the
-  // file + error list; no valid row is mutated on rejection.
+  
+  
+  
+  
   const [importPreview, setImportPreview] = useState<{
     fileName: string;
     groups: ImportProductGroup[];
-    /** Exactly what the server import receives. */
+    
     listing: Record<string, unknown>[];
     errors: Array<{ row: number; message: string }>;
     hasCategoryColumn: boolean;
@@ -1574,9 +1574,9 @@ export default function ProductsView({ initialProducts, categories, perms, store
         return;
       }
 
-      // Workbook header is row 2 (row 1 is the sheet title). Find the first
-      // row that actually carries the canonical columns instead of assuming
-      // headers are row 1.
+      
+      
+      
       const headerRowIndex = grid.findIndex((cells) => {
         const normalized = cells.map((cell) => cell.trim().toLowerCase());
         return (
@@ -1614,8 +1614,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
       const cGender = col(['gender']);
       const cHsn = col(['hsn', 'hsn code', 'hsn/sac']);
       const cCategory = col(['category', 'product category']);
-      // The same planner the server import runs, so the preview cannot drift
-      // from what actually gets created.
+      
+      
       const sheetRows: number[] = [];
       const listing = grid.slice(headerRowIndex + 1).map((cells, i) => {
         sheetRows.push(headerRowIndex + i + 2);
@@ -1638,8 +1638,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
     reader.readAsText(file);
   };
 
-  // The server re-validates every row and creates drafts (import_jobs); the
-  // preview above is only a convenience.
+  
+  
   const applyImport = async () => {
     if (!importPreview || importPreview.groups.length === 0 || importing) return;
     if (!can('product.import')) return refused('import products');
@@ -1659,14 +1659,14 @@ export default function ProductsView({ initialProducts, categories, perms, store
     router.refresh();
   };
 
-  // Customer-view gallery slides: the ordered image list (persisted + previews).
+  
   const gallerySlides: Array<{ type: 'image'; src: string; alt: string }> = formImages.map((im) => ({
     type: 'image' as const,
     src: assetSrc(im.src),
     alt: formName || 'Product image',
   }));
 
-  // Bulk actions (table-view bar appears when rows are selected)
+  
   const clearSelection = () => setSelectedIds(new Set());
 
   const handleExportSelected = () => {
@@ -1759,7 +1759,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const outOfStockCount = products.filter((p) => !p.madeToOrder && p.stock === 0).length;
   const draftCount = products.filter((p) => p.publicationStatus === 'draft').length;
 
-  // KPI cards double as filters (shared by grid + table views)
+  
   const filtersClear = selectedCat === 'All' && publicationFilter === 'all' && stockFilter === 'all';
   const clearProductFilters = () => {
     setSelectedCat('All');
@@ -1778,7 +1778,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
       }
     };
 
-  // Media stage + asset panel blocks (MX2): defined once, arranged by width.
+  
   const stageIndexClamped = Math.min(stageIndex, Math.max(0, gallerySlides.length - 1));
   const stageHeader = (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -1816,7 +1816,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
             aspectRatio: photoAspect,
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {}
           <img src={s.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </button>
       ))}
@@ -1865,7 +1865,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
         <GripVertical size={14} />
       </span>
       <MediaFrame height={40} width={40} radius={8} style={{ flexShrink: 0 }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {}
         <img src={assetSrc(im.src)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </MediaFrame>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -1910,9 +1910,9 @@ export default function ProductsView({ initialProducts, categories, perms, store
       </UpliftSurface>
     </SurfaceCard>
   ));
-  // Card twin of assetRows for wide containers (MX4): the row's design DNA
-  // (1:1 thumb, name + URL, badge row, delete) in a 2-per-row grid. Drag
-  // anywhere on the card; same cover / preview / delete paths.
+  
+  
+  
   const assetCards = (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
       {formImages.map((im, idx) => (
@@ -1942,7 +1942,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
           style={{ alignItems: 'center', minWidth: 0 }}
         >
           <MediaFrame height={72} width={72} radius={8} style={{ flexShrink: 0 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {}
             <img src={assetSrc(im.src)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </MediaFrame>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -2049,8 +2049,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
       </div>
     </div>
   );
-  // Gallery presentation controls (P1a): layout toggle + ratio picker +
-  // visibility switch. The stage above reflects every choice live.
+  
+  
   const presentationSection = (
     <DrawerSection title="Presentation" titleGap={10}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -2187,7 +2187,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
         }
       />
 
-      {/* Stats Row */}
+      {}
       <div className={styles.statGrid}>
         <StatCard
           label="Total Products"
@@ -2251,11 +2251,11 @@ export default function ProductsView({ initialProducts, categories, perms, store
         />
       </div>
 
-      {/* Catalog Filter Bar & Grid */}
+      {}
       <ContentCard>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-            {/* Publication Filter Tabs */}
+            {}
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--tuw-text-secondary, #5D6772)', textTransform: 'uppercase' }}>
                 Status:
@@ -2338,7 +2338,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
         </div>
 
         {view === 'grid' ? (
-        /* Card Grid */
+        
         <div className={styles.cardGrid}>
           {filteredProducts.length === 0 ? (
             <div style={{ padding: '60px 16px', textAlign: 'center', color: 'var(--tuw-text-secondary, #5D6772)', gridColumn: '1 / -1' }}>
@@ -2433,7 +2433,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
           )}
         </div>
         ) : (
-        /* Table View */
+        
         <Table style={{ tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: 44 }} />
@@ -2541,8 +2541,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
                     {p.category}
                   </TableCell>
                   <TableCell className="tuw-tabular-nums" style={{ padding: '14px 16px', fontSize: 14, fontWeight: 600, color: 'var(--tuw-text-primary, #262626)', textAlign: 'right' }}>
-                    {/* "From" reads as a quiet label (VPRICE-3); the amount
-                        stays the loud part of the cell. */}
+                    {
+}
                     {p.priceSpread && (
                       <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--tuw-text-secondary, #5D6772)', marginRight: 4 }}>From</span>
                     )}
@@ -2602,7 +2602,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
         )}
       </ContentCard>
 
-      {/* Edit Product Drawer */}
+      {}
       <Drawer
         isOpen={Boolean(editingProduct) || isCreating}
         onClose={closeEditor}
@@ -3246,8 +3246,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
                 {formVariants.length} variants · {variantStockTotal(formVariants)} units in stock
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {/* Storefront "From" readout (VPRICE-3): its own quiet pill
-                    instead of a clause glued onto the counts sentence. */}
+                {
+}
                 {variantSpread && variantLowest !== null && (
                   <Badge
                     size="sm"
@@ -3263,8 +3263,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
                 </Button>
               </div>
             </div>
-            {/* Upcharges strip (VPRICE-4): moved up from General so the
-                ladder's inputs sit beside the matrix they feed. */}
+            {
+}
             <Disclosure
               title="Per-value price adjustments"
               subtitle="Value upcharges added on top of the base price."
@@ -3291,8 +3291,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
                       >
                         {attrName}
                       </div>
-                      {/* Two-column value grid (VPRICE-3): roughly halves the
-                          expanded height without losing the name → input rhythm. */}
+                      {
+}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 16, rowGap: 8 }}>
                         {attr.values.map((value) => {
                           const key = adjustmentKey(attrName, value);
@@ -3333,8 +3333,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
                   <TableHead style={{ padding: '12px 16px' }}>Color</TableHead>
                   <TableHead style={{ padding: '12px 16px' }}>Size</TableHead>
                   <TableHead style={{ padding: '12px 16px' }}>SKU</TableHead>
-                  {/* Right padding caps the label over the numbers' right edge
-                      (cell 16 + slot 56 + gap 8 + border 1 + pad 14 = 95). */}
+                  {
+}
                   <TableHead style={{ padding: '12px 95px 12px 16px', textAlign: 'right' }}>Price</TableHead>
                   <TableHead style={{ padding: '12px 16px' }}>Stock</TableHead>
                   <TableHead style={{ padding: '12px 16px', width: 48 }}><span className="sr-only">Actions</span></TableHead>
@@ -3348,7 +3348,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
                         <Input
                           aria-label="Variant color"
                           placeholder={v.color === '' ? 'Color' : undefined}
-                          // eslint-disable-next-line jsx-a11y/no-autofocus
+                          
                           autoFocus={v.color === '' && v.size === ''}
                           value={v.color}
                           onChange={(e) => touchVariant(v.id, { color: e.target.value })}
@@ -3389,24 +3389,24 @@ export default function ProductsView({ initialProducts, categories, perms, store
                             value={priceDrafts[v.id] !== undefined ? priceDrafts[v.id] : v.price.toFixed(2)}
                             onChange={(e) => {
                               const raw = e.target.value;
-                              // Money keys only (VPRICE-4): digits + one dot,
-                              // so intermediate states like "61." type cleanly.
+                              
+                              
                               if (!/^\d*\.?\d*$/.test(raw)) return;
                               setPriceDrafts((prev) => ({ ...prev, [v.id]: raw }));
                               const n = parseFloat(raw);
-                              // Typing pins the cell (R1): the price survives
-                              // base/attribute recomputes until reset.
+                              
+                              
                               if (!isNaN(n) && n >= 0) updateVariant(v.id, { price: roundPrice(n), priceOverridden: true });
                             }}
                             onBlur={() => clearPriceDraft(v.id)}
                             style={{ height: 36, textAlign: 'right' }}
                           />
                         </div>
-                        {/* Fixed annotation slot (VPRICE-3B): derived-Σ chip or
-                            pinned reset control, docked right of the input
-                            (early-version feel) — always reserved so every
-                            price input keeps the exact same width and the
-                            numbers line up down the column. */}
+                        {
+
+
+
+}
                         <div
                           style={{
                             width: 56,
@@ -3862,7 +3862,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
         )}
       </Drawer>
 
-      {/* CSV import preview (X1b): counts + row errors → stage drafts. */}
+      {}
       <Modal
         isOpen={importPreview !== null}
         onClose={() => setImportPreview(null)}

@@ -10,10 +10,10 @@ import { useAdminState } from '@/mocks/state';
 import { issueRefundAction, listRefundsAction, markRefundPaidAction, refundableOrderAction, rejectRefundAction } from '@/server/money-actions';
 import { MONO_ID_STYLE } from '@/lib/format';
 
-// Refunds from the database (TL-BE-09). Prepaid money goes back to its source
-// through the (demo) gateway at once; cash on delivery is paid out by staff
-// and finished with the bank UTR. The server refuses anything above what is
-// left, a second open payout, or a repeated click.
+
+
+
+
 
 type ListResult = { rows: RefundRow[]; total: number; stats: { completedPaise: number; completed: number; processing: number; rejected: number } };
 
@@ -37,7 +37,7 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
   const [pageSize, setPageSize] = useState(10);
   const [selected, setSelected] = useState<RefundRow | null>(null);
 
-  // Issue form. One key per opening, reused on retries: a double click makes one refund.
+  
   const [isIssueOpen, setIsIssueOpen] = useState(false);
   const [issueKey, setIssueKey] = useState('');
   const [orderNumber, setOrderNumber] = useState('');
@@ -50,7 +50,7 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Paying out a cash-on-delivery refund.
+  
   const [utr, setUtr] = useState('');
   const [rejectNote, setRejectNote] = useState('');
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -72,11 +72,11 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
     if (first.current) { first.current = false; return; }
     const t = setTimeout(() => void load(), searchTerm ? 300 : 0);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [searchTerm, statusFilter, currentPage, pageSize]);
   useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter]);
 
-  // Two Look up clicks can resolve out of order; only the newest answer wins.
+  
   const lookupRequest = useRef(0);
   const lookUp = async (num: string) => {
     if (!num.trim()) return;
@@ -97,7 +97,7 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
     }
   };
 
-  // Reset the busy flag even when a server call rejects.
+  
   const withBusy = async <T,>(run: () => Promise<T>, failureTitle: string): Promise<T | null> => {
     setBusy(true);
     try {
@@ -124,14 +124,14 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
     if (num) void lookUp(num);
   };
 
-  // Linked from Orders / Payments: open the form for that order once.
+  
   const openedFor = useRef<string | null>(null);
   useEffect(() => {
     if (openForOrder && openedFor.current !== openForOrder) {
       openedFor.current = openForOrder;
       openIssue(openForOrder);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [openForOrder]);
 
   const submitIssue = async (e: React.FormEvent) => {
@@ -146,7 +146,7 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
     }), 'Refund Failed');
     if (!result) return;
     if (!result.ok) {
-      // Keep everything typed; show what to fix.
+      
       setFormError(result.error.details[0]?.message ?? result.error.message);
       return;
     }
@@ -196,7 +196,7 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
       link.href = url;
       link.download = `tuw_refunds_${new Date().toISOString().slice(0, 10)}.csv`;
       link.click();
-      // Let the download start before releasing the blob URL.
+      
       setTimeout(() => URL.revokeObjectURL(url), 0);
     } catch {
       showToast({ type: 'warning', title: 'Export Failed', description: 'The request failed. Please try again.' });

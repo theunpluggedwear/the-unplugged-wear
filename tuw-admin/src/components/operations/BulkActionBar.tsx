@@ -11,9 +11,9 @@ export interface BulkActionBarProps {
   style?: React.CSSProperties;
 }
 
-/**
- * Floating bulk action bar that displays when items in a table are selected
- */
+
+
+
 export default function BulkActionBar({
   selectedCount,
   onClearSelection,

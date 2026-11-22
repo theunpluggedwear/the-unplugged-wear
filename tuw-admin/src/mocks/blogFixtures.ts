@@ -1,9 +1,9 @@
-// Deterministic blog fixtures — demo-state seed only.
-//
-// These mirror the normalized schema: one category per post, one author,
-// many tags, JSON content, immutable revisions and slug history. The data
-// is intentionally small and editorial, with @example.com identities and
-// Indiranagar addresses per the project demo rules.
+
+
+
+
+
+
 
 import type {
   BlogAuthor,

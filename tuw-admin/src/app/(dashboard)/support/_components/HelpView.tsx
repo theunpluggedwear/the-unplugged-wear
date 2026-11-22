@@ -29,7 +29,7 @@ export default function HelpView() {
   const [statusFilter, setStatusFilter] = useState<'all' | SupportTicket['status']>('all');
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [draftReply, setDraftReply] = useState('');
-  // Row selection (multi-select; header checkbox tri-states over the page)
+  
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
@@ -42,7 +42,7 @@ export default function HelpView() {
   const totalPages = Math.max(1, Math.ceil(filteredTickets.length / pageSize));
   const paginatedTickets = filteredTickets.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  // Row selection helpers (header checkbox tri-states over the page)
+  
   const pageIds = paginatedTickets.map((t) => t.id);
   const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
   const somePageSelected = pageIds.some((id) => selectedIds.has(id));
@@ -85,7 +85,7 @@ export default function HelpView() {
     setDraftReply('');
   };
 
-  // Bulk actions (bar appears when rows are selected)
+  
   const BULK_RESOLVE_NOTICE =
     'Hello, our support team has reviewed your request and applied a resolution. Please reply to this thread if you need anything further.';
   const clearSelection = () => setSelectedIds(new Set());
@@ -160,7 +160,7 @@ export default function HelpView() {
         <StatCard label="Avg. Response Time" value="18 mins" trend="Instant simulated triage" trendType="up" hoverable />
       </div>
 
-      {/* Ticket Queue Card */}
+      {}
       <ContentCard>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -288,7 +288,7 @@ export default function HelpView() {
         />
       </ContentCard>
 
-      {/* Ticket Detail & Response Drawer */}
+      {}
       <Drawer
         isOpen={Boolean(selectedTicket)}
         onClose={() => setSelectedTicket(null)}
@@ -309,7 +309,7 @@ export default function HelpView() {
               </div>
             </HeroCard>
 
-            {/* Conversation Thread */}
+            {}
             <DrawerSection title="Conversation Thread" titleGap={12}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {selectedTicket.messages.map((msg, idx) => (
@@ -339,7 +339,7 @@ export default function HelpView() {
               </div>
             </DrawerSection>
 
-            {/* Response Drafting */}
+            {}
             <form onSubmit={handleSendReply} style={{ borderTop: '1px solid var(--tuw-border-subtle, #E2E4E6)', paddingTop: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--tuw-text-primary, #262626)' }}>
@@ -350,7 +350,7 @@ export default function HelpView() {
                 </span>
               </div>
 
-              {/* Canned Response Chips */}
+              {}
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
                 {cannedResponses.map((cr, idx) => (
                   <button

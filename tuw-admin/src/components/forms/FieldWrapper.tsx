@@ -14,9 +14,9 @@ export interface FieldWrapperProps {
   style?: React.CSSProperties;
 }
 
-/**
- * Standard Form Field Wrapper adhering to TUW Design System
- */
+
+
+
 export default function FieldWrapper({
   label,
   required = false,

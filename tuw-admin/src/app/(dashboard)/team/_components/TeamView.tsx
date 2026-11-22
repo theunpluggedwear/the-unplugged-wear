@@ -73,7 +73,7 @@ export default function TeamView({ members, invites, currentUserId }: TeamViewPr
   };
 
   const openInvite = () => {
-    setInviteKey(crypto.randomUUID()); // one key per invite attempt: retries never send twice
+    setInviteKey(crypto.randomUUID()); 
     setMessage(null);
     setIsInviteOpen(true);
   };
@@ -85,7 +85,7 @@ export default function TeamView({ members, invites, currentUserId }: TeamViewPr
     const result = await inviteStaffAction({ email: formEmail, role: formRole, idempotencyKey: inviteKey });
     setPending(false);
     if (!result.ok) {
-      setMessage({ tone: 'error', text: result.error.message }); // drawer stays open, values kept
+      setMessage({ tone: 'error', text: result.error.message }); 
       return;
     }
     setIsInviteOpen(false);

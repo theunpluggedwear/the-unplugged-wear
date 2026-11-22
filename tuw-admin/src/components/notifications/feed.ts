@@ -6,8 +6,8 @@ interface OpsSignals {
   supportTickets: SupportTicket[];
 }
 
-// Pure ops feed builder (N1): demo order and support items until those
-// modules go live. Inventory alerts come from the database (useStaffAlerts).
+
+
 export function buildNotifications({ orders, supportTickets }: OpsSignals): Notification[] {
   const items: Notification[] = [];
 
