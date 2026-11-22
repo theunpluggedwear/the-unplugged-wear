@@ -203,7 +203,7 @@ export default function CollectionsView({ initialCollections, products, canManag
                 <TableCell style={{ padding: '14px 16px', fontSize: 14, fontWeight: 600, color: 'var(--tuw-text-primary, #262626)' }}>
                   {item.name}
                 </TableCell>
-                <TableCell style={{ padding: '14px 16px', fontSize: 13, fontFamily: 'monospace', color: 'var(--tuw-text-secondary, #5D6772)' }}>
+                <TableCell className="tuw-mono-id" style={{ padding: '14px 16px', fontSize: 13 }}>
                   /{item.slug}
                 </TableCell>
                 <TableCell style={{ padding: '14px 16px', fontSize: 14, color: 'var(--tuw-text-primary, #262626)' }}>

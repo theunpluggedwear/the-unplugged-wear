@@ -227,7 +227,7 @@ export default function ShipmentsView({ initial, perms }: { initial: ListResult;
                     <TableCell style={{ fontWeight: 600 }}>{row.orderNumber}</TableCell>
                     <TableCell>{row.customerName}</TableCell>
                     <TableCell>{row.carrier ?? '—'}</TableCell>
-                    <TableCell style={{ fontFamily: 'var(--tuw-font-mono, monospace)', fontSize: 12 }}>{row.trackingNumber ?? '—'}</TableCell>
+                    <TableCell className="tuw-mono-id" style={{ fontSize: 12 }}>{row.trackingNumber ?? '—'}</TableCell>
                     <TableCell><Badge variant={STATUS_BADGE[row.status]}>{STATUS_LABEL[row.status]}</Badge></TableCell>
                     <TableCell>{day(row.shippedAt)}</TableCell>
                     <TableCell>{day(row.estimatedDeliveryAt)}</TableCell>

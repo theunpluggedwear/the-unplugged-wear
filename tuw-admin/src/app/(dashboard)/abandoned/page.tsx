@@ -133,7 +133,7 @@ export default function AbandonedPage() {
               </TableRow>
             ) : paginated.map((c) => (
               <TableRow key={c.id} hoverable={false}>
-                <TableCell style={{ padding: '10px 16px', fontSize: 13, fontWeight: 700, fontFamily: 'monospace', color: 'var(--tuw-text-primary, #262626)' }}>
+                <TableCell className="tuw-mono-id" style={{ padding: '10px 16px', fontSize: 13, fontWeight: 700 }}>
                   {c.cartId}
                 </TableCell>
                 <TableCell style={{ padding: '10px 16px', fontSize: 13, color: 'var(--tuw-text-secondary, #5D6772)' }}>

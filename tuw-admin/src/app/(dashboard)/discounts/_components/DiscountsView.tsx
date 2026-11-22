@@ -243,7 +243,7 @@ export default function DiscountsView({ initialCodes, initialSchedules, perms }:
               </TableRow>
             ) : paginatedCodes.map((d) => (
               <TableRow key={d.id} hoverable={false}>
-                <TableCell style={{ padding: '10px 16px', fontSize: 14, fontWeight: 700, fontFamily: 'monospace', color: 'var(--tuw-text-primary, #262626)' }}>
+                <TableCell className="tuw-mono-id" style={{ padding: '10px 16px', fontSize: 14, fontWeight: 700 }}>
                   {d.code}
                 </TableCell>
                 <TableCell style={{ padding: '10px 16px' }}>

@@ -196,7 +196,7 @@ export default function PaymentsView({ initial, providers, perms }: { initial: L
                 { label: 'Email:', value: <span>{selected.customerEmail || '—'}</span> },
                 { label: 'Method:', value: <span>{METHOD[selected.method] ?? selected.method}</span> },
                 { label: 'Provider:', value: <span>{selected.provider === 'mock' ? 'Demo gateway (no money collected)' : selected.provider}</span> },
-                { label: 'Gateway reference:', value: <span style={{ fontFamily: 'monospace' }}>{selected.transactionId ?? '—'}</span> },
+                { label: 'Gateway reference:', value: <span className="tuw-mono-id">{selected.transactionId ?? '—'}</span> },
                 { label: 'Paid at:', value: <span>{when(selected.paidAt)}</span> },
                 { label: 'Refunded:', value: <span className="tuw-tabular-nums">{selected.refundedPaise ? rupees(selected.refundedPaise) : '—'}</span> },
               ]}

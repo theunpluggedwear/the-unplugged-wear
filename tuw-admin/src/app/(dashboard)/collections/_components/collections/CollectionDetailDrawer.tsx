@@ -209,7 +209,7 @@ export default function CollectionDetailDrawer({
                 {
                   label: 'Slug',
                   value: (
-                    <span style={{ fontFamily: 'monospace' }}>/{collection.slug}</span>
+                    <span className="tuw-mono-id">/{collection.slug}</span>
                   ),
                 },
                 { label: 'Visibility', value: visibilityBadge(collection.visibility) },

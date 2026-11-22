@@ -365,8 +365,8 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
                 items={[
                   { label: 'Customer:', value: <strong>{selected.customerName}</strong> },
                   { label: 'Method:', value: <span>{METHOD[selected.method]}</span> },
-                  ...(selected.destinationMasked ? [{ label: 'Paid to:', value: <span style={{ fontFamily: 'monospace' }}>{selected.destinationMasked}</span> }] : []),
-                  { label: 'Reference:', value: <span style={{ fontFamily: 'monospace' }}>{selected.payoutReference ?? 'Not paid yet'}</span> },
+                  ...(selected.destinationMasked ? [{ label: 'Paid to:', value: <span className="tuw-mono-id">{selected.destinationMasked}</span> }] : []),
+                  { label: 'Reference:', value: <span className="tuw-mono-id">{selected.payoutReference ?? 'Not paid yet'}</span> },
                   { label: 'Reason:', value: <span>{selected.reason}</span> },
                   { label: 'Issued by:', value: <span>{selected.actorName}</span> },
                   { label: 'Last change:', value: <span>{when(selected.updatedAt)}</span> },

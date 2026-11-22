@@ -9,15 +9,15 @@
   },
   "summary": {
     "total": 458,
-    "done": 401,
+    "done": 402,
     "in_progress": 2,
-    "backlog": 55
+    "backlog": 54
   },
   "session": {
     "branch": "feat/dharmil-admin",
     "tip": "94ddc98",
     "unpushed": [],
-    "next_up": "TL-UI-ADM-MONO",
+    "next_up": "TL-UI-CMS-PERSIST",
     "pending_verifications": [
       "admin journal editor + list full keyboard/focus/Reset Demo pass at 360/768/1024/1440 (CDP route-load check passed; interactive pass pending)",
       "SQL dry-run: apply 001 + 002 + 006-cms.sql against a real PostgreSQL instance; verify generated blogs.search_vector, slug/CHECK constraints, FK RESTRICT/CASCADE behavior, and partial indexes. psql remains unavailable locally.",
@@ -4584,11 +4584,11 @@
     {
       "id": "TL-UI-ADM-MONO",
       "title": "Monospace identifier color alignment (five tables)",
-      "status": "backlog",
-      "owner": "unassigned",
-      "log": "Parked 2026-10-19: shipments tracking IDs already use var(--tuw-text-info,#175CD3); decide whether discounts/carts (and collection slug/design IDs) match or stay default ink",
-      "design_match": "pending",
-      "verified": false,
+      "status": "done",
+      "owner": "agent",
+      "log": "Added .tuw-mono-id using --tuw-text-info and --tuw-font-mono; applied to shipments AWB, discounts codes, abandoned cart IDs, collection slugs and their drawers, plus payment/refund gateway references. Clickable order/RMA/ticket IDs keep --tuw-action-primary. Designs list has no visible ID, so no change there. Browser QA confirmed rgb(23,92,211) monospace and no 360px overflow; clickable IDs remained rgb(117,57,255).",
+      "design_match": "yes",
+      "verified": true,
       "pushed": false,
       "follow_ups": []
     },
