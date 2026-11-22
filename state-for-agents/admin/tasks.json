@@ -8,16 +8,16 @@
     "reference": "Figma WmpPcdGcXerVgqNpgr6Q6S + production screenshots"
   },
   "summary": {
-    "total": 460,
-    "done": 405,
-    "in_progress": 2,
+    "total": 462,
+    "done": 406,
+    "in_progress": 3,
     "backlog": 53
   },
   "session": {
     "branch": "feat/dharmil-admin",
     "tip": "34d4ca7",
     "unpushed": [],
-    "next_up": "TL-UI-DESIGN-PLAN",
+    "next_up": "TL-COMMENT-AUDIT",
     "pending_verifications": [
       "admin journal editor + list full keyboard/focus/Reset Demo pass at 360/768/1024/1440 (CDP route-load check passed; interactive pass pending)",
       "SQL dry-run: apply 001 + 002 + 006-cms.sql against a real PostgreSQL instance; verify generated blogs.search_vector, slug/CHECK constraints, FK RESTRICT/CASCADE behavior, and partial indexes. psql remains unavailable locally.",
@@ -8119,6 +8119,45 @@
         "No UI/theme/storefront changes."
       ],
       "verified": true,
+      "pushed": false,
+      "follow_ups": []
+    },
+    {
+      "id": "TL-BE-LIVE-DATA",
+      "title": "Wire remaining admin demo screens to live database reads",
+      "status": "done",
+      "owner": "agent",
+      "parent": "TL-BE-CORE",
+      "started": "2026-11-22",
+      "finished": "2026-11-22",
+      "log": "Added analytics and support heart modules, guarded admin actions and jobs. Dashboard, reports, abandoned carts and support inbox now read live DB data with honest empty states. Fixed products status column in inventory-alert query. Browser QA confirmed all four pages render live data without Instant errors. Remaining third-party adapters stay mock/sandbox until credentials exist.",
+      "design_match": "n/a",
+      "key_decisions": [
+        "No fabricated data; empty states until real rows exist.",
+        "Third-party adapters remain mock/sandbox only where credentials are unavailable.",
+        "No storefront files were changed."
+      ],
+      "verified": true,
+      "pushed": false,
+      "follow_ups": [
+        "Storefront analytics beacon and contact-to-support-ticket wiring remain separate storefront tasks."
+      ]
+    },
+    {
+      "id": "TL-COMMENT-AUDIT",
+      "title": "Audit source comments, add ratchet lint and /delete-comment skill",
+      "status": "in_progress",
+      "owner": "agent",
+      "parent": null,
+      "started": "2026-11-22",
+      "finished": null,
+      "log": "Infrastructure done: scripts/check-comments.mjs, comment-ratchet.json baseline (4273 lines), state-for-agents/admin/comment-audit.csv inventory, /delete-comment skill and initial ADR set. Per-comment categorization and deletion batches remain.",
+      "design_match": "n/a",
+      "key_decisions": [
+        "Ratchet must never increase.",
+        "Decision records move to DOC/adr and code comments are deleted."
+      ],
+      "verified": false,
       "pushed": false,
       "follow_ups": []
     }

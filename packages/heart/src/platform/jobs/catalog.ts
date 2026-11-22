@@ -6,6 +6,7 @@ import { submitDueOrders, syncOpenFulfillment } from '../../modules/fulfillment/
 import { expireDue } from '../../modules/gift-cards/index.ts';
 import { reconcilePendingPayments, retryFailedWebhooks } from '../../modules/payments/index.ts';
 import { reconcileInvoiceDocuments } from '../../modules/invoices/index.ts';
+import { detectAbandonedCarts, rollupDaily } from '../../modules/analytics/index.ts';
 import { sweepRateLimits } from '../ratelimit/index.ts';
 
 // Every job the system runs, registered in one place so any trigger (Cron
@@ -67,6 +68,18 @@ export function loadJobs(): void {
     name: 'webhooks.retryFailed',
     description: 'Retry failed provider webhook deliveries from the durable inbox.',
     run: retryFailedWebhooks,
+  });
+
+  registerJob({
+    name: 'analytics.detectAbandoned',
+    description: 'Record idle active carts in the abandoned-cart recovery inbox.',
+    run: async () => ({ processed: await detectAbandonedCarts(24) }),
+  });
+
+  registerJob({
+    name: 'analytics.rollupDaily',
+    description: 'Upsert the permanent daily_stats row for today.',
+    run: async () => ({ processed: await rollupDaily() }),
   });
 }
 
