@@ -26,6 +26,7 @@ export interface DashboardSummary {
   averageOrder: number;
   conversionRate: number;
   deltas: { revenue: number; orders: number; averageOrder: number; conversion: number };
+  kpiSeries: { revenue: number[]; orders: number[]; averageOrder: number[]; conversion: number[] };
   trend: Array<{ day: string; value: number; previous: number }>;
   inventoryAlerts: Array<{ name: string; unitsLeft: number; threshold: number; velocityPerDay: number }>;
   topProducts: Array<{
@@ -57,6 +58,31 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export function percentDelta(current: number, previous: number): number {
   if (!Number.isFinite(previous) || previous === 0) return 0;
   return ((current - previous) / previous) * 100;
+}
+
+export interface DailyKpiRow {
+  [column: string]: unknown;
+  revenue: unknown;
+  conversions: unknown;
+  unique_visitors: unknown;
+  page_views: unknown;
+}
+
+export function toKpiSeries(rows: DailyKpiRow[]): DashboardSummary['kpiSeries'] {
+  const latest = [...rows].reverse().slice(-7);
+  return {
+    revenue: latest.map((r) => num(r.revenue)),
+    orders: latest.map((r) => num(r.conversions)),
+    averageOrder: latest.map((r) => {
+      const orders = num(r.conversions);
+      return orders > 0 ? num(r.revenue) / orders : 0;
+    }),
+    conversion: latest.map((r) => {
+      const unique = num(r.unique_visitors);
+      const denominator = Math.max(1, unique > 0 ? unique : num(r.page_views));
+      return (num(r.conversions) / denominator) * 100;
+    }),
+  };
 }
 
 export function shiftWindow(from: Date | null, to: Date | null): { from: Date | null; to: Date | null } {
@@ -178,7 +204,7 @@ export async function getDashboardSummary(range?: DateRangeFilter): Promise<Dash
   const prevDailyWindow = prev.from && prev.to
     ? sql`AND date >= ${prev.from} AND date <= ${prev.to}` : sql``;
 
-  const [kpi, prevKpi, trend, prevTrend, alerts, velocity, top, recent, sessions, conversions, prevConversions] = await Promise.all([
+  const [kpi, prevKpi, trend, prevTrend, kpiRows, alerts, velocity, top, recent, sessions, conversions, prevConversions] = await Promise.all([
     db.execute<{ revenue: string; orders: string }>(sql`
       SELECT
         COALESCE((SELECT sum(amount) FROM payments WHERE status IN ('captured','refunded') ${paymentWindow}), 0)
@@ -195,6 +221,9 @@ export async function getDashboardSummary(range?: DateRangeFilter): Promise<Dash
     db.execute<{ iso: string; value: string }>(sql`
       SELECT date::text AS iso, revenue AS value
       FROM daily_stats WHERE true ${prevDailyWindow} ORDER BY date DESC ${trendLimit}`),
+    db.execute<DailyKpiRow>(sql`
+      SELECT revenue, conversions, unique_visitors, page_views
+      FROM daily_stats WHERE true ${dailyWindow} ORDER BY date DESC ${trendLimit}`),
     db.execute<{ product_id: string; name: string; units_left: number; threshold: number }>(sql`
       SELECT p.id AS product_id, p.name, p.stock AS units_left,
         COALESCE(p.low_stock_threshold, 5) AS threshold
@@ -256,6 +285,7 @@ export async function getDashboardSummary(range?: DateRangeFilter): Promise<Dash
       averageOrder: percentDelta(averageOrder, prevAverageOrder),
       conversion: percentDelta(conversionRate, prevConversionRate),
     },
+    kpiSeries: toKpiSeries(kpiRows.rows),
     trend: trend.rows.map((r, i) => ({
       day: r.day,
       value: num(r.value),
@@ -314,7 +344,7 @@ export async function getReportSummary(): Promise<ReportSummary> {
 
 export async function rollupDaily(): Promise<number> {
   const { rows } = await getDb().execute<{ n: number }>(sql`
-    SELECT count(*)::int AS n FROM (
+    WITH rolled AS (
       INSERT INTO daily_stats (id, date, page_views, unique_visitors, conversions, revenue)
       SELECT ${uuidv7()}::uuid, current_date,
         (SELECT count(*) FROM page_views WHERE ts::date = current_date),
@@ -325,6 +355,7 @@ export async function rollupDaily(): Promise<number> {
         page_views = EXCLUDED.page_views, unique_visitors = EXCLUDED.unique_visitors,
         conversions = EXCLUDED.conversions, revenue = EXCLUDED.revenue
       RETURNING date
-    ) rolled`);
+    )
+    SELECT count(*)::int AS n FROM rolled`);
   return rows[0]?.n ?? 0;
 }
