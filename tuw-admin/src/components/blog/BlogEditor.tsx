@@ -28,12 +28,16 @@ import {
 } from 'lucide-react';
 import BlogContentPreview from '@/components/blog/BlogContentPreview';
 import RichTextEditor from '@/components/blog/RichTextEditor';
-import { useAdminState } from '@/mocks/state';
+import { listRevisionsAction, restoreRevisionAction, savePostAction } from '@/server/marketing-actions';
 import { formatDateTime } from '@/lib/format';
 import {
+  type BlogAuthor,
+  type BlogCategory,
   type BlogContent,
   type BlogDraft,
+  type BlogMediaAsset,
   type BlogStatus,
+  type BlogTag,
   extractBlogText,
   formatReadingTime,
   readingTimeMinutes,
@@ -43,6 +47,15 @@ import {
 interface BlogEditorProps {
   mode: 'create' | 'edit';
   postId?: string;
+  post?: BlogDraft | null;
+  meta: {
+    categories: BlogCategory[];
+    authors: BlogAuthor[];
+    tags: BlogTag[];
+  };
+  media: BlogMediaAsset[];
+  revisions: { id: string; revisionNo: number; title: string; createdAt: string; contentText: string }[];
+  canManage: boolean;
 }
 
 interface BlogEditorErrors {
@@ -83,24 +96,21 @@ const draftFromPost = (post?: BlogDraft): BlogDraft => {
   };
 };
 
-export default function BlogEditor({ mode, postId }: BlogEditorProps) {
+export default function BlogEditor({
+  mode,
+  postId,
+  post: initialPost,
+  meta,
+  media: blogMedia,
+  revisions: initialRevisions,
+  canManage,
+}: BlogEditorProps) {
   const router = useRouter();
-  const {
-    blogAuthors,
-    blogCategories,
-    blogMedia,
-    blogPosts,
-    blogRevisions,
-    blogTags,
-    saveBlogPost,
-    restoreBlogRevision,
-    canPerformAction,
-  } = useAdminState();
-
-  const post = useMemo(
-    () => (mode === 'edit' && postId ? blogPosts.find((p) => p.id === postId) : undefined),
-    [mode, postId, blogPosts]
-  );
+  const blogAuthors = meta.authors;
+  const blogCategories = meta.categories;
+  const blogTags = meta.tags;
+  const post = initialPost ?? undefined;
+  const blogRevisions = initialRevisions;
 
   const [form, setForm] = useState<BlogDraft>(() =>
     draftFromPost(mode === 'edit' ? post : undefined)
@@ -108,6 +118,7 @@ export default function BlogEditor({ mode, postId }: BlogEditorProps) {
   const [slugTouched, setSlugTouched] = useState(mode === 'edit');
   const [errors, setErrors] = useState<BlogEditorErrors>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isRevisionsOpen, setIsRevisionsOpen] = useState(false);
   const [revisionToRestore, setRevisionToRestore] = useState<string | null>(null);
@@ -118,7 +129,7 @@ export default function BlogEditor({ mode, postId }: BlogEditorProps) {
     setForm(draftFromPost(post));
     setSlugTouched(true);
     setErrors({});
-  }, [mode, post?.id, post?.version]);
+  }, [mode, post?.id]);
 
   const contentText = useMemo(() => extractBlogText(form.content), [form.content]);
   const readTime = useMemo(() => readingTimeMinutes(contentText), [contentText]);
@@ -196,8 +207,9 @@ export default function BlogEditor({ mode, postId }: BlogEditorProps) {
   };
 
   const save = async (nextStatus?: BlogStatus) => {
-    if (!canPerformAction('cms')) return;
+    if (!canManage) return;
     setIsSaving(true);
+    setNotice(null);
     const status: BlogStatus = nextStatus ?? form.status;
     const publishedAt =
       status === 'draft'
@@ -205,39 +217,67 @@ export default function BlogEditor({ mode, postId }: BlogEditorProps) {
         : status === 'scheduled'
           ? toIso(form.publishedAt)
           : toIso(form.publishedAt) ?? new Date().toISOString();
-    const result = saveBlogPost(
-      { ...form, status, publishedAt },
-      nextStatus === 'published' || nextStatus === 'scheduled' ? 'publish' : 'draft'
-    );
+    const result = await savePostAction({
+      ...(form.id ? { id: form.id } : {}),
+      slug: form.slug,
+      title: form.title,
+      subtitle: form.subtitle,
+      excerpt: form.excerpt,
+      categoryId: form.categoryId ?? null,
+      authorId: form.authorId,
+      coverMediaId: form.coverMediaId ?? null,
+      ogMediaId: form.ogMediaId ?? null,
+      content: form.content,
+      status,
+      isFeatured: form.isFeatured,
+      publishedAt: publishedAt ?? null,
+      seoTitle: form.seoTitle,
+      seoDescription: form.seoDescription,
+      canonicalUrl: form.canonicalUrl,
+      noindex: form.noindex,
+      tagIds: form.tagIds,
+    });
     setIsSaving(false);
     if (!result.ok) {
-      setErrors(result.errors ?? {});
+      setErrors({ form: result.error.message });
       return;
     }
     setErrors({});
+    const refreshNote = result.data.storefront.ok
+      ? ''
+      : ` Storefront refresh failed: ${result.data.storefront.reason}`;
+    setNotice(`Saved ${result.data.post.slug}.${refreshNote}`);
     if (mode === 'create') {
       router.push('/content/journal');
-    } else if (nextStatus && nextStatus !== form.status) {
-      // Stay on the editor after a status change; the state-driven effect
-      // syncs the new version below.
-      setForm((prev) => ({ ...prev, status: nextStatus, publishedAt }));
+      return;
     }
+    setForm((prev) => ({ ...prev, status, publishedAt }));
+    router.refresh();
   };
 
-  const handleRestore = (revisionId: string) => {
-    const revision = blogRevisions.find((revision) => revision.id === revisionId);
-    if (!revision) return;
-    restoreBlogRevision(revisionId);
+  const handleRestore = async (revisionId: string) => {
+    if (!postId) return;
+    setIsSaving(true);
+    setNotice(null);
+    const result = await restoreRevisionAction({ postId, id: revisionId });
+    setIsSaving(false);
+    if (!result.ok) {
+      setErrors({ form: result.error.message });
+      return;
+    }
+    setErrors({});
+    const refreshNote = result.data.storefront.ok
+      ? ''
+      : ` Storefront refresh failed: ${result.data.storefront.reason}`;
+    setNotice(`Restored as a new draft version.${refreshNote}`);
     setIsRevisionsOpen(false);
     setRevisionToRestore(null);
-    router.push('/content/journal');
+    router.refresh();
   };
 
-  const revisionList = post
-    ? blogRevisions
-        .filter((revision) => revision.blogId === post.id)
-        .sort((a, b) => b.revisionNo - a.revisionNo)
-    : [];
+  const revisionList = blogRevisions
+    .slice()
+    .sort((a, b) => b.revisionNo - a.revisionNo);
 
   return (
     <DashboardShell pageTitle={mode === 'create' ? 'New Editorial Story' : 'Edit Editorial Story'}>
@@ -260,7 +300,7 @@ export default function BlogEditor({ mode, postId }: BlogEditorProps) {
         }
         subtitle={
           mode === 'edit'
-            ? `Version ${post?.version ?? 1} · ${post?.updatedAt ? formatDateTime(post.updatedAt) : 'Unsaved'}`
+            ? 'Edit the article and publish when ready.'
             : 'Draft a new article for the storefront journal.'
         }
         actions={
@@ -295,6 +335,17 @@ export default function BlogEditor({ mode, postId }: BlogEditorProps) {
           </>
         }
       />
+
+      {notice && (
+        <p role="status" style={{ margin: '12px 0 0', fontSize: 13, color: 'var(--tuw-text-success, #187343)' }}>
+          {notice}
+        </p>
+      )}
+      {errors.form && (
+        <p role="alert" style={{ margin: '12px 0 0', fontSize: 13, color: 'var(--tuw-text-error, #C91818)' }}>
+          {errors.form}
+        </p>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: 20, alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
@@ -564,7 +615,7 @@ export default function BlogEditor({ mode, postId }: BlogEditorProps) {
                       {formatDateTime(revision.createdAt)}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--tuw-text-secondary, #5D6772)', marginTop: 4 }}>
-                      {revision.snapshot.contentText.slice(0, 120)}…
+                      {revision.contentText.slice(0, 120)}…
                     </div>
                   </div>
                   <Button

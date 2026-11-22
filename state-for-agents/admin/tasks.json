@@ -9,15 +9,15 @@
   },
   "summary": {
     "total": 458,
-    "done": 402,
+    "done": 403,
     "in_progress": 2,
-    "backlog": 54
+    "backlog": 53
   },
   "session": {
     "branch": "feat/dharmil-admin",
     "tip": "b21285a",
     "unpushed": [],
-    "next_up": "TL-UI-CMS-PERSIST",
+    "next_up": "TL-UI-DESIGN-PLAN",
     "pending_verifications": [
       "admin journal editor + list full keyboard/focus/Reset Demo pass at 360/768/1024/1440 (CDP route-load check passed; interactive pass pending)",
       "SQL dry-run: apply 001 + 002 + 006-cms.sql against a real PostgreSQL instance; verify generated blogs.search_vector, slug/CHECK constraints, FK RESTRICT/CASCADE behavior, and partial indexes. psql remains unavailable locally.",
@@ -4594,14 +4594,16 @@
     },
     {
       "id": "TL-UI-CMS-PERSIST",
-      "title": "Content CMS persistence + live counts (Journal, Pages, Media, Navigation)",
-      "status": "backlog",
-      "owner": "unassigned",
-      "log": "Decision 2026-10-19: keep all four sections as-is for now; parked fixes — edits live in component state (lost on nav/reload, outside Reset Demo) and overview badges are hardcoded/wrong (Journal 12 vs 4 fixture, Media 142 vs 6)",
-      "design_match": "pending",
-      "verified": false,
+      "title": "Content CMS persistence + live counts (Journal + mobile/tablet navigation)",
+      "status": "done",
+      "owner": "agent",
+      "log": "Admin-only CMS persistence done 2026-11-22. BlogEditor now loads/saves posts, revisions and meta through heart backend actions; structured mobile/tablet navigation editor saves typed menu items; CMS overview shows real published-post and mobile-item counts. Heart exposes getStorefrontMobileNav() for later storefront wiring. Fixed latent blog_slug_history column bug and savePost post-commit read. Browser QA: blog create/edit/revision restore persisted after reload; nav save persisted after reload. No storefront files touched.",
+      "design_match": "yes",
+      "verified": true,
       "pushed": false,
-      "follow_ups": []
+      "follow_ups": [
+        "Storefront wiring later: consume @tuw/heart getStorefrontMobileNav() in Header/MobileMenu with NAV_ITEMS fallback."
+      ]
     },
     {
       "id": "TL-UI-DESIGN-PLAN",

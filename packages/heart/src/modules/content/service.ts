@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { getDb, withTransaction } from '../../platform/db/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
+import { mobileNav } from './schemas.ts';
 
 export const CMS_TAGS = {
   home: 'cms:home',
@@ -63,6 +64,21 @@ export async function saveNavigation(navbar: Record<string, unknown>, actorId: s
       ON CONFLICT (scope) DO UPDATE SET navbar = EXCLUDED.navbar, updated_at = now()`);
   });
   return navbar;
+}
+
+export type MobileNavItem = typeof mobileNav._output[number];
+
+/** Typed read for phones/tablets. Returns [] until a CMS menu is saved. */
+export async function getStorefrontMobileNav(): Promise<MobileNavItem[]> {
+  const navbar = await getNavigation();
+  const parsed = mobileNav.safeParse(navbar.mobile ?? []);
+  return parsed.success ? parsed.data : [];
+}
+
+export async function saveMobileNav(items: MobileNavItem[], actorId: string): Promise<MobileNavItem[]> {
+  const navbar = await getNavigation();
+  await saveNavigation({ ...navbar, mobile: items }, actorId);
+  return items;
 }
 
 export async function getTheme(): Promise<{ theme: Record<string, unknown>; version: number }> {

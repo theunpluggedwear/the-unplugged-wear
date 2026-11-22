@@ -12,8 +12,29 @@ export const savePage = z.object({
 
 export const pageRef = z.object({ slug: pageSlug });
 
+export const mobileNavLink = z.object({
+  label: z.string().trim().min(1).max(100),
+  href: z.string().trim().min(1).max(500),
+});
+
+export const mobileNavColumn = z.object({
+  title: z.string().trim().min(1).max(100),
+  links: z.array(mobileNavLink).max(30),
+});
+
+export const mobileNavItem = z.object({
+  label: z.string().trim().min(1).max(100),
+  href: z.string().trim().min(1).max(500),
+  columns: z.array(mobileNavColumn).max(6).optional(),
+});
+
+export const mobileNav = z.array(mobileNavItem).max(20);
+export const saveMobileNav = z.object({ items: mobileNav });
+
 export const saveNavigation = z.object({
-  navbar: z.record(z.unknown()),
+  navbar: z.object({
+    mobile: mobileNav.default([]),
+  }).passthrough(),
 });
 
 export const saveTheme = z.object({

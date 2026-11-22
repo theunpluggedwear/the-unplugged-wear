@@ -27,6 +27,14 @@ export const saveNavigationAction = guards.action({ permission: 'content.manage'
   return { navbar, storefront: await refresh(CMS_TAGS.nav) };
 });
 
+export const getMobileNavAction = guards.action({ permission: 'content.manage', input: s.getNavigationInput }, ({ ctx }) =>
+  content.adminGetMobileNav(ctx.user!.id));
+
+export const saveMobileNavAction = guards.action({ permission: 'content.manage', input: s.saveMobileNav }, async ({ input, ctx }) => {
+  const items = await content.adminSaveMobileNav(input.items, ctx.user!.id);
+  return { items, storefront: await refresh(CMS_TAGS.nav) };
+});
+
 export const listFaqsAction = guards.action({ permission: 'content.manage', input: s.faqList }, ({ ctx }) =>
   content.adminListFaqs(ctx.user!.id));
 

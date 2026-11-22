@@ -35,6 +35,16 @@ export async function adminSaveNavigation(navbar: Record<string, unknown>, actor
   return svc.saveNavigation(navbar, actorId);
 }
 
+export async function adminGetMobileNav(actorId: string) {
+  await requireContentManager(actorId);
+  return svc.getStorefrontMobileNav();
+}
+
+export async function adminSaveMobileNav(items: svc.MobileNavItem[], actorId: string) {
+  await requireContentManager(actorId);
+  return svc.saveMobileNav(items, actorId);
+}
+
 export async function adminGetTheme(actorId: string) {
   await requireContentManager(actorId);
   return svc.getTheme();

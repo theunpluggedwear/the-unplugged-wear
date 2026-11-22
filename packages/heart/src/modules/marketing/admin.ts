@@ -29,6 +29,21 @@ export async function adminGetPost(slug: string, actorId: string) {
   return svc.getPostBySlug(slug, false);
 }
 
+export async function adminGetPostById(id: string, actorId: string) {
+  await requireContentManager(actorId);
+  return svc.getPostById(id);
+}
+
+export async function adminListRevisions(blogId: string, actorId: string) {
+  await requireContentManager(actorId);
+  return svc.listRevisions(blogId);
+}
+
+export async function adminRestoreRevision(blogId: string, revisionId: string, actorId: string) {
+  await requireContentManager(actorId);
+  return svc.restoreRevision(blogId, revisionId, actorId);
+}
+
 export async function adminJournalMeta(actorId: string) {
   await requireContentManager(actorId);
   const [categories, authors, tags] = await Promise.all([svc.listCategories(), svc.listAuthors(), svc.listTags()]);
