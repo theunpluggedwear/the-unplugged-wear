@@ -8,8 +8,8 @@
     "reference": "Figma WmpPcdGcXerVgqNpgr6Q6S + production screenshots"
   },
   "summary": {
-    "total": 459,
-    "done": 404,
+    "total": 460,
+    "done": 405,
     "in_progress": 2,
     "backlog": 53
   },
@@ -8099,6 +8099,24 @@
       "key_decisions": [
         "No new UI components; reused existing primitives from tuw-admin/src/components/ui.",
         "No storefront files touched; CMS backend behaviour and persistence unchanged."
+      ],
+      "verified": true,
+      "pushed": false,
+      "follow_ups": []
+    },
+    {
+      "id": "TL-UI-INSTANT-NAV-FIX",
+      "title": "Opt protected admin routes out of instant-navigation validation",
+      "status": "done",
+      "owner": "agent",
+      "parent": null,
+      "started": "2026-11-22",
+      "finished": "2026-11-22",
+      "log": "Added export const instant = false to (dashboard)/layout.tsx and 36 protected admin route segments. Auth-gated pages read cookies through session.requireStaff, so per-route blocking is the documented Next.js 16.3 fix. Verified with admin typecheck, 75/75 tests, normal build, next build --debug-prerender (exit 0), and browser QA across 15 affected routes with no Instant overlay and sidebar visible.",
+      "design_match": "n/a",
+      "key_decisions": [
+        "Per-route opt-out only; no global validation downgrade in next.config.ts.",
+        "No UI/theme/storefront changes."
       ],
       "verified": true,
       "pushed": false,

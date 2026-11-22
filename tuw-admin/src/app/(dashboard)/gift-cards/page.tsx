@@ -1,3 +1,4 @@
+export const instant = false;
 import { adminListGiftCards } from '@tuw/heart/modules/gift-cards';
 import { session } from '@/server/session';
 import GiftCardsView from './_components/GiftCardsView';

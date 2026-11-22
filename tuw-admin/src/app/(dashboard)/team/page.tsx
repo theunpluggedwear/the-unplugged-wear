@@ -1,3 +1,4 @@
+export const instant = false;
 import { listStaff } from '@tuw/heart/modules/auth';
 import { session } from '@/server/session';
 import TeamView from './_components/TeamView';

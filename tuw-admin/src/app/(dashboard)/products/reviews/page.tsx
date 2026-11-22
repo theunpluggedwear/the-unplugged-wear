@@ -1,3 +1,4 @@
+export const instant = false;
 import { adminListReviews } from '@tuw/heart/modules/catalog';
 import { session } from '@/server/session';
 import ReviewsView from './_components/ReviewsView';

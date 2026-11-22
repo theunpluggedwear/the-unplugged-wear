@@ -1,3 +1,4 @@
+export const instant = false;
 import { listRefunds } from '@tuw/heart/modules/orders';
 import { session } from '@/server/session';
 import RefundsView from './_components/RefundsView';

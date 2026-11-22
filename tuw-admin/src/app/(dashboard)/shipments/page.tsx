@@ -1,3 +1,4 @@
+export const instant = false;
 import { adminListShipments } from '@tuw/heart/modules/fulfillment';
 import { session } from '@/server/session';
 import ShipmentsView from './_components/ShipmentsView';

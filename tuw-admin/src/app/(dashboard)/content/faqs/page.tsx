@@ -1,3 +1,4 @@
+export const instant = false;
 import DashboardShell from '@/components/layout/DashboardShell';
 import { adminListFaqs } from '@tuw/heart/modules/content';
 import { adminListCategories, getStorefrontCatalog } from '@tuw/heart/modules/catalog';

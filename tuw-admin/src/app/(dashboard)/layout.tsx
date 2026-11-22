@@ -1,3 +1,4 @@
+export const instant = false;
 import { Suspense } from 'react';
 import PageSkeleton from '@/components/layout/PageSkeleton';
 

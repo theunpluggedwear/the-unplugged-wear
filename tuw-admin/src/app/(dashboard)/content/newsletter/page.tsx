@@ -1,3 +1,4 @@
+export const instant = false;
 import DashboardShell from '@/components/layout/DashboardShell';
 import {
   Badge,

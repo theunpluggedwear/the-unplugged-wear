@@ -1,3 +1,4 @@
+export const instant = false;
 import React from 'react';
 import Link from 'next/link';
 import { adminGetMobileNav } from '@tuw/heart/modules/content';

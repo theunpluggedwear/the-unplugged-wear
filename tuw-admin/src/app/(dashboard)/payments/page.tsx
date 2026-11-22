@@ -1,3 +1,4 @@
+export const instant = false;
 import { listPayments } from '@tuw/heart/modules/orders';
 import { listProviders } from '@tuw/heart/integrations/registry';
 import { session } from '@/server/session';

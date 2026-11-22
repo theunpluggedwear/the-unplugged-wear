@@ -1,3 +1,4 @@
+export const instant = false;
 import Link from 'next/link';
 import DashboardShell from '@/components/layout/DashboardShell';
 

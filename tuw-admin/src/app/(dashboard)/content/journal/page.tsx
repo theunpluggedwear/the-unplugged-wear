@@ -1,3 +1,4 @@
+export const instant = false;
 import DashboardShell from '@/components/layout/DashboardShell';
 import { adminJournalMeta, adminListPosts } from '@tuw/heart/modules/marketing';
 import { session } from '@/server/session';

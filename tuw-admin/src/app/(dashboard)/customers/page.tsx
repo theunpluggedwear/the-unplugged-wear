@@ -1,3 +1,4 @@
+export const instant = false;
 import * as customers from '@tuw/heart/modules/customers';
 import { session } from '@/server/session';
 import CustomersView from './_components/CustomersView';

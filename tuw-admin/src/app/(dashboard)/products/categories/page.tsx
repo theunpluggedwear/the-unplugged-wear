@@ -1,3 +1,4 @@
+export const instant = false;
 import { adminListCategories } from '@tuw/heart/modules/catalog';
 import { session } from '@/server/session';
 import CategoriesView from './_components/CategoriesView';

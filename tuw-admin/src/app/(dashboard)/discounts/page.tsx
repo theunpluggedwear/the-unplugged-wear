@@ -1,3 +1,4 @@
+export const instant = false;
 import { adminListDiscounts } from '@tuw/heart/modules/orders';
 import { listProductDiscounts } from '@tuw/heart/modules/catalog';
 import { session } from '@/server/session';

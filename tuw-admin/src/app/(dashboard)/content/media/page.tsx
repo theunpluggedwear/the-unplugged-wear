@@ -1,3 +1,4 @@
+export const instant = false;
 import DashboardShell from '@/components/layout/DashboardShell';
 import { adminListMedia } from '@tuw/heart/modules/content';
 import { session } from '@/server/session';

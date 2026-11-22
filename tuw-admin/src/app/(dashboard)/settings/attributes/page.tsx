@@ -1,3 +1,4 @@
+export const instant = false;
 import { Suspense } from 'react';
 import { listLibrary } from '@tuw/heart/modules/catalog';
 import PageSkeleton from '@/components/layout/PageSkeleton';

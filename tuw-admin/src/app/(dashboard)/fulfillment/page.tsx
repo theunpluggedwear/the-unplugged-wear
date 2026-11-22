@@ -1,3 +1,4 @@
+export const instant = false;
 import { adminListFulfillment } from '@tuw/heart/modules/fulfillment';
 import { qikinkHealth } from '@tuw/heart/integrations/fulfillment';
 import { getSetting } from '@tuw/heart/modules/settings';

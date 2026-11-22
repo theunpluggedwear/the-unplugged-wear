@@ -1,3 +1,4 @@
+export const instant = false;
 import DashboardShell from '@/components/layout/DashboardShell';
 import { adminGetHomeCms } from '@tuw/heart/modules/content';
 import { adminListPosts, adminJournalMeta } from '@tuw/heart/modules/marketing';

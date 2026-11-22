@@ -1,3 +1,4 @@
+export const instant = false;
 import React from 'react';
 import BlogEditor from '@/components/blog/BlogEditor';
 import { loadBlogEditorData } from '@/server/blog-editor-data';

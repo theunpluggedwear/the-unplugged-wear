@@ -1,3 +1,4 @@
+export const instant = false;
 import SettingsRoute from '../_components/SettingsRoute';
 
 export default function Page() {

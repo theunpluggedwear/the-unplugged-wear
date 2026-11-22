@@ -1,3 +1,4 @@
+export const instant = false;
 import { adminListOrders, type AdminOrderTab } from '@tuw/heart/modules/orders';
 import { session } from '@/server/session';
 import OrdersView from './_components/OrdersView';

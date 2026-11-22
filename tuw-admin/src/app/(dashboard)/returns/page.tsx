@@ -1,3 +1,4 @@
+export const instant = false;
 import { adminListReturns } from '@tuw/heart/modules/returns';
 import { session } from '@/server/session';
 import ReturnsView from './_components/ReturnsView';

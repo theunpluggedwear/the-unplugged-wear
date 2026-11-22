@@ -1,3 +1,4 @@
+export const instant = false;
 import React from 'react';
 import { adminGetMobileNav } from '@tuw/heart/modules/content';
 import DashboardShell from '@/components/layout/DashboardShell';
