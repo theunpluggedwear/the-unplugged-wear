@@ -16,15 +16,28 @@ export interface AbandonedCartRow {
   status: 'detected' | 'reminded' | 'converted' | 'recovered';
 }
 
+export type DashboardOrderStatus =
+  | 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered'
+  | 'cancelled' | 'failed' | 'refunded';
+
 export interface DashboardSummary {
   revenueToday: number;
   ordersToday: number;
   averageOrder: number;
   conversionRate: number;
-  trend: Array<{ day: string; value: number }>;
-  inventoryAlerts: Array<{ name: string; unitsLeft: number; threshold: number }>;
-  topProducts: Array<{ name: string; revenue: number; units: number }>;
-  recentOrders: Array<{ orderNumber: string; customerName: string; total: number; status: string }>;
+  deltas: { revenue: number; orders: number; averageOrder: number; conversion: number };
+  trend: Array<{ day: string; value: number; previous: number }>;
+  inventoryAlerts: Array<{ name: string; unitsLeft: number; threshold: number; velocityPerDay: number }>;
+  topProducts: Array<{
+    name: string;
+    revenue: number;
+    units: number;
+    price: number;
+    stock: number;
+    imageUrl: string | null;
+    imageAlt: string | null;
+  }>;
+  recentOrders: Array<{ orderNumber: string; customerName: string; total: number; status: DashboardOrderStatus }>;
 }
 
 export interface ReportSummary {
@@ -38,6 +51,22 @@ export interface ReportSummary {
 }
 
 const num = (value: unknown) => (value === null || value === undefined ? 0 : Number(value));
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function percentDelta(current: number, previous: number): number {
+  if (!Number.isFinite(previous) || previous === 0) return 0;
+  return ((current - previous) / previous) * 100;
+}
+
+export function shiftWindow(from: Date | null, to: Date | null): { from: Date | null; to: Date | null } {
+  if (!from || !to) return { from: null, to: null };
+  const days = Math.max(1, Math.floor((to.getTime() - from.getTime()) / DAY_MS) + 1);
+  return {
+    from: new Date(from.getTime() - days * DAY_MS),
+    to: new Date(from.getTime() - 1000),
+  };
+}
 
 export async function listAbandonedCarts(): Promise<AbandonedCartRow[]> {
   const { rows } = await getDb().execute<{
@@ -119,6 +148,10 @@ function rangeBounds(range?: DateRangeFilter): { from: Date | null; to: Date | n
 export async function getDashboardSummary(range?: DateRangeFilter): Promise<DashboardSummary> {
   const db = getDb();
   const { from, to } = rangeBounds(range);
+  const prev = shiftWindow(from, to);
+  const hasRange = Boolean(from && to);
+  const trendLimit = hasRange ? sql`LIMIT 35` : sql`LIMIT 7`;
+
   const paymentWindow = from && to
     ? sql`AND paid_at >= ${from} AND paid_at <= ${to}`
     : from ? sql`AND paid_at >= ${from}` : to ? sql`AND paid_at <= ${to}` : sql``;
@@ -134,46 +167,121 @@ export async function getDashboardSummary(range?: DateRangeFilter): Promise<Dash
   const dailyWindow = from && to
     ? sql`AND date >= ${from} AND date <= ${to}`
     : from ? sql`AND date >= ${from}` : to ? sql`AND date <= ${to}` : sql``;
+  const prevPaymentWindow = prev.from && prev.to
+    ? sql`AND paid_at >= ${prev.from} AND paid_at <= ${prev.to}` : sql``;
+  const prevRefundWindow = prev.from && prev.to
+    ? sql`AND created_at >= ${prev.from} AND created_at <= ${prev.to}` : sql``;
+  const prevOrderWindow = prev.from && prev.to
+    ? sql`AND created_at >= ${prev.from} AND created_at <= ${prev.to}` : sql``;
+  const prevJoinedOrderWindow = prev.from && prev.to
+    ? sql`AND o.created_at >= ${prev.from} AND o.created_at <= ${prev.to}` : sql``;
+  const prevDailyWindow = prev.from && prev.to
+    ? sql`AND date >= ${prev.from} AND date <= ${prev.to}` : sql``;
 
-  const [kpi, trend, alerts, top, recent, sessions, conversions] = await Promise.all([
+  const [kpi, prevKpi, trend, prevTrend, alerts, velocity, top, recent, sessions, conversions, prevConversions] = await Promise.all([
     db.execute<{ revenue: string; orders: string }>(sql`
       SELECT
         COALESCE((SELECT sum(amount) FROM payments WHERE status IN ('captured','refunded') ${paymentWindow}), 0)
         - COALESCE((SELECT sum(amount) FROM refunds WHERE true ${refundWindow}), 0) AS revenue,
         (SELECT count(*) FROM orders WHERE payment_status = 'paid' ${orderWindow}) AS orders`),
-    db.execute<{ day: string; value: string }>(sql`
-      SELECT to_char(date, 'DD Mon') AS day, revenue AS value FROM daily_stats WHERE true ${dailyWindow}
-      ORDER BY date DESC LIMIT 7`),
-    db.execute<{ name: string; units_left: number; threshold: number }>(sql`
-      SELECT name, stock AS units_left, COALESCE(low_stock_threshold, 5) AS threshold
-      FROM products WHERE status = 'active' AND stock <= COALESCE(low_stock_threshold, 5)
-      ORDER BY stock ASC LIMIT 5`),
-    db.execute<{ name: string; revenue: string; units: string }>(sql`
-      SELECT oi.product_name AS name, sum(oi.line_total) AS revenue, sum(oi.qty) AS units
+    db.execute<{ revenue: string; orders: string }>(sql`
+      SELECT
+        COALESCE((SELECT sum(amount) FROM payments WHERE status IN ('captured','refunded') ${prevPaymentWindow}), 0)
+        - COALESCE((SELECT sum(amount) FROM refunds WHERE true ${prevRefundWindow}), 0) AS revenue,
+        (SELECT count(*) FROM orders WHERE payment_status = 'paid' ${prevOrderWindow}) AS orders`),
+    db.execute<{ day: string; iso: string; value: string }>(sql`
+      SELECT to_char(date, 'DD Mon') AS day, date::text AS iso, revenue AS value
+      FROM daily_stats WHERE true ${dailyWindow} ORDER BY date DESC ${trendLimit}`),
+    db.execute<{ iso: string; value: string }>(sql`
+      SELECT date::text AS iso, revenue AS value
+      FROM daily_stats WHERE true ${prevDailyWindow} ORDER BY date DESC ${trendLimit}`),
+    db.execute<{ product_id: string; name: string; units_left: number; threshold: number }>(sql`
+      SELECT p.id AS product_id, p.name, p.stock AS units_left,
+        COALESCE(p.low_stock_threshold, 5) AS threshold
+      FROM products p
+      WHERE p.status = 'active' AND p.stock <= COALESCE(p.low_stock_threshold, 5)
+      ORDER BY p.stock ASC LIMIT 5`),
+    db.execute<{ product_id: string; velocity: string }>(sql`
+      SELECT oi.product_id, COALESCE(sum(oi.qty), 0)::numeric / 7 AS velocity
       FROM order_items oi JOIN orders o ON o.id = oi.order_id
+      WHERE o.payment_status = 'paid' AND o.created_at >= now() - interval '7 days'
+      GROUP BY oi.product_id`),
+    db.execute<{
+      name: string; revenue: string; units: string; price: string; stock: string;
+      image_url: string | null; image_alt: string | null;
+    }>(sql`
+      SELECT oi.product_name AS name, sum(oi.line_total) AS revenue, sum(oi.qty) AS units,
+        COALESCE(max(p.price), 0) AS price, COALESCE(max(p.stock), 0) AS stock,
+        max(img.url) AS image_url, max(img.alt) AS image_alt
+      FROM order_items oi
+      JOIN orders o ON o.id = oi.order_id
+      JOIN products p ON p.id = oi.product_id
+      LEFT JOIN LATERAL (
+        SELECT pi.url, pi.alt FROM product_images pi
+        WHERE pi.product_id = p.id AND pi.variant_id IS NULL
+        ORDER BY pi.is_primary DESC, pi.sort_order ASC LIMIT 1
+      ) img ON true
       WHERE o.payment_status = 'paid' ${joinedOrderWindow}
-      GROUP BY oi.product_name ORDER BY revenue DESC LIMIT 5`),
-    db.execute<{ order_number: string; customer_name: string; total: string; status: string }>(sql`
+      GROUP BY p.id, oi.product_name ORDER BY revenue DESC LIMIT 5`),
+    db.execute<{ order_number: string; customer_name: string; total: string; status: DashboardOrderStatus }>(sql`
       SELECT order_number,
         COALESCE(NULLIF(guest_name, ''), 'Customer') AS customer_name,
         grand_total AS total, status
       FROM orders WHERE true ${orderWindow} ORDER BY created_at DESC LIMIT 6`),
     db.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM analytics_sessions`),
     db.execute<{ n: number }>(sql`SELECT COALESCE(sum(conversions), 0)::int AS n FROM daily_stats WHERE true ${dailyWindow}`),
+    db.execute<{ n: number }>(sql`SELECT COALESCE(sum(conversions), 0)::int AS n FROM daily_stats WHERE true ${prevDailyWindow}`),
   ]);
 
   const revenue = num(kpi.rows[0]?.revenue);
   const orders = num(kpi.rows[0]?.orders);
+  const averageOrder = orders > 0 ? revenue / orders : 0;
   const sessionCount = sessions.rows[0]?.n ?? 0;
+  const conversionRate = sessionCount > 0 ? (num(conversions.rows[0]?.n) / sessionCount) * 100 : 0;
+  const prevRevenue = num(prevKpi.rows[0]?.revenue);
+  const prevOrders = num(prevKpi.rows[0]?.orders);
+  const prevAverageOrder = prevOrders > 0 ? prevRevenue / prevOrders : 0;
+  const prevConversionRate = sessionCount > 0 ? (num(prevConversions.rows[0]?.n) / sessionCount) * 100 : 0;
+
+  const previousValues = prevTrend.rows.map((r) => num(r.value));
+  const velocityByProduct = new Map(velocity.rows.map((r) => [r.product_id, num(r.velocity)]));
   return {
     revenueToday: revenue,
     ordersToday: orders,
-    averageOrder: orders > 0 ? revenue / orders : 0,
-    conversionRate: sessionCount > 0 ? ((conversions.rows[0]?.n ?? 0) / sessionCount) * 100 : 0,
-    trend: trend.rows.map((r) => ({ day: r.day, value: num(r.value) })).reverse(),
-    inventoryAlerts: alerts.rows.map((r) => ({ name: r.name, unitsLeft: r.units_left, threshold: r.threshold })),
-    topProducts: top.rows.map((r) => ({ name: r.name, revenue: num(r.revenue), units: num(r.units) })),
-    recentOrders: recent.rows.map((r) => ({ orderNumber: r.order_number, customerName: r.customer_name, total: num(r.total), status: r.status })),
+    averageOrder,
+    conversionRate,
+    deltas: {
+      revenue: percentDelta(revenue, prevRevenue),
+      orders: percentDelta(orders, prevOrders),
+      averageOrder: percentDelta(averageOrder, prevAverageOrder),
+      conversion: percentDelta(conversionRate, prevConversionRate),
+    },
+    trend: trend.rows.map((r, i) => ({
+      day: r.day,
+      value: num(r.value),
+      previous: previousValues[i] ?? 0,
+    })).reverse(),
+    inventoryAlerts: alerts.rows.map((r) => ({
+      name: r.name,
+      unitsLeft: r.units_left,
+      threshold: r.threshold,
+      velocityPerDay: velocityByProduct.get(r.product_id) ?? 0,
+    })),
+    topProducts: top.rows.map((r) => ({
+      name: r.name,
+      revenue: num(r.revenue),
+      units: num(r.units),
+      price: num(r.price),
+      stock: num(r.stock),
+      imageUrl: r.image_url ?? null,
+      imageAlt: r.image_alt ?? null,
+    })),
+    recentOrders: recent.rows.map((r) => ({
+      orderNumber: r.order_number,
+      customerName: r.customer_name,
+      total: num(r.total),
+      status: r.status,
+    })),
   };
 }
 
