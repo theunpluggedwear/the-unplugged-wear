@@ -37,6 +37,14 @@
     {
       "path": "/api/cron/invoices.reconcileDocuments",
       "schedule": "50 4 * * *"
+    },
+    {
+      "path": "/api/cron/analytics.detectAbandoned",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/analytics.rollupDaily",
+      "schedule": "15 2 * * *"
     }
   ]
 }

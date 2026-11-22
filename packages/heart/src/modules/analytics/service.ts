@@ -1,6 +1,6 @@
 import 'server-only';
 import { sql } from 'drizzle-orm';
-import { getDb, withTransaction } from '../../platform/db/index.ts';
+import { getDb, withTransaction, type Transaction } from '../../platform/db/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
 import { getEmailSender } from '../../integrations/email/index.ts';
@@ -141,9 +141,9 @@ export async function markAbandonedReminded(id: string, actorId: string): Promis
 
 export async function detectAbandonedCarts(hoursIdle = 24): Promise<number> {
   const { rows } = await getDb().execute<{ n: number }>(sql`
-    SELECT count(*)::int AS n FROM (
+    WITH inserted AS (
       INSERT INTO abandoned_carts (id, cart_id, user_id, email, items, cart_total, abandoned_at)
-      SELECT ${uuidv7()}::uuid, c.id, c.user_id, u.email,
+      SELECT gen_random_uuid(), c.id, c.user_id, u.email,
         COALESCE(jsonb_agg(jsonb_build_object('name', ci.product_name, 'qty', ci.qty)), '[]'::jsonb),
         COALESCE(sum(ci.unit_price * ci.qty), 0),
         c.last_activity_at
@@ -153,8 +153,17 @@ export async function detectAbandonedCarts(hoursIdle = 24): Promise<number> {
       WHERE c.status = 'active' AND c.last_activity_at < now() - (${hoursIdle} || ' hours')::interval
       GROUP BY c.id, c.user_id, u.email, c.last_activity_at
       ON CONFLICT (cart_id) DO NOTHING
-    ) inserted`);
+      RETURNING id
+    )
+    SELECT count(*)::int AS n FROM inserted`);
   return rows[0]?.n ?? 0;
+}
+
+export async function markAbandonedConverted(tx: Transaction, cartId: string): Promise<void> {
+  await tx.execute(sql`
+    UPDATE abandoned_carts
+    SET status = CASE WHEN status = 'reminded' THEN 'recovered' ELSE 'converted' END
+    WHERE cart_id = ${cartId}::uuid AND status IN ('detected', 'reminded')`);
 }
 
 export interface DateRangeFilter {
