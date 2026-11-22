@@ -9,13 +9,13 @@
   },
   "summary": {
     "total": 467,
-    "done": 421,
-    "in_progress": 17,
+    "done": 422,
+    "in_progress": 16,
     "backlog": 29
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "7725074",
+    "tip": "f81f4f1",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -7436,16 +7436,17 @@
     {
       "id": "TL-BE-15.03",
       "title": "Wire admin /dashboard, /reports, /abandoned cards (one Suspense per card)",
-      "status": "in_progress",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-15",
       "started": null,
       "finished": null,
-      "log": "Live data wired on /dashboard, /reports and /abandoned; per-card Suspense is still NOT implemented (one server fetch per page). PARTIAL: split each page into one Suspense per card.",
+      "log": "Dashboard, reports and abandoned now fetch each card independently and render it in its own Suspense with a Skeleton fallback. Dashboard passes one promise per card into client components; reports and abandoned use async server card components. Browser QA passed at 360/768/1024/1440 with no runtime errors. The four KPI tiles share one boundary because they share one query.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
+      "finished": "2026-11-22",
       "follow_ups": []
     },
     {
