@@ -7,11 +7,8 @@ import Badge from '@/components/ui/Badge';
 import type { OrderItem } from '@/mocks/fixtures';
 import type { OrderStatus } from '@tuw/heart/modules/orders';
 
-// Class map - selectors live in src/app/globals.css (single app.css, home- prefix).
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'home-' + String(p) });
 
-// Figma 26px status pill: ui Badge carries the token treatment; only the
-// dashboard-specific metrics ride along (no new size variant introduced).
 const STATUS_BADGE_STYLE: React.CSSProperties = {
   height: '26px',
   padding: '0 12px',
@@ -22,7 +19,6 @@ interface RecentOrdersCardProps {
   orders: OrderItem[];
 }
 
-// SQL order status -> ui Badge variant + demo label.
 const STATUS_BADGE: Record<OrderStatus, { variant: 'success' | 'info' | 'warning' | 'danger'; label: string }> = {
   pending: { variant: 'warning', label: 'Pending' },
   confirmed: { variant: 'warning', label: 'Confirmed' },

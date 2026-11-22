@@ -1,6 +1,5 @@
 import React from 'react';
 
-// Class map - selectors live in src/app/globals.css (single app.css, home- prefix).
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'home-' + String(p) });
 
 export type SparklineTone = 'up' | 'down';
@@ -10,8 +9,6 @@ interface SparklineProps {
   label?: string;
 }
 
-// Area + line sparkline matching the Figma KPI treatment.
-// Tones: up = green (#00CB75 / #C6EAA0 wash), down = red (#E94845 wash).
 export function Sparkline({ tone, label }: SparklineProps) {
   const gradId = React.useId();
   const isUp = tone === 'up';

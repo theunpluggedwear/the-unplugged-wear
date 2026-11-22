@@ -27,9 +27,41 @@ function commentLines(file) {
   return found;
 }
 
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let quoted = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === '"' && text[i + 1] === '"') { cell += '"'; i += 1; }
+      else if (ch === '"') quoted = false;
+      else cell += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ',') { row.push(cell); cell = ''; }
+    else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+    else if (ch !== '\r') cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+
+function previousClassifications() {
+  if (!fs.existsSync(auditPath)) return new Map();
+  const rows = parseCsv(fs.readFileSync(auditPath, 'utf8')).slice(1);
+  const map = new Map();
+  for (const row of rows) {
+    if (row.length < 6) continue;
+    map.set(`${row[0]}::${row[2]}`, [row[3], row[4], row[5]]);
+  }
+  return map;
+}
+
 function counts() {
   const result = {};
   const audit = [];
+  const prior = previousClassifications();
   for (const dir of roots) {
     for (const file of walk(path.join(root, dir))) {
       const rel = path.relative(root, file).replace(/\\/g, '/');
@@ -37,7 +69,11 @@ function counts() {
       if (!found.length) continue;
       result[rel] = found.length;
       for (const item of found) {
-        audit.push([rel, item.line, item.text.replace(/"/g, '""'), 'UNCLASSIFIED', '', ''].join(','));
+        const saved = prior.get(`${rel}::${item.text}`) ?? ['UNCLASSIFIED', '', ''];
+        const row = [rel, String(item.line), item.text, ...saved]
+          .map((cell) => `"${cell.replace(/"/g, '""')}"`)
+          .join(',');
+        audit.push(row);
       }
     }
   }

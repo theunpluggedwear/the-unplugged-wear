@@ -8151,7 +8151,7 @@
       "parent": null,
       "started": "2026-11-22",
       "finished": null,
-      "log": "Infrastructure done: scripts/check-comments.mjs, comment-ratchet.json baseline (4273 lines), state-for-agents/admin/comment-audit.csv inventory, /delete-comment skill and initial ADR set. Per-comment categorization and deletion batches remain.",
+      "log": "Infrastructure done: scripts/check-comments.mjs, comment-ratchet.json, comment-audit.csv inventory, /delete-comment skill and ADR set. Batch 1 removed 57 dashboard component comments; three decision records moved to ADR 0006-0008. Audit CSV now preserves prior classifications on regeneration. Ratchet lowered 4273 -> 4213. Typecheck, build and lint pass.",
       "design_match": "n/a",
       "key_decisions": [
         "Ratchet must never increase.",

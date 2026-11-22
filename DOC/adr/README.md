@@ -11,3 +11,6 @@ Source code must not carry decision comments. Decision comments are moved here b
 - [0003 — Razorpay-hosted invoices are non-GST](./0003-non-gst-razorpay-invoices.md)
 - [0004 — Abandoned cart reminders are exactly-once](./0004-abandoned-cart-exactly-once.md)
 - [0005 — QA demo product guardrail is code-only and removable](./0005-qa-demo-product-guardrail.md)
+- [0006 — Fixed dashboard slot pool](./0006-dashboard-slot-pool.md)
+- [0007 — Dashboard bar normalization](./0007-dashboard-bar-normalization.md)
+- [0008 — Dashboard status pill sizing](./0008-dashboard-status-pill-sizing.md)

@@ -3,7 +3,6 @@ import SurfaceCard from '@/components/ui/SurfaceCard';
 import { Sparkline, type SparklineTone } from './Sparkline';
 import { TrendBadge } from './TrendBadge';
 
-// Class map - selectors live in src/app/globals.css (single app.css, home- prefix).
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'home-' + String(p) });
 
 interface MetricCardProps {
@@ -16,7 +15,6 @@ interface MetricCardProps {
   sparkTone: SparklineTone;
 }
 
-// KPI metric card: label, value + sparkline row, delta badge + comparison row.
 export function MetricCard({
   label,
   value,

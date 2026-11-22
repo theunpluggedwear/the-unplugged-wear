@@ -7,7 +7,6 @@ import { FilterMenu } from './FilterMenu';
 import { ProgressBar } from './ProgressBar';
 import { PRODUCT_SORTS, type TopProduct } from '@/hooks/useDashboardData';
 
-// Class map - selectors live in src/app/globals.css (single app.css, home- prefix).
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'home-' + String(p) });
 
 interface ProductListCardProps {

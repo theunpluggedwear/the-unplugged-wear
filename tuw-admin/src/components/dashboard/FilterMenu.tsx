@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { usePopoverAnimation } from '@/hooks/usePopoverAnimation';
 
-// Class map - selectors live in src/app/globals.css (single app.css, home- prefix).
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'home-' + String(p) });
 
 export interface FilterMenuOption {
@@ -19,9 +18,6 @@ interface FilterMenuProps {
   ariaLabel?: string;
 }
 
-// Dumb dropdown: trigger shows the active label; menu lists every option.
-// Data (options + value) flows in via props — mock or live, the menu
-// does not care. Fluid: relative wrapper, absolute menu, no fixed widths.
 export function FilterMenu({ options, value, onChange, ariaLabel = 'Filter options' }: FilterMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const anim = usePopoverAnimation(menuOpen, () => setMenuOpen(false));

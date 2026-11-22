@@ -13,15 +13,10 @@ import AnimatedNumber from '@/components/ui/AnimatedNumber';
 import EmptyState from '@/components/ui/EmptyState';
 import { SALES_RANGES, formatINRWhole, type SalesTrendPoint } from '@/hooks/useDashboardData';
 
-// Class map - selectors live in src/app/globals.css (single app.css, home- prefix).
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'home-' + String(p) });
 
 const SALES_Y_TICKS = ['₹10K', '₹8K', '₹6K', '₹4K', '₹2K', '₹0'];
 
-// Fixed slot pool (B2, motion skill data-change rule): every feed pads to
-// MAX_SLOTS index-keyed slots so range switches travel through the CSS
-// height transition — including to/from zero — instead of remounting.
-// Empty slots render zero bars, blank labels, and no tooltip.
 const MAX_SLOTS = 7;
 
 function padSlots(points: SalesTrendPoint[]): SalesTrendPoint[] {
@@ -44,8 +39,6 @@ interface SalesTrendCardProps {
   onRangeChange: (range: string) => void;
 }
 
-// Normalize bar values against the data max (floor 100 keeps the Figma
-// percentage heights pixel-identical for the default feed).
 function barHeight(value: number, points: SalesTrendPoint[]): string {
   const max = Math.max(100, ...points.map((p) => Math.max(p.lastWeek, p.thisWeek)));
   return `${(value / max) * 100}%`;
