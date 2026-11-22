@@ -8,14 +8,14 @@
     "reference": "Figma WmpPcdGcXerVgqNpgr6Q6S + production screenshots"
   },
   "summary": {
-    "total": 466,
-    "done": 411,
+    "total": 467,
+    "done": 412,
     "in_progress": 3,
     "backlog": 52
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "fab29c2",
+    "tip": "295da0c",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -1802,6 +1802,18 @@
       "status": "done",
       "owner": "agent",
       "log": "Reintroduced SalesTrendCard (paired bars, legend, tooltips, data-driven ticks, presets), MetricCard KPI deltas + sparklines, ProductListCard with ImageWithFallback, InventoryAlertsCard and RecentOrdersCard. Heart analytics now returns an equal-length previous window, KPI deltas, enriched top products and inventory velocity; chart presets stay in sync with the header calendar through URL state. Browser QA at 360/768/1024/1440 with temporary daily_stats rows, then removed. Gates: admin typecheck/test 75/75/build/lint:comments 3016/3016, heart typecheck + analytics tests 4/4.",
+      "design_match": "n/a",
+      "verified": true,
+      "pushed": false,
+      "started": "2026-11-22",
+      "finished": "2026-11-22"
+    },
+    {
+      "id": "TL-UI-DASH-KPI-SPARKLINES",
+      "title": "Drive dashboard KPI sparklines from real daily data",
+      "status": "done",
+      "owner": "agent",
+      "log": "KPI sparklines now use a generated Catmull-Rom path from a real 7-day series (revenue, orders, average order, conversion) exposed by adminGetDashboard; the original 90x40 SVG, 90x38 CSS, strokes, washes and tone colors are unchanged, with the old paths kept as the empty/flat fallback. Repaired the broken analytics.rollupDaily SQL so daily_stats actually populates. Browser QA confirmed four distinct real paths and unchanged sizing at 360/768/1024/1440; seeded rows and QA admin removed. Gates: heart typecheck + analytics tests 7/7, admin typecheck/test 78/78/build/lint:comments 3016/3016.",
       "design_match": "n/a",
       "verified": true,
       "pushed": false,
