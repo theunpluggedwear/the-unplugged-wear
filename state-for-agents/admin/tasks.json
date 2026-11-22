@@ -8,14 +8,14 @@
     "reference": "Figma WmpPcdGcXerVgqNpgr6Q6S + production screenshots"
   },
   "summary": {
-    "total": 465,
-    "done": 410,
+    "total": 466,
+    "done": 411,
     "in_progress": 3,
     "backlog": 52
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "85986e4",
+    "tip": "fab29c2",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -1793,6 +1793,18 @@
       "verified": true,
       "pushed": false,
       "follow_ups": [],
+      "started": "2026-11-22",
+      "finished": "2026-11-22"
+    },
+    {
+      "id": "TL-UI-DASH-FULL-RESTORE",
+      "title": "Restore full earlier dashboard visuals from live data",
+      "status": "done",
+      "owner": "agent",
+      "log": "Reintroduced SalesTrendCard (paired bars, legend, tooltips, data-driven ticks, presets), MetricCard KPI deltas + sparklines, ProductListCard with ImageWithFallback, InventoryAlertsCard and RecentOrdersCard. Heart analytics now returns an equal-length previous window, KPI deltas, enriched top products and inventory velocity; chart presets stay in sync with the header calendar through URL state. Browser QA at 360/768/1024/1440 with temporary daily_stats rows, then removed. Gates: admin typecheck/test 75/75/build/lint:comments 3016/3016, heart typecheck + analytics tests 4/4.",
+      "design_match": "n/a",
+      "verified": true,
+      "pushed": false,
       "started": "2026-11-22",
       "finished": "2026-11-22"
     },
