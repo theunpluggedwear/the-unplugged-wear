@@ -1,7 +1,25 @@
 'use client';
 
 import { useState } from 'react';
+import {
+  Badge,
+  Button,
+  ContentCard,
+  EmptyState,
+  Input,
+  LinkButton,
+  PageHeader,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Textarea,
+} from '@/components/ui';
 import { savePostAction } from '@/server/marketing-actions';
+import { MONO_ID_STYLE } from '@/lib/format';
 
 type Post = { id: string; slug: string; title: string; status: string; publishedAt: string | null; authorName: string };
 type Meta = { categories: { id: string; name: string }[]; authors: { id: string; name: string }[]; tags: { id: string; name: string }[] };
@@ -14,7 +32,7 @@ export default function JournalManager({ initial, meta }: { initial: Post[]; met
     status: 'draft' as 'draft' | 'scheduled' | 'published' | 'archived',
     publishedAt: '', content: '[]', tagIds: '',
   });
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; tone: 'success' | 'error' } | null>(null);
 
   function set(k: keyof typeof form, v: string) { setForm((f) => ({ ...f, [k]: v })); }
 
@@ -30,54 +48,96 @@ export default function JournalManager({ initial, meta }: { initial: Post[]; met
         content: JSON.parse(form.content),
         tagIds: form.tagIds.split(',').map((s) => s.trim()).filter(Boolean),
       });
-      if (!res.ok) { setNotice(res.error.message); return; }
+      if (!res.ok) { setNotice({ text: res.error.message, tone: 'error' }); return; }
       setPosts((p) => [res.data.post, ...p.filter((x) => x.id !== res.data.post.id)]);
       const storefrontNote = res.data.storefront.ok ? '' : ` Storefront refresh failed: ${res.data.storefront.reason}`;
-      setNotice(`Saved ${form.slug}.${storefrontNote}`);
+      setNotice({ text: `Saved ${form.slug}.${storefrontNote}`, tone: res.data.storefront.ok ? 'success' : 'error' });
+      setForm({ ...form, id: '', slug: '', title: '', subtitle: '', excerpt: '', publishedAt: '', content: '[]', tagIds: '' });
     } catch {
-      setNotice('Content must be valid JSON.');
+      setNotice({ text: 'Content must be valid JSON.', tone: 'error' });
     }
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Journal</h1>
-      <div className="grid gap-3 max-w-2xl">
-        <label className="text-sm">Slug <input className="ml-2 border rounded px-2 py-1" value={form.slug} onChange={(e) => set('slug', e.target.value)} /></label>
-        <label className="text-sm">Title <input className="ml-2 border rounded px-2 py-1" value={form.title} onChange={(e) => set('title', e.target.value)} /></label>
-        <label className="text-sm">Subtitle <input className="ml-2 border rounded px-2 py-1" value={form.subtitle} onChange={(e) => set('subtitle', e.target.value)} /></label>
-        <label className="text-sm">Excerpt <input className="ml-2 border rounded px-2 py-1" value={form.excerpt} onChange={(e) => set('excerpt', e.target.value)} /></label>
-        <label className="text-sm">Author
-          <select className="ml-2 border rounded px-2 py-1" value={form.authorId} onChange={(e) => set('authorId', e.target.value)}>
-            {meta.authors.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
-        </label>
-        <label className="text-sm">Category
-          <select className="ml-2 border rounded px-2 py-1" value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)}>
-            <option value="">None</option>
-            {meta.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </label>
-        <label className="text-sm">Status
-          <select className="ml-2 border rounded px-2 py-1" value={form.status} onChange={(e) => set('status', e.target.value)}>
-            {['draft', 'scheduled', 'published', 'archived'].map((s) => <option key={s}>{s}</option>)}
-          </select>
-        </label>
-        <label className="text-sm">Publish at <input type="datetime-local" className="ml-2 border rounded px-2 py-1" value={form.publishedAt} onChange={(e) => set('publishedAt', e.target.value)} /></label>
-        <label className="text-sm">Tag IDs (comma-separated) <input className="ml-2 border rounded px-2 py-1" value={form.tagIds} onChange={(e) => set('tagIds', e.target.value)} /></label>
-        <label className="block text-sm">Content (JSON blocks)
-          <textarea className="mt-1 w-full border rounded px-2 py-1 font-mono text-xs" rows={10} value={form.content} onChange={(e) => set('content', e.target.value)} />
-        </label>
-        <button className="w-fit px-4 py-2 rounded bg-black text-white" onClick={save}>Save post</button>
-        {notice && <p className="text-sm">{notice}</p>}
-      </div>
-      <ul className="text-sm divide-y">
-        {posts.map((p) => (
-          <li key={p.id} className="py-2 flex justify-between">
-            <span>{p.title} <span className="text-muted-foreground">/{p.slug} · {p.status}</span></span>
-          </li>
-        ))}
-      </ul>
+      <PageHeader
+        title="Journal"
+        subtitle="Editorial posts. Use the full editor for rich content and revisions."
+        actions={<LinkButton href="/content/journal/new" variant="primary" size="md">New story</LinkButton>}
+      />
+
+      {notice && (
+        <p
+          role={notice.tone === 'error' ? 'alert' : 'status'}
+          style={{ fontSize: 13, color: notice.tone === 'error' ? 'var(--tuw-text-error)' : 'var(--tuw-text-success)' }}
+        >
+          {notice.text}
+        </p>
+      )}
+
+      <ContentCard>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Input label="Slug" value={form.slug} onChange={(e) => set('slug', e.target.value)} required />
+          <Input label="Title" value={form.title} onChange={(e) => set('title', e.target.value)} required />
+          <Input label="Subtitle" value={form.subtitle} onChange={(e) => set('subtitle', e.target.value)} />
+          <Input label="Excerpt" value={form.excerpt} onChange={(e) => set('excerpt', e.target.value)} />
+          <Select
+            label="Author"
+            value={form.authorId}
+            onChange={(e) => set('authorId', e.target.value)}
+            options={meta.authors.map((a) => ({ value: a.id, label: a.name }))}
+          />
+          <Select
+            label="Category"
+            value={form.categoryId}
+            onChange={(e) => set('categoryId', e.target.value)}
+            options={[{ value: '', label: 'None' }, ...meta.categories.map((c) => ({ value: c.id, label: c.name }))]}
+          />
+          <Select
+            label="Status"
+            value={form.status}
+            onChange={(e) => set('status', e.target.value)}
+            options={['draft', 'scheduled', 'published', 'archived'].map((s) => ({ value: s, label: s[0]!.toUpperCase() + s.slice(1) }))}
+          />
+          <Input label="Publish at" type="datetime-local" value={form.publishedAt} onChange={(e) => set('publishedAt', e.target.value)} />
+          <Input label="Tag IDs (comma-separated)" value={form.tagIds} onChange={(e) => set('tagIds', e.target.value)} />
+          <div className="md:col-span-2">
+            <Textarea label="Content (JSON blocks)" rows={10} value={form.content} onChange={(e) => set('content', e.target.value)} className="font-mono" />
+          </div>
+          <div className="md:col-span-2">
+            <Button variant="primary" size="md" onClick={() => void save()}>{form.id ? 'Update post' : 'Save post'}</Button>
+          </div>
+        </div>
+      </ContentCard>
+
+      {posts.length === 0 ? (
+        <EmptyState title="No posts yet" description="Saved stories will appear here." />
+      ) : (
+        <ContentCard padding="0px">
+          <Table>
+            <TableHeader>
+              <TableRow hoverable={false}>
+                <TableHead>Title</TableHead>
+                <TableHead>Slug</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {posts.map((p) => (
+                <TableRow key={p.id} hoverable={false}>
+                  <TableCell>{p.title}</TableCell>
+                  <TableCell style={MONO_ID_STYLE}>/{p.slug}</TableCell>
+                  <TableCell><Badge variant={p.status === 'published' ? 'success' : 'neutral'}>{p.status}</Badge></TableCell>
+                  <TableCell>
+                    <LinkButton href={`/content/journal/${p.id}/edit`} variant="secondary" size="sm">Open editor</LinkButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ContentCard>
+      )}
     </div>
   );
 }

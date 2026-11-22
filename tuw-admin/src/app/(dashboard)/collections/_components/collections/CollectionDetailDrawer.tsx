@@ -15,6 +15,7 @@ import {
 import { Edit3, Layers } from 'lucide-react';
 import type { CollectionItem, ProductItem } from '@/mocks/fixtures';
 import { collectionCount, resolveCollectionProducts } from '@tuw/heart/modules/catalog/rules';
+import { MONO_ID_STYLE } from '@/lib/format';
 
 export interface CollectionDetailDrawerProps {
   collection: CollectionItem | null;
@@ -209,7 +210,7 @@ export default function CollectionDetailDrawer({
                 {
                   label: 'Slug',
                   value: (
-                    <span className="tuw-mono-id">/{collection.slug}</span>
+                    <span style={MONO_ID_STYLE}>/{collection.slug}</span>
                   ),
                 },
                 { label: 'Visibility', value: visibilityBadge(collection.visibility) },

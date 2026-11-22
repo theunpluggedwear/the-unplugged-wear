@@ -8,6 +8,7 @@ import { useAdminState } from '@/mocks/state';
 import type { AdminDiscountCode as DiscountCode } from '@tuw/heart/modules/orders';
 import type { ProductDiscountRow } from '@tuw/heart/modules/catalog';
 import { createDiscountAction, deleteDiscountAction, setDiscountActiveAction, setProductDiscountActiveAction } from '@/server/discount-actions';
+import { MONO_ID_STYLE } from '@/lib/format';
 
 // Discount codes and product discount schedules from the database
 // (TL-BE-08). Checkout reads the same rows; a used code can be switched off
@@ -243,7 +244,7 @@ export default function DiscountsView({ initialCodes, initialSchedules, perms }:
               </TableRow>
             ) : paginatedCodes.map((d) => (
               <TableRow key={d.id} hoverable={false}>
-                <TableCell className="tuw-mono-id" style={{ padding: '10px 16px', fontSize: 14, fontWeight: 700 }}>
+                <TableCell style={{ ...MONO_ID_STYLE, padding: '10px 16px', fontSize: 14, fontWeight: 700 }}>
                   {d.code}
                 </TableCell>
                 <TableCell style={{ padding: '10px 16px' }}>

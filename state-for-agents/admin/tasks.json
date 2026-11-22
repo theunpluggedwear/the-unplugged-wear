@@ -8,8 +8,8 @@
     "reference": "Figma WmpPcdGcXerVgqNpgr6Q6S + production screenshots"
   },
   "summary": {
-    "total": 458,
-    "done": 403,
+    "total": 459,
+    "done": 404,
     "in_progress": 2,
     "backlog": 53
   },
@@ -8085,6 +8085,24 @@
       "follow_ups": [],
       "category": "qa",
       "severity": "high"
+    },
+    {
+      "id": "TL-UI-CMS-THEME-ALIGN",
+      "title": "Align CMS and Design Assets screens with admin theme primitives",
+      "status": "done",
+      "owner": "agent",
+      "parent": null,
+      "started": "2026-11-22",
+      "finished": "2026-11-22",
+      "log": "All CMS child pages and Design Assets now use DashboardShell, PageHeader and existing UI primitives with --tuw-* tokens. Store Navigation shell restored. Removed custom .tuw-mono-id class in favour of shared MONO_ID_STYLE using --tuw-text-info. Browser QA at 1440/360 confirmed sidebar visible on all pages, zero black buttons, no horizontal overflow, and primary buttons using rgb(117,57,255).",
+      "design_match": "yes",
+      "key_decisions": [
+        "No new UI components; reused existing primitives from tuw-admin/src/components/ui.",
+        "No storefront files touched; CMS backend behaviour and persistence unchanged."
+      ],
+      "verified": true,
+      "pushed": false,
+      "follow_ups": []
     }
   ],
   "workflow": {

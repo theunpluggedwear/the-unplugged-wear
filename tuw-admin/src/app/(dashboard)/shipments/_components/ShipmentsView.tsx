@@ -11,6 +11,7 @@ import {
 } from '@/components/ui';
 import { useAdminState } from '@/mocks/state';
 import { addTrackingAction, getShipmentAction, listShipmentsAction, setShipmentStatusAction } from '@/server/fulfillment-actions';
+import { MONO_ID_STYLE } from '@/lib/format';
 
 // Parcels (TL-BE-11). Provider-synced parcels appear here on their own; a
 // Custom Atelier or off-platform courier is added by hand. Either way the
@@ -227,7 +228,7 @@ export default function ShipmentsView({ initial, perms }: { initial: ListResult;
                     <TableCell style={{ fontWeight: 600 }}>{row.orderNumber}</TableCell>
                     <TableCell>{row.customerName}</TableCell>
                     <TableCell>{row.carrier ?? '—'}</TableCell>
-                    <TableCell className="tuw-mono-id" style={{ fontSize: 12 }}>{row.trackingNumber ?? '—'}</TableCell>
+                    <TableCell style={{ ...MONO_ID_STYLE, fontSize: 12 }}>{row.trackingNumber ?? '—'}</TableCell>
                     <TableCell><Badge variant={STATUS_BADGE[row.status]}>{STATUS_LABEL[row.status]}</Badge></TableCell>
                     <TableCell>{day(row.shippedAt)}</TableCell>
                     <TableCell>{day(row.estimatedDeliveryAt)}</TableCell>

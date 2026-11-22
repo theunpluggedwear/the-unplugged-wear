@@ -9,6 +9,7 @@ import DashboardShell from '@/components/layout/DashboardShell';
 import { ContentCard, StatCard, Badge, Button, Input, Drawer, Pagination, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, PageHeader, HeroCard, KeyValueList, FilterPills } from '@/components/ui';
 import { useAdminState } from '@/mocks/state';
 import { listPaymentsAction, markCodCollectedAction } from '@/server/money-actions';
+import { MONO_ID_STYLE } from '@/lib/format';
 
 // Payments from the database (TL-BE-09). Only the demo gateway exists until
 // the integrations phase, so no money moves; every figure is still real data.
@@ -196,7 +197,7 @@ export default function PaymentsView({ initial, providers, perms }: { initial: L
                 { label: 'Email:', value: <span>{selected.customerEmail || '—'}</span> },
                 { label: 'Method:', value: <span>{METHOD[selected.method] ?? selected.method}</span> },
                 { label: 'Provider:', value: <span>{selected.provider === 'mock' ? 'Demo gateway (no money collected)' : selected.provider}</span> },
-                { label: 'Gateway reference:', value: <span className="tuw-mono-id">{selected.transactionId ?? '—'}</span> },
+                { label: 'Gateway reference:', value: <span style={MONO_ID_STYLE}>{selected.transactionId ?? '—'}</span> },
                 { label: 'Paid at:', value: <span>{when(selected.paidAt)}</span> },
                 { label: 'Refunded:', value: <span className="tuw-tabular-nums">{selected.refundedPaise ? rupees(selected.refundedPaise) : '—'}</span> },
               ]}

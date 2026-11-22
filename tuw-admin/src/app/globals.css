@@ -378,16 +378,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Non-clickable machine identifiers (AWB, codes, slugs, cart IDs). Clickable
-   order/ticket IDs keep --tuw-action-primary instead. */
-.tuw-mono-id {
-  /* TableCell/primitive inline defaults set font-family and colour, so these
-     two declarations need to win without repeating tokens at every call site. */
-  font-family: var(--tuw-font-mono, ui-monospace, monospace) !important;
-  color: var(--tuw-text-info, #175CD3) !important;
-  font-variant-numeric: tabular-nums;
-}
-
 /* Base resets — layered so Tailwind utilities (@layer utilities) win over them.
    Values unchanged for legacy unlayered components; utilities now apply bg/border/padding. */
 @layer base {

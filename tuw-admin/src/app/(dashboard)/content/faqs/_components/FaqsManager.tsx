@@ -1,6 +1,23 @@
 'use client';
 
 import { useState } from 'react';
+import {
+  Badge,
+  Button,
+  Checkbox,
+  ContentCard,
+  EmptyState,
+  Input,
+  PageHeader,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Textarea,
+} from '@/components/ui';
 import { deleteFaqAction, saveFaqAction } from '@/server/content-actions';
 
 type Faq = {
@@ -29,7 +46,7 @@ export default function FaqsManager({ initial, products, categories }: {
 }) {
   const [faqs, setFaqs] = useState(initial);
   const [form, setForm] = useState({ ...empty });
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; tone: 'success' | 'error' } | null>(null);
 
   function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) { setForm((f) => ({ ...f, [k]: v })); }
   function edit(f: Faq) {
@@ -48,59 +65,105 @@ export default function FaqsManager({ initial, products, categories }: {
       question: form.question, answer: form.answer,
       sortOrder: form.sortOrder, isPublished: form.isPublished,
     });
-    if (!res.ok) { setNotice(res.error.message); return; }
+    if (!res.ok) { setNotice({ text: res.error.message, tone: 'error' }); return; }
     setFaqs((list) => [res.data.faq, ...list.filter((f) => f.id !== res.data.faq.id)]);
     setForm({ ...empty });
     const storefrontNote = res.data.storefront.ok ? '' : ` Storefront refresh failed: ${res.data.storefront.reason}`;
-    setNotice(`Saved.${storefrontNote}`);
+    setNotice({ text: `Saved.${storefrontNote}`, tone: res.data.storefront.ok ? 'success' : 'error' });
   }
 
   async function remove(id: string) {
     const res = await deleteFaqAction({ id });
-    if (!res.ok) { setNotice(res.error.message); return; }
+    if (!res.ok) { setNotice({ text: res.error.message, tone: 'error' }); return; }
     setFaqs((list) => list.filter((f) => f.id !== id));
-    if (!res.data.storefront.ok) setNotice(`Removed. Storefront refresh failed: ${res.data.storefront.reason}`);
+    if (!res.data.storefront.ok) setNotice({ text: `Removed. Storefront refresh failed: ${res.data.storefront.reason}`, tone: 'error' });
+    else setNotice({ text: 'FAQ removed.', tone: 'success' });
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">FAQs</h1>
-      <div className="grid gap-3 max-w-2xl">
-        <label className="text-sm">Scope
-          <select className="ml-2 border rounded px-2 py-1" value={form.scope} onChange={(e) => set('scope', e.target.value as Faq['scope'])}>
-            <option value="general">General</option><option value="product">Product</option><option value="category">Category</option>
-          </select>
-        </label>
-        {form.scope === 'product' && (
-          <label className="text-sm">Product
-            <select className="ml-2 border rounded px-2 py-1" value={form.productId} onChange={(e) => set('productId', e.target.value)}>
-              <option value="">Choose…</option>{products.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
-            </select>
-          </label>
-        )}
-        {form.scope === 'category' && (
-          <label className="text-sm">Category
-            <select className="ml-2 border rounded px-2 py-1" value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)}>
-              <option value="">Choose…</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </label>
-        )}
-        <label className="text-sm">Group label (general) <input className="ml-2 border rounded px-2 py-1" value={form.groupLabel} onChange={(e) => set('groupLabel', e.target.value)} /></label>
-        <label className="text-sm">Question <input className="ml-2 border rounded px-2 py-1" value={form.question} onChange={(e) => set('question', e.target.value)} /></label>
-        <label className="block text-sm">Answer <textarea className="mt-1 w-full border rounded px-2 py-1" rows={4} value={form.answer} onChange={(e) => set('answer', e.target.value)} /></label>
-        <label className="text-sm">Sort order <input type="number" className="ml-2 border rounded px-2 py-1 w-20" value={form.sortOrder} onChange={(e) => set('sortOrder', Number(e.target.value))} /></label>
-        <label className="text-sm">Published <input type="checkbox" className="ml-2" checked={form.isPublished} onChange={(e) => set('isPublished', e.target.checked)} /></label>
-        <button className="w-fit px-4 py-2 rounded bg-black text-white" onClick={save}>Save FAQ</button>
-        {notice && <p className="text-sm">{notice}</p>}
-      </div>
-      <ul className="text-sm divide-y">
-        {faqs.map((f) => (
-          <li key={f.id} className="py-2 flex justify-between gap-3">
-            <span>{f.question} <span className="text-muted-foreground">· {f.scope} · {f.isPublished ? 'published' : 'draft'}</span></span>
-            <span className="flex gap-3"><button className="underline" onClick={() => edit(f)}>Edit</button><button className="underline text-red-600" onClick={() => remove(f.id)}>Delete</button></span>
-          </li>
-        ))}
-      </ul>
+      <PageHeader
+        title="FAQs"
+        subtitle="General, product and category help entries."
+        actions={<Button variant="primary" size="md" onClick={() => void save()}>{form.id ? 'Update FAQ' : 'Save FAQ'}</Button>}
+      />
+
+      {notice && (
+        <p
+          role={notice.tone === 'error' ? 'alert' : 'status'}
+          style={{ fontSize: 13, color: notice.tone === 'error' ? 'var(--tuw-text-error)' : 'var(--tuw-text-success)' }}
+        >
+          {notice.text}
+        </p>
+      )}
+
+      <ContentCard>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Select
+            label="Scope"
+            value={form.scope}
+            onChange={(e) => set('scope', e.target.value as Faq['scope'])}
+            options={[{ value: 'general', label: 'General' }, { value: 'product', label: 'Product' }, { value: 'category', label: 'Category' }]}
+          />
+          {form.scope === 'product' && (
+            <Select
+              label="Product"
+              value={form.productId}
+              onChange={(e) => set('productId', e.target.value)}
+              options={[{ value: '', label: 'Choose…' }, ...products.map((p) => ({ value: p.id, label: p.title }))]}
+            />
+          )}
+          {form.scope === 'category' && (
+            <Select
+              label="Category"
+              value={form.categoryId}
+              onChange={(e) => set('categoryId', e.target.value)}
+              options={[{ value: '', label: 'Choose…' }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
+            />
+          )}
+          <Input label="Group label (general)" value={form.groupLabel} onChange={(e) => set('groupLabel', e.target.value)} />
+          <Input label="Question" value={form.question} onChange={(e) => set('question', e.target.value)} required />
+          <div className="md:col-span-2">
+            <Textarea label="Answer" rows={4} value={form.answer} onChange={(e) => set('answer', e.target.value)} required />
+          </div>
+          <Input label="Sort order" type="number" value={form.sortOrder} onChange={(e) => set('sortOrder', Number(e.target.value))} />
+          <div className="flex items-end pb-2">
+            <Checkbox label="Published" checked={form.isPublished} onChange={(e) => set('isPublished', e.target.checked)} />
+          </div>
+        </div>
+      </ContentCard>
+
+      {faqs.length === 0 ? (
+        <EmptyState title="No FAQs yet" description="Saved help entries will appear here." />
+      ) : (
+        <ContentCard padding="0px">
+          <Table>
+            <TableHeader>
+              <TableRow hoverable={false}>
+                <TableHead>Question</TableHead>
+                <TableHead>Scope</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {faqs.map((f) => (
+                <TableRow key={f.id} hoverable={false}>
+                  <TableCell>{f.question}</TableCell>
+                  <TableCell>{f.scope}</TableCell>
+                  <TableCell><Badge variant={f.isPublished ? 'success' : 'neutral'}>{f.isPublished ? 'Published' : 'Draft'}</Badge></TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button variant="secondary" size="sm" onClick={() => edit(f)}>Edit</Button>
+                      <Button variant="danger" size="sm" onClick={() => void remove(f.id)}>Delete</Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ContentCard>
+      )}
     </div>
   );
 }

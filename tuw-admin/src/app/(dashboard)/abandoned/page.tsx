@@ -6,6 +6,7 @@ import { ContentCard, StatCard, Badge, Button, Input, Pagination, Table, TableHe
 import { Download, BellRing } from 'lucide-react';
 import { useAdminState } from '@/mocks/state';
 import { AbandonedCart } from '@/mocks/fixtures';
+import { MONO_ID_STYLE } from '@/lib/format';
 
 // Abandoned carts (Phase-2 abandonment): detected → reminded → converted
 // pipeline with exactly-once reminders and email-matched auto-conversion.
@@ -133,7 +134,7 @@ export default function AbandonedPage() {
               </TableRow>
             ) : paginated.map((c) => (
               <TableRow key={c.id} hoverable={false}>
-                <TableCell className="tuw-mono-id" style={{ padding: '10px 16px', fontSize: 13, fontWeight: 700 }}>
+                <TableCell style={{ ...MONO_ID_STYLE, padding: '10px 16px', fontSize: 13, fontWeight: 700 }}>
                   {c.cartId}
                 </TableCell>
                 <TableCell style={{ padding: '10px 16px', fontSize: 13, color: 'var(--tuw-text-secondary, #5D6772)' }}>

@@ -27,6 +27,7 @@ import { deleteCollectionAction, saveCollectionAction } from '@/server/catalog-a
 import { collectionCount, uniqueSlug } from '@tuw/heart/modules/catalog/rules';
 import CollectionFormDrawer, { type CollectionSaveResult } from './collections/CollectionFormDrawer';
 import CollectionDetailDrawer from './collections/CollectionDetailDrawer';
+import { MONO_ID_STYLE } from '@/lib/format';
 
 // Collections on real data (TL-BE-05): the server page reads them, this view
 // renders and calls the guarded actions.
@@ -203,7 +204,7 @@ export default function CollectionsView({ initialCollections, products, canManag
                 <TableCell style={{ padding: '14px 16px', fontSize: 14, fontWeight: 600, color: 'var(--tuw-text-primary, #262626)' }}>
                   {item.name}
                 </TableCell>
-                <TableCell className="tuw-mono-id" style={{ padding: '14px 16px', fontSize: 13 }}>
+                <TableCell style={{ ...MONO_ID_STYLE, padding: '14px 16px', fontSize: 13 }}>
                   /{item.slug}
                 </TableCell>
                 <TableCell style={{ padding: '14px 16px', fontSize: 14, color: 'var(--tuw-text-primary, #262626)' }}>

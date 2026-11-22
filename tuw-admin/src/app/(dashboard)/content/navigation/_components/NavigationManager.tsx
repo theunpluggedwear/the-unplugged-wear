@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import type { MobileNavItem } from '@tuw/heart/modules/content';
-import { Button, Input, PageHeader } from '@/components/ui';
+import { Button, ContentCard, EmptyState, Input, PageHeader } from '@/components/ui';
 import { saveMobileNavAction } from '@/server/content-actions';
 
 const emptyItem = (): MobileNavItem => ({ label: '', href: '', columns: [] });
 
 export default function NavigationManager({ initial }: { initial: MobileNavItem[] }) {
   const [items, setItems] = useState<MobileNavItem[]>(initial);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; tone: 'success' | 'error' } | null>(null);
   const [busy, setBusy] = useState(false);
 
   function updateItem(index: number, patch: Partial<MobileNavItem>) {
@@ -88,7 +88,7 @@ export default function NavigationManager({ initial }: { initial: MobileNavItem[
 
   async function save() {
     if (!items.every((item) => item.label.trim() && item.href.trim())) {
-      setNotice('Every menu item needs a label and a link.');
+      setNotice({ text: 'Every menu item needs a label and a link.', tone: 'error' });
       return;
     }
     setBusy(true);
@@ -96,13 +96,13 @@ export default function NavigationManager({ initial }: { initial: MobileNavItem[
     const result = await saveMobileNavAction({ items });
     setBusy(false);
     if (!result.ok) {
-      setNotice(result.error.message);
+      setNotice({ text: result.error.message, tone: 'error' });
       return;
     }
     const refreshNote = result.data.storefront.ok
       ? ''
       : ` Storefront refresh failed: ${result.data.storefront.reason}`;
-    setNotice(`Mobile navigation saved.${refreshNote}`);
+    setNotice({ text: `Mobile navigation saved.${refreshNote}`, tone: result.data.storefront.ok ? 'success' : 'error' });
   }
 
   return (
@@ -116,19 +116,22 @@ export default function NavigationManager({ initial }: { initial: MobileNavItem[
           </Button>
         }
       />
-      {notice && <p role="status" className="text-sm">{notice}</p>}
+      {notice && (
+        <p
+          role={notice.tone === 'error' ? 'alert' : 'status'}
+          style={{ fontSize: 13, color: notice.tone === 'error' ? 'var(--tuw-text-error)' : 'var(--tuw-text-success)' }}
+        >
+          {notice.text}
+        </p>
+      )}
+
+      {items.length === 0 ? (
+        <EmptyState title="No mobile menu items" description="Add items to build the phone and tablet drawer menu." />
+      ) : null}
 
       <div className="flex flex-col gap-4">
         {items.map((item, itemIndex) => (
-          <section
-            key={`${itemIndex}-${item.label}`}
-            style={{
-              padding: 16,
-              border: '1px solid var(--tuw-border-subtle, #E2E4E6)',
-              borderRadius: 12,
-              background: 'var(--tuw-bg-surface, #FFFFFF)',
-            }}
-          >
+          <ContentCard key={`${itemIndex}-${item.label}`}>
             <div className="flex flex-wrap items-end gap-3">
               <div style={{ flex: '1 1 220px' }}>
                 <Input label="Menu label" value={item.label} onChange={(e) => updateItem(itemIndex, { label: e.target.value })} required />
@@ -138,12 +141,12 @@ export default function NavigationManager({ initial }: { initial: MobileNavItem[
               </div>
               <Button variant="secondary" size="sm" disabled={itemIndex === 0} onClick={() => moveItem(itemIndex, -1)}>Up</Button>
               <Button variant="secondary" size="sm" disabled={itemIndex === items.length - 1} onClick={() => moveItem(itemIndex, 1)}>Down</Button>
-              <Button variant="secondary" size="sm" onClick={() => removeItem(itemIndex)}>Remove</Button>
+              <Button variant="danger" size="sm" onClick={() => removeItem(itemIndex)}>Remove</Button>
             </div>
 
             <div className="mt-4 flex flex-col gap-3">
               {(item.columns ?? []).map((column, columnIndex) => (
-                <div key={columnIndex} style={{ paddingLeft: 16, borderLeft: '2px solid var(--tuw-border-subtle, #E2E4E6)' }}>
+                <div key={columnIndex} style={{ paddingLeft: 16, borderLeft: '2px solid var(--tuw-border-subtle)' }}>
                   <div className="flex flex-wrap items-end gap-3">
                     <div style={{ flex: '1 1 220px' }}>
                       <Input label="Column title" value={column.title} onChange={(e) => updateColumn(itemIndex, columnIndex, e.target.value)} required />
@@ -159,7 +162,7 @@ export default function NavigationManager({ initial }: { initial: MobileNavItem[
                         <div style={{ flex: '2 1 280px' }}>
                           <Input label="Link URL" value={link.href} onChange={(e) => updateLink(itemIndex, columnIndex, linkIndex, { href: e.target.value })} required />
                         </div>
-                        <Button variant="secondary" size="sm" onClick={() => removeLink(itemIndex, columnIndex, linkIndex)}>Remove</Button>
+                        <Button variant="danger" size="sm" onClick={() => removeLink(itemIndex, columnIndex, linkIndex)}>Remove</Button>
                       </div>
                     ))}
                     <Button variant="secondary" size="sm" onClick={() => addLink(itemIndex, columnIndex)}>Add link</Button>
@@ -168,7 +171,7 @@ export default function NavigationManager({ initial }: { initial: MobileNavItem[
               ))}
               <Button variant="secondary" size="sm" onClick={() => addColumn(itemIndex)}>Add column</Button>
             </div>
-          </section>
+          </ContentCard>
         ))}
 
         <Button variant="secondary" size="md" onClick={addItem}>Add menu item</Button>
