@@ -8,14 +8,14 @@
     "reference": "Figma WmpPcdGcXerVgqNpgr6Q6S + production screenshots"
   },
   "summary": {
-    "total": 467,
-    "done": 422,
-    "in_progress": 16,
+    "total": 468,
+    "done": 424,
+    "in_progress": 15,
     "backlog": 29
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "f81f4f1",
+    "tip": "2b8a638",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -1753,13 +1753,26 @@
     {
       "id": "TL-UI-FX1",
       "title": "Focus parity on form primitives + journal proof",
-      "status": "in_progress",
+      "status": "done",
       "owner": "unassigned",
-      "log": "FormTextarea/FormSelect/ui-Select/ui-Textarea gain Input focus language; journal modal proves it. PARTIAL: FormSelect/FormTextarea still lack the Input focus language; journal modal proof pending",
+      "log": "Select, Textarea, FormSelect and FormTextarea now use the same focus and error tokens as Input. Verified on the journal editor modal at 360/768/1024/1440.",
       "design_match": "pending",
-      "verified": false,
+      "verified": true,
       "pushed": false,
+      "finished": "2026-11-23",
       "follow_ups": []
+    },
+    {
+      "id": "TL-UI-NAV-SHELL",
+      "title": "Keep the dashboard shell mounted across navigation",
+      "status": "done",
+      "owner": "agent",
+      "log": "DashboardShell moved from 32 page/view components into (dashboard)/layout.tsx, so the sidebar and header survive client navigation. The page title now comes from the pathname via src/lib/page-titles.ts. A DOM marker on the header stayed intact across Dashboard to Products and the title changed correctly; focus rings and 360/768/1024/1440 layouts re-verified.",
+      "design_match": "n/a",
+      "verified": true,
+      "pushed": false,
+      "started": "2026-11-23",
+      "finished": "2026-11-23"
     },
     {
       "id": "TL-UI-SEL",
