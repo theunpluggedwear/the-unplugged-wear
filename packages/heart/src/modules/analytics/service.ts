@@ -180,13 +180,10 @@ function rangeBounds(range?: DateRangeFilter): { from: Date | null; to: Date | n
   };
 }
 
-export async function getDashboardSummary(range?: DateRangeFilter): Promise<DashboardSummary> {
-  const db = getDb();
+function dashboardWindows(range?: DateRangeFilter) {
   const { from, to } = rangeBounds(range);
   const prev = shiftWindow(from, to);
-  const hasRange = Boolean(from && to);
-  const trendLimit = hasRange ? sql`LIMIT 35` : sql`LIMIT 7`;
-
+  const trendLimit = from && to ? sql`LIMIT 35` : sql`LIMIT 7`;
   const paymentWindow = from && to
     ? sql`AND paid_at >= ${from} AND paid_at <= ${to}`
     : from ? sql`AND paid_at >= ${from}` : to ? sql`AND paid_at <= ${to}` : sql``;
@@ -208,31 +205,104 @@ export async function getDashboardSummary(range?: DateRangeFilter): Promise<Dash
     ? sql`AND created_at >= ${prev.from} AND created_at <= ${prev.to}` : sql``;
   const prevOrderWindow = prev.from && prev.to
     ? sql`AND created_at >= ${prev.from} AND created_at <= ${prev.to}` : sql``;
-  const prevJoinedOrderWindow = prev.from && prev.to
-    ? sql`AND o.created_at >= ${prev.from} AND o.created_at <= ${prev.to}` : sql``;
   const prevDailyWindow = prev.from && prev.to
     ? sql`AND date >= ${prev.from} AND date <= ${prev.to}` : sql``;
+  return {
+    paymentWindow, refundWindow, orderWindow, joinedOrderWindow, dailyWindow,
+    prevPaymentWindow, prevRefundWindow, prevOrderWindow, prevDailyWindow, trendLimit,
+  };
+}
 
-  const [kpi, prevKpi, trend, prevTrend, kpiRows, alerts, velocity, top, recent, sessions, conversions, prevConversions] = await Promise.all([
+export type DashboardKpis = Pick<DashboardSummary,
+  'revenueToday' | 'ordersToday' | 'averageOrder' | 'conversionRate' | 'deltas' | 'kpiSeries'>;
+
+export async function getDashboardKpis(range?: DateRangeFilter): Promise<DashboardKpis> {
+  const db = getDb();
+  const w = dashboardWindows(range);
+  const [kpi, prevKpi, kpiRows, sessions, conversions, prevConversions] = await Promise.all([
     db.execute<{ revenue: string; orders: string }>(sql`
       SELECT
-        COALESCE((SELECT sum(amount) FROM payments WHERE status IN ('captured','refunded') ${paymentWindow}), 0)
-        - COALESCE((SELECT sum(amount) FROM refunds WHERE true ${refundWindow}), 0) AS revenue,
-        (SELECT count(*) FROM orders WHERE payment_status = 'paid' ${orderWindow}) AS orders`),
+        COALESCE((SELECT sum(amount) FROM payments WHERE status IN ('captured','refunded') ${w.paymentWindow}), 0)
+        - COALESCE((SELECT sum(amount) FROM refunds WHERE true ${w.refundWindow}), 0) AS revenue,
+        (SELECT count(*) FROM orders WHERE payment_status = 'paid' ${w.orderWindow}) AS orders`),
     db.execute<{ revenue: string; orders: string }>(sql`
       SELECT
-        COALESCE((SELECT sum(amount) FROM payments WHERE status IN ('captured','refunded') ${prevPaymentWindow}), 0)
-        - COALESCE((SELECT sum(amount) FROM refunds WHERE true ${prevRefundWindow}), 0) AS revenue,
-        (SELECT count(*) FROM orders WHERE payment_status = 'paid' ${prevOrderWindow}) AS orders`),
-    db.execute<{ day: string; iso: string; value: string }>(sql`
-      SELECT to_char(date, 'DD Mon') AS day, date::text AS iso, revenue AS value
-      FROM daily_stats WHERE true ${dailyWindow} ORDER BY date DESC ${trendLimit}`),
-    db.execute<{ iso: string; value: string }>(sql`
-      SELECT date::text AS iso, revenue AS value
-      FROM daily_stats WHERE true ${prevDailyWindow} ORDER BY date DESC ${trendLimit}`),
+        COALESCE((SELECT sum(amount) FROM payments WHERE status IN ('captured','refunded') ${w.prevPaymentWindow}), 0)
+        - COALESCE((SELECT sum(amount) FROM refunds WHERE true ${w.prevRefundWindow}), 0) AS revenue,
+        (SELECT count(*) FROM orders WHERE payment_status = 'paid' ${w.prevOrderWindow}) AS orders`),
     db.execute<DailyKpiRow>(sql`
       SELECT revenue, conversions, unique_visitors, page_views
-      FROM daily_stats WHERE true ${dailyWindow} ORDER BY date DESC ${trendLimit}`),
+      FROM daily_stats WHERE true ${w.dailyWindow} ORDER BY date DESC ${w.trendLimit}`),
+    db.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM analytics_sessions`),
+    db.execute<{ n: number }>(sql`SELECT COALESCE(sum(conversions), 0)::int AS n FROM daily_stats WHERE true ${w.dailyWindow}`),
+    db.execute<{ n: number }>(sql`SELECT COALESCE(sum(conversions), 0)::int AS n FROM daily_stats WHERE true ${w.prevDailyWindow}`),
+  ]);
+  const revenue = num(kpi.rows[0]?.revenue);
+  const orders = num(kpi.rows[0]?.orders);
+  const averageOrder = orders > 0 ? revenue / orders : 0;
+  const sessionCount = sessions.rows[0]?.n ?? 0;
+  const conversionRate = sessionCount > 0 ? (num(conversions.rows[0]?.n) / sessionCount) * 100 : 0;
+  const prevRevenue = num(prevKpi.rows[0]?.revenue);
+  const prevOrders = num(prevKpi.rows[0]?.orders);
+  return {
+    revenueToday: revenue,
+    ordersToday: orders,
+    averageOrder,
+    conversionRate,
+    deltas: {
+      revenue: percentDelta(revenue, prevRevenue),
+      orders: percentDelta(orders, prevOrders),
+      averageOrder: percentDelta(averageOrder, prevOrders > 0 ? prevRevenue / prevOrders : 0),
+      conversion: percentDelta(conversionRate, sessionCount > 0 ? (num(prevConversions.rows[0]?.n) / sessionCount) * 100 : 0),
+    },
+    kpiSeries: toKpiSeries(kpiRows.rows),
+  };
+}
+
+export async function getDashboardSales(range?: DateRangeFilter): Promise<DashboardSummary['trend']> {
+  const db = getDb();
+  const w = dashboardWindows(range);
+  const [trend, prevTrend] = await Promise.all([
+    db.execute<{ day: string; value: string }>(sql`
+      SELECT to_char(date, 'DD Mon') AS day, revenue AS value
+      FROM daily_stats WHERE true ${w.dailyWindow} ORDER BY date DESC ${w.trendLimit}`),
+    db.execute<{ value: string }>(sql`
+      SELECT revenue AS value FROM daily_stats WHERE true ${w.prevDailyWindow}
+      ORDER BY date DESC ${w.trendLimit}`),
+  ]);
+  const previous = prevTrend.rows.map((r) => num(r.value));
+  return trend.rows.map((r, i) => ({ day: r.day, value: num(r.value), previous: previous[i] ?? 0 })).reverse();
+}
+
+export async function getDashboardProducts(range?: DateRangeFilter): Promise<DashboardSummary['topProducts']> {
+  const db = getDb();
+  const w = dashboardWindows(range);
+  const { rows } = await db.execute<{
+    name: string; revenue: string; units: string; price: string; stock: string;
+    image_url: string | null; image_alt: string | null;
+  }>(sql`
+    SELECT oi.product_name AS name, sum(oi.line_total) AS revenue, sum(oi.qty) AS units,
+      COALESCE(max(p.price), 0) AS price, COALESCE(max(p.stock), 0) AS stock,
+      max(img.url) AS image_url, max(img.alt) AS image_alt
+    FROM order_items oi
+    JOIN orders o ON o.id = oi.order_id
+    JOIN products p ON p.id = oi.product_id
+    LEFT JOIN LATERAL (
+      SELECT pi.url, pi.alt FROM product_images pi
+      WHERE pi.product_id = p.id AND pi.variant_id IS NULL
+      ORDER BY pi.is_primary DESC, pi.sort_order ASC LIMIT 1
+    ) img ON true
+    WHERE o.payment_status = 'paid' ${w.joinedOrderWindow}
+    GROUP BY p.id, oi.product_name ORDER BY revenue DESC LIMIT 5`);
+  return rows.map((r) => ({
+    name: r.name, revenue: num(r.revenue), units: num(r.units), price: num(r.price), stock: num(r.stock),
+    imageUrl: r.image_url ?? null, imageAlt: r.image_alt ?? null,
+  }));
+}
+
+export async function getDashboardInventory(): Promise<DashboardSummary['inventoryAlerts']> {
+  const db = getDb();
+  const [alerts, velocity] = await Promise.all([
     db.execute<{ product_id: string; name: string; units_left: number; threshold: number }>(sql`
       SELECT p.id AS product_id, p.name, p.stock AS units_left,
         COALESCE(p.low_stock_threshold, 5) AS threshold
@@ -244,110 +314,93 @@ export async function getDashboardSummary(range?: DateRangeFilter): Promise<Dash
       FROM order_items oi JOIN orders o ON o.id = oi.order_id
       WHERE o.payment_status = 'paid' AND o.created_at >= now() - interval '7 days'
       GROUP BY oi.product_id`),
-    db.execute<{
-      name: string; revenue: string; units: string; price: string; stock: string;
-      image_url: string | null; image_alt: string | null;
-    }>(sql`
-      SELECT oi.product_name AS name, sum(oi.line_total) AS revenue, sum(oi.qty) AS units,
-        COALESCE(max(p.price), 0) AS price, COALESCE(max(p.stock), 0) AS stock,
-        max(img.url) AS image_url, max(img.alt) AS image_alt
-      FROM order_items oi
-      JOIN orders o ON o.id = oi.order_id
-      JOIN products p ON p.id = oi.product_id
-      LEFT JOIN LATERAL (
-        SELECT pi.url, pi.alt FROM product_images pi
-        WHERE pi.product_id = p.id AND pi.variant_id IS NULL
-        ORDER BY pi.is_primary DESC, pi.sort_order ASC LIMIT 1
-      ) img ON true
-      WHERE o.payment_status = 'paid' ${joinedOrderWindow}
-      GROUP BY p.id, oi.product_name ORDER BY revenue DESC LIMIT 5`),
-    db.execute<{ order_number: string; customer_name: string; total: string; status: DashboardOrderStatus }>(sql`
-      SELECT order_number,
-        COALESCE(NULLIF(guest_name, ''), 'Customer') AS customer_name,
-        grand_total AS total, status
-      FROM orders WHERE true ${orderWindow} ORDER BY created_at DESC LIMIT 6`),
-    db.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM analytics_sessions`),
-    db.execute<{ n: number }>(sql`SELECT COALESCE(sum(conversions), 0)::int AS n FROM daily_stats WHERE true ${dailyWindow}`),
-    db.execute<{ n: number }>(sql`SELECT COALESCE(sum(conversions), 0)::int AS n FROM daily_stats WHERE true ${prevDailyWindow}`),
   ]);
-
-  const revenue = num(kpi.rows[0]?.revenue);
-  const orders = num(kpi.rows[0]?.orders);
-  const averageOrder = orders > 0 ? revenue / orders : 0;
-  const sessionCount = sessions.rows[0]?.n ?? 0;
-  const conversionRate = sessionCount > 0 ? (num(conversions.rows[0]?.n) / sessionCount) * 100 : 0;
-  const prevRevenue = num(prevKpi.rows[0]?.revenue);
-  const prevOrders = num(prevKpi.rows[0]?.orders);
-  const prevAverageOrder = prevOrders > 0 ? prevRevenue / prevOrders : 0;
-  const prevConversionRate = sessionCount > 0 ? (num(prevConversions.rows[0]?.n) / sessionCount) * 100 : 0;
-
-  const previousValues = prevTrend.rows.map((r) => num(r.value));
-  const velocityByProduct = new Map(velocity.rows.map((r) => [r.product_id, num(r.velocity)]));
-  return {
-    revenueToday: revenue,
-    ordersToday: orders,
-    averageOrder,
-    conversionRate,
-    deltas: {
-      revenue: percentDelta(revenue, prevRevenue),
-      orders: percentDelta(orders, prevOrders),
-      averageOrder: percentDelta(averageOrder, prevAverageOrder),
-      conversion: percentDelta(conversionRate, prevConversionRate),
-    },
-    kpiSeries: toKpiSeries(kpiRows.rows),
-    trend: trend.rows.map((r, i) => ({
-      day: r.day,
-      value: num(r.value),
-      previous: previousValues[i] ?? 0,
-    })).reverse(),
-    inventoryAlerts: alerts.rows.map((r) => ({
-      name: r.name,
-      unitsLeft: r.units_left,
-      threshold: r.threshold,
-      velocityPerDay: velocityByProduct.get(r.product_id) ?? 0,
-    })),
-    topProducts: top.rows.map((r) => ({
-      name: r.name,
-      revenue: num(r.revenue),
-      units: num(r.units),
-      price: num(r.price),
-      stock: num(r.stock),
-      imageUrl: r.image_url ?? null,
-      imageAlt: r.image_alt ?? null,
-    })),
-    recentOrders: recent.rows.map((r) => ({
-      orderNumber: r.order_number,
-      customerName: r.customer_name,
-      total: num(r.total),
-      status: r.status,
-    })),
-  };
+  const byProduct = new Map(velocity.rows.map((r) => [r.product_id, num(r.velocity)]));
+  return alerts.rows.map((r) => ({
+    name: r.name, unitsLeft: r.units_left, threshold: r.threshold,
+    velocityPerDay: byProduct.get(r.product_id) ?? 0,
+  }));
 }
 
-export async function getReportSummary(): Promise<ReportSummary> {
+export async function getDashboardRecent(range?: DateRangeFilter): Promise<DashboardSummary['recentOrders']> {
   const db = getDb();
-  const [sales, refunds, search, views] = await Promise.all([
+  const w = dashboardWindows(range);
+  const { rows } = await db.execute<{
+    order_number: string; customer_name: string; total: string; status: DashboardOrderStatus;
+  }>(sql`
+    SELECT order_number,
+      COALESCE(NULLIF(guest_name, ''), 'Customer') AS customer_name,
+      grand_total AS total, status
+    FROM orders WHERE true ${w.orderWindow} ORDER BY created_at DESC LIMIT 6`);
+  return rows.map((r) => ({
+    orderNumber: r.order_number, customerName: r.customer_name, total: num(r.total), status: r.status,
+  }));
+}
+
+export async function getDashboardSummary(range?: DateRangeFilter): Promise<DashboardSummary> {
+  const [kpis, trend, topProducts, inventoryAlerts, recentOrders] = await Promise.all([
+    getDashboardKpis(range),
+    getDashboardSales(range),
+    getDashboardProducts(range),
+    getDashboardInventory(),
+    getDashboardRecent(range),
+  ]);
+  return { ...kpis, trend, topProducts, inventoryAlerts, recentOrders };
+}
+
+export type ReportKpis = Pick<ReportSummary, 'revenue' | 'orders' | 'aov' | 'refunds'>;
+export type ReportDemand = Pick<ReportSummary, 'searches' | 'zeroResults'>;
+
+export async function getReportKpis(): Promise<ReportKpis> {
+  const db = getDb();
+  const [sales, refunds] = await Promise.all([
     db.execute<{ revenue: string; orders: string }>(sql`
       SELECT COALESCE(sum(grand_total), 0) AS revenue, count(*) AS orders
       FROM orders WHERE payment_status = 'paid'`),
     db.execute<{ amount: string }>(sql`SELECT COALESCE(sum(amount), 0) AS amount FROM refunds`),
-    db.execute<{ searches: string; zero: string }>(sql`
-      SELECT count(*) AS searches, count(*) FILTER (WHERE hits = 0) AS zero FROM search_terms`),
-    db.execute<{ name: string; views: string }>(sql`
-      SELECT p.name, count(*) AS views FROM product_views pv
-      JOIN products p ON p.id = pv.product_id
-      GROUP BY p.name ORDER BY views DESC LIMIT 10`),
   ]);
   const revenue = num(sales.rows[0]?.revenue);
   const orders = num(sales.rows[0]?.orders);
+  return { revenue, orders, aov: orders > 0 ? revenue / orders : 0, refunds: num(refunds.rows[0]?.amount) };
+}
+
+export async function getReportSearchDemand(): Promise<ReportDemand> {
+  const { rows } = await getDb().execute<{ searches: string; zero: string }>(sql`
+    SELECT count(*) AS searches, count(*) FILTER (WHERE hits = 0) AS zero FROM search_terms`);
+  return { searches: num(rows[0]?.searches), zeroResults: num(rows[0]?.zero) };
+}
+
+export async function getReportTopProducts(): Promise<ReportSummary['topProducts']> {
+  const { rows } = await getDb().execute<{ name: string; views: string }>(sql`
+    SELECT p.name, count(*) AS views FROM product_views pv
+    JOIN products p ON p.id = pv.product_id
+    GROUP BY p.name ORDER BY views DESC LIMIT 10`);
+  return rows.map((r) => ({ name: r.name, views: num(r.views) }));
+}
+
+export async function getReportSummary(): Promise<ReportSummary> {
+  const [kpis, demand, topProducts] = await Promise.all([
+    getReportKpis(), getReportSearchDemand(), getReportTopProducts(),
+  ]);
+  return { ...kpis, ...demand, topProducts };
+}
+
+export async function getAbandonedStats(): Promise<{
+  atRisk: number; recoverableValue: number; recoveryRate: number;
+}> {
+  const { rows } = await getDb().execute<{
+    at_risk: number; recoverable: string; total: number; converted: number;
+  }>(sql`
+    SELECT count(*) FILTER (WHERE status = 'detected')::int AS at_risk,
+      COALESCE(sum(cart_total) FILTER (WHERE status = 'detected'), 0) AS recoverable,
+      count(*)::int AS total,
+      count(*) FILTER (WHERE status IN ('converted','recovered'))::int AS converted
+    FROM abandoned_carts`);
+  const total = num(rows[0]?.total);
   return {
-    revenue,
-    orders,
-    aov: orders > 0 ? revenue / orders : 0,
-    refunds: num(refunds.rows[0]?.amount),
-    searches: num(search.rows[0]?.searches),
-    zeroResults: num(search.rows[0]?.zero),
-    topProducts: views.rows.map((r) => ({ name: r.name, views: num(r.views) })),
+    atRisk: num(rows[0]?.at_risk),
+    recoverableValue: num(rows[0]?.recoverable),
+    recoveryRate: total > 0 ? (num(rows[0]?.converted) / total) * 100 : 0,
   };
 }
 
