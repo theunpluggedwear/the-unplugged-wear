@@ -1,5 +1,4 @@
 export const instant = false;
-import DashboardShell from '@/components/layout/DashboardShell';
 import {
   Badge,
   ContentCard,
@@ -20,7 +19,7 @@ export default async function NewsletterPage() {
   const claims = await session.requireStaff('content.manage', '/content/newsletter');
   const subscribers = await adminListSubscribers(claims.sub);
   return (
-    <DashboardShell pageTitle="Newsletter subscribers">
+    <>
       <PageHeader
         title="Newsletter subscribers"
         subtitle="Double opt-in sign-ups and their current status."
@@ -55,6 +54,6 @@ export default async function NewsletterPage() {
           </Table>
         </ContentCard>
       )}
-    </DashboardShell>
+    </>
   );
 }

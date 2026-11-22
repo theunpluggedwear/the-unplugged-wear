@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import { cn } from '@/lib/cn';
+import { pageTitleFor } from '@/lib/page-titles';
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -15,11 +17,10 @@ let globalIsCollapsed: boolean = false;
 
 export default function DashboardShell({
   children,
-  pageTitle = 'Dashboard',
+  pageTitle,
 }: DashboardShellProps) {
-  
-  
-  
+  const pathname = usePathname();
+  const title = pageTitle ?? pageTitleFor(pathname);
   const [isCollapsed, setIsCollapsed] = useState(() => globalIsCollapsed);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -72,7 +73,7 @@ export default function DashboardShell({
       {}
       <div className={cn('flex min-h-screen min-w-0 flex-1 flex-col bg-canvas', isCollapsed ? 'ml-20' : 'ml-60 md:ml-55 lg:ml-60', 'max-md:ml-0')}>
         <Header
-          pageTitle={pageTitle}
+          pageTitle={title}
           mobileMenuOpen={mobileMenuOpen}
           onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
         />

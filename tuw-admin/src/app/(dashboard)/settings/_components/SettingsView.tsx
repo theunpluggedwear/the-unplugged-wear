@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Save, Check, AlertCircle, Library, ShieldCheck } from 'lucide-react';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { Button, Input, Textarea, Select, Switch, ContentCard, Badge, PageHeader, LinkButton } from '@/components/ui';
 import type { SettingsValues, SettingKey } from '@tuw/heart/modules/settings';
 import type { Provider } from '@tuw/heart/integrations/registry';
@@ -247,7 +246,7 @@ export default function SettingsView({ tab, values, providers: initialProviders 
   const providerGroups = tab === 'payments' ? [['payment', 'Payment gateways']] : tab === 'fulfillment' ? [['fulfillment', 'Print partners'], ['shipping', 'Couriers']] : [];
 
   return (
-    <DashboardShell pageTitle="Settings" activeNav="settings">
+    <>
       <PageHeader
         title="Store Settings"
         actions={section ? (
@@ -324,6 +323,6 @@ export default function SettingsView({ tab, values, providers: initialProviders 
           </ContentCard>
         ))}
       </div>
-    </DashboardShell>
+    </>
   );
 }

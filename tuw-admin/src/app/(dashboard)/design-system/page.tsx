@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { Button, Badge, Input, ContentCard, StatCard, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, PageHeader } from '@/components/ui';
 import { COLORS, SPACING, FIGMA_META } from '@/lib/tokens';
 import {
@@ -60,7 +59,7 @@ export default function DesignSystemPage() {
   ];
 
   return (
-    <DashboardShell>
+    <>
       <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
         
         {}
@@ -505,6 +504,6 @@ export default function DesignSystemPage() {
         )}
 
       </div>
-    </DashboardShell>
+    </>
   );
 }

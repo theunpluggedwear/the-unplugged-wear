@@ -3,7 +3,6 @@ import React from 'react';
 import Link from 'next/link';
 import { adminGetMobileNav } from '@tuw/heart/modules/content';
 import { adminListPosts } from '@tuw/heart/modules/marketing';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { Badge, ContentCard, PageHeader } from '@/components/ui';
 import { BookOpen, Menu, ArrowRight } from 'lucide-react';
 import { session } from '@/server/session';
@@ -32,7 +31,7 @@ export default async function ContentOverviewPage() {
   ];
 
   return (
-    <DashboardShell pageTitle="Content Management">
+    <>
       <PageHeader title="Content & CMS" />
 
       <div className="grid gap-5 md:grid-cols-2">
@@ -59,6 +58,6 @@ export default async function ContentOverviewPage() {
           </Link>
         ))}
       </div>
-    </DashboardShell>
+    </>
   );
 }

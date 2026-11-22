@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { Badge, Button, ContentCard, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea } from '@/components/ui';
 import type { SupportTicketRow } from '@tuw/heart/modules/support';
 import { replyTicketAction, setTicketStatusAction } from '@/server/support-actions';
@@ -36,7 +35,7 @@ export default function SupportLiveView({ initial }: { initial: SupportTicketRow
   }
 
   return (
-    <DashboardShell pageTitle="Support">
+    <>
       <PageHeader title="Support Inbox" subtitle="Live support tickets from the database." />
 
       {notice && <p role="status" style={{ color: 'var(--tuw-text-info)', fontSize: 13 }}>{notice}</p>}
@@ -84,6 +83,6 @@ export default function SupportLiveView({ initial }: { initial: SupportTicketRow
           </div>
         </ContentCard>
       )}
-    </DashboardShell>
+    </>
   );
 }

@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { RotateCcw, Search, Download } from 'lucide-react';
 import type { RefundRow, RefundableOrder } from '@tuw/heart/modules/orders';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { ContentCard, StatCard, Badge, Button, Input, Select, Drawer, Pagination, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, FilterPills, PageHeader, HeroCard, DrawerSection, KeyValueList } from '@/components/ui';
 import { useToast } from '@/components/providers/ToastProvider';
 import { issueRefundAction, listRefundsAction, markRefundPaidAction, refundableOrderAction, rejectRefundAction } from '@/server/money-actions';
@@ -207,7 +206,7 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
   const totalPages = Math.max(1, Math.ceil(list.total / pageSize));
 
   return (
-    <DashboardShell pageTitle="Refunds">
+    <>
       <PageHeader
         title="Refund Management"
         actions={
@@ -378,6 +377,6 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
           </div>
         )}
       </Drawer>
-    </DashboardShell>
+    </>
   );
 }

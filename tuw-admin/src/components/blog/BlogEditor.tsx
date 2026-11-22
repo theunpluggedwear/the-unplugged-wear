@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import DashboardShell from '@/components/layout/DashboardShell';
 import {
   Badge,
   Button,
@@ -280,7 +279,7 @@ export default function BlogEditor({
     .sort((a, b) => b.revisionNo - a.revisionNo);
 
   return (
-    <DashboardShell pageTitle={mode === 'create' ? 'New Editorial Story' : 'Edit Editorial Story'}>
+    <>
       <PageHeader
         title={mode === 'create' ? 'Compose Editorial Story' : 'Edit Editorial Story'}
         eyebrow={
@@ -658,6 +657,6 @@ export default function BlogEditor({
           post will not change until you publish again.
         </p>
       </Drawer>
-    </DashboardShell>
+    </>
   );
 }

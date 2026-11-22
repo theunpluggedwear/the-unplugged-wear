@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import DashboardShell from '@/components/layout/DashboardShell';
 import {
   ContentCard,
   StatCard,
@@ -147,7 +146,7 @@ export default function CollectionsView({ initialCollections, products, canManag
     : [{ value: 'view', label: 'View details' }];
 
   return (
-    <DashboardShell pageTitle="Collections">
+    <>
       <PageHeader
         title="Apparel Collections"
         actions={
@@ -296,6 +295,6 @@ export default function CollectionsView({ initialCollections, products, canManag
           the store. Products stay in the catalog. This can&apos;t be undone.
         </p>
       </Modal>
-    </DashboardShell>
+    </>
   );
 }

@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PackagePlus, Search, Truck } from 'lucide-react';
 import type { AdminShipmentRow, ShipmentStatusValue } from '@tuw/heart/modules/fulfillment';
-import DashboardShell from '@/components/layout/DashboardShell';
 import {
   Badge, Button, ContentCard, Drawer, DrawerSection, EmptyState, FilterPills, Input, ItemsRow,
   Modal, PageHeader, Pagination, PanelLayout, Select, Table, TableBody, TableCell, TableHead,
@@ -160,7 +159,7 @@ export default function ShipmentsView({ initial, perms }: { initial: ListResult;
   const totalPages = Math.max(1, Math.ceil(list.total / perPage));
 
   return (
-    <DashboardShell pageTitle="Shipments" activeNav="shipments">
+    <>
       <PageHeader
         title="Shipments"
         actions={
@@ -337,6 +336,6 @@ export default function ShipmentsView({ initial, perms }: { initial: ListResult;
           </p>
         </div>
       </Modal>
-    </DashboardShell>
+    </>
   );
 }

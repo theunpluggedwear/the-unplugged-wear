@@ -2,7 +2,6 @@
 
 import React, { Suspense, use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import DashboardShell from '@/components/layout/DashboardShell';
 import {
   DashboardHeader,
   InventoryAlertsCard,
@@ -165,7 +164,7 @@ export default function DashboardLiveView({
   const date = new Intl.DateTimeFormat('en-IN', { dateStyle: 'full', timeZone: 'Asia/Kolkata' }).format(new Date());
 
   return (
-    <DashboardShell pageTitle="Dashboard" activeNav="home">
+    <>
       <DashboardHeader
         title={`Welcome back, ${userName}`}
         subtitle={`${date} · live store data`}
@@ -203,6 +202,6 @@ export default function DashboardLiveView({
           <OrdersCard data={orders} />
         </Suspense>
       </section>
-    </DashboardShell>
+    </>
   );
 }

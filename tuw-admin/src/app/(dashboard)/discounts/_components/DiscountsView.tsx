@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { ContentCard, StatCard, Badge, Button, Input, Drawer, Pagination, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, FilterPills, PageHeader, Tabs, DropdownMenu, Switch, UpliftSurface } from '@/components/ui';
 import { Plus, Download, Trash2, ChevronDown } from 'lucide-react';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -150,7 +149,7 @@ export default function DiscountsView({ initialCodes, initialSchedules, perms }:
   };
 
   return (
-    <DashboardShell pageTitle="Discounts" activeNav="discounts">
+    <>
       <PageHeader
         title="Discounts & Promotions"
         actions={
@@ -488,6 +487,6 @@ export default function DiscountsView({ initialCodes, initialSchedules, perms }:
           />
         </div>
       </Drawer>
-    </DashboardShell>
+    </>
   );
 }

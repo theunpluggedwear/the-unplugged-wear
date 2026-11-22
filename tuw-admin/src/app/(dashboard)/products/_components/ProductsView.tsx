@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Plus, Filter, Search, Edit3, Trash2, CheckCircle2, Eye, AlertTriangle, LayoutGrid, List, Tag, ChevronDown, Download, Archive, GripVertical, Upload, Images, Focus, Library, RotateCcw, X } from 'lucide-react';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { StatCard, ContentCard, SurfaceCard, UpliftSurface, Button, Badge, IconButton, Input, Drawer, Modal, Pagination, FilterPills, PageHeader, ViewToggle, DropdownMenu, Checkbox, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, MediaFrame, FormTextarea, Tabs, Stepper, Switch, DrawerSection, DrawerCard, SearchableSelect, Disclosure, Carousel, LinkButton, ImageWithFallback } from '@/components/ui';
 import { useToast } from '@/components/providers/ToastProvider';
 import { resolveVariants, variantStockTotal, buildVariantSku, deriveVariantPrice, recomputeVariants, minFromPrice, pruneAdjustments, roundPrice, hasPriceSpread, adjustmentKey, sumAdjustments } from '@tuw/heart/modules/catalog/variants';
@@ -2139,7 +2138,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
   );
 
   return (
-    <DashboardShell pageTitle="Products" activeNav="products">
+    <>
       <PageHeader
         title="Product Catalog"
         actions={
@@ -3962,6 +3961,6 @@ export default function ProductsView({ initialProducts, categories, perms, store
           ) : null}
         </div>
       </Modal>
-    </DashboardShell>
+    </>
   );
 }

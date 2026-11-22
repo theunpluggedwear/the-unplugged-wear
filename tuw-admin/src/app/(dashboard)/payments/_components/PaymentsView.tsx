@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Download, Search, Banknote } from 'lucide-react';
 import type { PaymentRow } from '@tuw/heart/modules/orders';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { ContentCard, StatCard, Badge, Button, Input, Drawer, Pagination, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, PageHeader, HeroCard, KeyValueList, FilterPills } from '@/components/ui';
 import { useToast } from '@/components/providers/ToastProvider';
 import { listPaymentsAction, markCodCollectedAction } from '@/server/money-actions';
@@ -81,7 +80,7 @@ export default function PaymentsView({ initial, providers, perms }: { initial: L
   const totalPages = Math.max(1, Math.ceil(list.total / pageSize));
 
   return (
-    <DashboardShell pageTitle="Payments">
+    <>
       <PageHeader
         title="Payment Transactions & Gateways"
         actions={<Button variant="secondary" size="md" icon={<Download size={16} />} onClick={() => void handleExportCSV()}><span>Export Payments CSV</span></Button>}
@@ -208,6 +207,6 @@ export default function PaymentsView({ initial, providers, perms }: { initial: L
           </div>
         )}
       </Drawer>
-    </DashboardShell>
+    </>
   );
 }

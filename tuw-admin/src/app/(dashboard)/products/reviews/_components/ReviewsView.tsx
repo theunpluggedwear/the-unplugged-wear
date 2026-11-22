@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { Badge, Button, ContentCard, PageHeader } from '@/components/ui';
 import type { AdminReview } from '@tuw/heart/modules/catalog';
 import { deleteReviewAction, moderateReviewAction } from '@/server/catalog-actions';
@@ -26,7 +25,7 @@ export default function ReviewsView({ initialReviews }: { initialReviews: AdminR
   const pending = reviews.filter((r) => !r.approved).length;
 
   return (
-    <DashboardShell pageTitle="Reviews" activeNav="products">
+    <>
       <PageHeader
         title="Product Reviews"
         eyebrow={<Link href="/products" style={{ color: 'var(--tuw-text-secondary, #5D6772)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}><ArrowLeft size={14} /> Back to Products</Link>}
@@ -56,6 +55,6 @@ export default function ReviewsView({ initialReviews }: { initialReviews: AdminR
           ))}
         </div>
       </ContentCard>
-    </DashboardShell>
+    </>
   );
 }

@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { ContentCard, StatCard, Badge, Button, Input, Select, Modal, Drawer, Pagination, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, PageHeader } from '@/components/ui';
 import { UserPlus, Search, Trash2, AlertTriangle, RotateCcw } from 'lucide-react';
 import { inviteStaffAction, revokeInviteAction, setStaffRoleAction, setStaffStatusAction } from '@/server/auth-actions';
@@ -107,7 +106,7 @@ export default function TeamView({ members, invites, currentUserId }: TeamViewPr
   };
 
   return (
-    <DashboardShell pageTitle="Team & Permissions">
+    <>
       <PageHeader
         title="Team & Permissions"
         actions={
@@ -265,6 +264,6 @@ export default function TeamView({ members, invites, currentUserId }: TeamViewPr
           </div>
         )}
       </Modal>
-    </DashboardShell>
+    </>
   );
 }

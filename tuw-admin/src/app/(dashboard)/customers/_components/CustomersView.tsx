@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useTransition } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { UserPlus, Download, Search, MapPin, Phone, Mail, Plus } from 'lucide-react';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { StatCard, ContentCard, Button, Badge, Input, Drawer, Pagination, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, PageHeader, DrawerSection } from '@/components/ui';
 import type { CustomerSummary, CustomerNote, Address, Household } from '@tuw/heart/modules/customers';
 import { addCustomerNoteAction, createCustomerAction } from '@/server/customer-actions';
@@ -121,7 +120,7 @@ export default function CustomersView({ list, stats, detail, selectedId, query }
   };
 
   return (
-    <DashboardShell pageTitle="Customers" activeNav="customers">
+    <>
       <PageHeader
         title="Customer Directory"
         actions={
@@ -396,6 +395,6 @@ export default function CustomersView({ list, stats, detail, selectedId, query }
           />
         </form>
       </Drawer>
-    </DashboardShell>
+    </>
   );
 }

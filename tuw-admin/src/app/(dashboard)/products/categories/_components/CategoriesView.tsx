@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { Button, ContentCard, Drawer, Input, PageHeader, Switch, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui';
 import type { AdminCategory } from '@tuw/heart/modules/catalog';
 import { deleteCategoryAction, saveCategoryAction } from '@/server/catalog-actions';
@@ -70,7 +69,7 @@ export default function CategoriesView({ initialCategories, canManage }: { initi
   };
 
   return (
-    <DashboardShell pageTitle="Categories" activeNav="products">
+    <>
       <PageHeader
         title="Product Categories"
         eyebrow={<Link href="/products" style={{ color: 'var(--tuw-text-secondary, #5D6772)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}><ArrowLeft size={14} /> Back to Products</Link>}
@@ -130,6 +129,6 @@ export default function CategoriesView({ initialCategories, canManage }: { initi
           <Input label="Sort order" inputMode="numeric" value={form.sortOrder} error={fieldErrors.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: e.target.value })} />
         </form>
       </Drawer>
-    </DashboardShell>
+    </>
   );
 }

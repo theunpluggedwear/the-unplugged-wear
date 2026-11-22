@@ -10,7 +10,6 @@ import type {
   ClaimRow,
   FulfillmentStatusValue,
 } from '@tuw/heart/modules/fulfillment';
-import DashboardShell from '@/components/layout/DashboardShell';
 import {
   Badge, Button, ContentCard, Drawer, DrawerSection, EmptyState, FilterPills, Input, ItemsRow,
   PageHeader, Pagination, PanelLayout, Select, StatCard, Table, TableBody, TableCell, TableHead,
@@ -340,7 +339,7 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
   const reshippable = detail ? ['shipped', 'delivery_exception', 'delivered', 'rto_initiated', 'returned'].includes(detail.row.status) : false;
 
   return (
-    <DashboardShell pageTitle="Fulfillment" activeNav="fulfillment">
+    <>
       <PageHeader
         title="Fulfilment & Shipping"
         actions={
@@ -696,6 +695,6 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
           </div>
         ) : null}
       </Drawer>
-    </DashboardShell>
+    </>
   );
 }

@@ -5,7 +5,6 @@ import {
   adminGetReportKpis,
   adminGetReportTopProducts,
 } from '@tuw/heart/modules/analytics';
-import DashboardShell from '@/components/layout/DashboardShell';
 import {
   ContentCard,
   PageHeader,
@@ -93,7 +92,7 @@ async function ViewedProducts({ actorId }: { actorId: string }) {
 export default async function ReportsPage() {
   const claims = await session.requireStaff('report.view', '/reports');
   return (
-    <DashboardShell pageTitle="Reports">
+    <>
       <PageHeader title="Analytics & Reports" subtitle="Live database aggregates. Empty means no data has been recorded yet." />
 
       <Suspense fallback={<KpiFallback />}>
@@ -108,6 +107,6 @@ export default async function ReportsPage() {
           <ViewedProducts actorId={claims.sub} />
         </Suspense>
       </div>
-    </DashboardShell>
+    </>
   );
 }

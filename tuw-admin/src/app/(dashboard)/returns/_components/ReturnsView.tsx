@@ -8,7 +8,6 @@ import type {
   AdminReturnStats,
   ReturnStatus,
 } from '@tuw/heart/modules/returns';
-import DashboardShell from '@/components/layout/DashboardShell';
 import {
   StatCard,
   ContentCard,
@@ -301,7 +300,7 @@ export default function ReturnsView({ initial, perms, openRma }: { initial: List
   const linesLocked = detail ? ['requested', 'rejected', 'cancelled'].includes(detail.status) : true;
 
   return (
-    <DashboardShell pageTitle="Returns" activeNav="returns">
+    <>
       <PageHeader
         title="Returns & Exchanges"
         actions={
@@ -657,6 +656,6 @@ export default function ReturnsView({ initial, perms, openRma }: { initial: List
           </div>
         )}
       </Drawer>
-    </DashboardShell>
+    </>
   );
 }

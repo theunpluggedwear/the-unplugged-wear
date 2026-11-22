@@ -1,7 +1,6 @@
 export const instant = false;
 import { Suspense } from 'react';
 import { adminGetAbandonedStats, adminListAbandoned } from '@tuw/heart/modules/analytics';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { ContentCard, PageHeader, Skeleton, StatCard } from '@/components/ui';
 import { session } from '@/server/session';
 import { formatINR } from '@/lib/format';
@@ -46,7 +45,7 @@ async function AbandonedTable({ actorId }: { actorId: string }) {
 export default async function AbandonedPage() {
   const claims = await session.requireStaff('order.view', '/abandoned');
   return (
-    <DashboardShell pageTitle="Abandoned" activeNav="abandoned">
+    <>
       <PageHeader title="Abandoned Carts" subtitle="Live recovery inbox from idle carts." />
       <Suspense fallback={<StatsFallback />}>
         <AbandonedStats actorId={claims.sub} />
@@ -54,6 +53,6 @@ export default async function AbandonedPage() {
       <Suspense fallback={<PanelFallback />}>
         <AbandonedTable actorId={claims.sub} />
       </Suspense>
-    </DashboardShell>
+    </>
   );
 }

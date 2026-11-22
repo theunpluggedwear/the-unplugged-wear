@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Download, Search, Eye, RotateCcw, Clock, Printer, ChevronDown } from 'lucide-react';
 import type { AdminOrderDetail, AdminOrderRow, AdminOrderStats, AdminOrderTab, OrderStatus } from '@tuw/heart/modules/orders';
-import DashboardShell from '@/components/layout/DashboardShell';
 import {
   StatCard,
   ContentCard,
@@ -224,7 +223,7 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
   const cancelNeedsRefund = detail ? detail.paymentStatus === 'paid' : false;
 
   return (
-    <DashboardShell pageTitle="Orders" activeNav="orders">
+    <>
       <PageHeader
         title="Order Management"
         actions={
@@ -525,6 +524,6 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
           </div>
         )}
       </Drawer>
-    </DashboardShell>
+    </>
   );
 }

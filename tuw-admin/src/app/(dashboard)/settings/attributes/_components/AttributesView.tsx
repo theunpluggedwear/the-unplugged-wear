@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { ContentCard, SurfaceCard, Badge, Button, Input, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, PageHeader, Switch, UpliftSurface, DropdownMenu } from '@/components/ui';
 import { Plus, Trash2, ArrowLeft, ChevronDown, X } from 'lucide-react';
 import { useToast } from '@/components/providers/ToastProvider';
@@ -114,7 +113,7 @@ export default function AttributesView({ initialLibrary, canManage }: { initialL
   );
 
   return (
-    <DashboardShell pageTitle="Attribute Library" activeNav="settings">
+    <>
       <PageHeader
         title="Attribute Library"
         eyebrow={
@@ -375,6 +374,6 @@ export default function AttributesView({ initialLibrary, canManage }: { initialL
           )}
         </div>
       </ContentCard>
-    </DashboardShell>
+    </>
   );
 }
