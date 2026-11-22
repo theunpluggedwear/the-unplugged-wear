@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Calendar } from 'lucide-react';
 import { Calendar as DateRangeCalendar } from '@/components/calendar';
-import { OnlineBadge } from './OnlineBadge';
 import { PageHeader } from '@/components/ui';
 import { usePopoverAnimation } from '@/hooks/usePopoverAnimation';
 import type { DateRange } from '@/hooks/useCalendarRange';
@@ -11,27 +11,32 @@ import type { DateRange } from '@/hooks/useCalendarRange';
 interface DashboardHeaderProps {
   title: string;
   subtitle: string;
-  onlineLabel?: string;
+  initialLabel?: string;
 }
 
-// Welcome header row: greeting + online badge + date-range filter.
-// The filter button shows a purple tint whenever a non-default range is
-// applied; the popover label state lives here (presentation only).
-export function DashboardHeader({ title, subtitle, onlineLabel = '2 online customers' }: DashboardHeaderProps) {
-  const [rangeLabel, setRangeLabel] = useState('Today');
+export function DashboardHeader({ title, subtitle, initialLabel = 'Today' }: DashboardHeaderProps) {
+  const router = useRouter();
+  const [rangeLabel, setRangeLabel] = useState(initialLabel);
   const [pickerOpen, setPickerOpen] = useState(false);
   const pickerAnim = usePopoverAnimation(pickerOpen, () => setPickerOpen(false));
-  const isFiltered = rangeLabel !== 'Today';
+  const isFiltered = rangeLabel !== initialLabel;
+
+  function applyRange(range: DateRange, label: string) {
+    setRangeLabel(label);
+    setPickerOpen(false);
+    const params = new URLSearchParams();
+    if (range.start) params.set('from', range.start.toISOString().slice(0, 10));
+    if (range.end) params.set('to', range.end.toISOString().slice(0, 10));
+    const query = params.toString();
+    router.push(query ? `/dashboard?${query}` : '/dashboard');
+  }
 
   return (
     <PageHeader
       title={title}
       subtitle={subtitle}
       actions={
-        <>
-          <OnlineBadge label={onlineLabel} />
-
-          <div className="relative">
+        <div className="relative">
           <button
             type="button"
             className={isFiltered ? 'home-dateFilterBtn home-dateFilterBtnActive' : 'home-dateFilterBtn'}
@@ -57,18 +62,11 @@ export function DashboardHeader({ title, subtitle, onlineLabel = '2 online custo
                     : 'animate-[popoverIn_0.18s_ease-out]'
                 }`}
               >
-                <DateRangeCalendar
-                  onApply={(range: DateRange, label: string) => {
-                    setRangeLabel(label);
-                    setPickerOpen(false);
-                  }}
-                  onClose={() => setPickerOpen(false)}
-                />
+                <DateRangeCalendar onApply={applyRange} onClose={() => setPickerOpen(false)} />
               </div>
             </>
           )}
-          </div>
-        </>
+        </div>
       }
     />
   );

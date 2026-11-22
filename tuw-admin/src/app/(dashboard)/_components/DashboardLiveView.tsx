@@ -1,18 +1,23 @@
 import React from 'react';
 import DashboardShell from '@/components/layout/DashboardShell';
-import { Badge, ContentCard, PageHeader, StatCard, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui';
+import { DashboardHeader } from '@/components/dashboard';
+import { Badge, ContentCard, StatCard, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui';
 import type { DashboardSummary } from '@tuw/heart/modules/analytics';
 import { formatINR } from '@/lib/format';
 
-export default function DashboardLiveView({ summary, userName }: { summary: DashboardSummary; userName: string }) {
+export default function DashboardLiveView({ summary, userName, initialLabel }: { summary: DashboardSummary; userName: string; initialLabel: string }) {
   const date = new Intl.DateTimeFormat('en-IN', { dateStyle: 'full', timeZone: 'Asia/Kolkata' }).format(new Date());
   return (
     <DashboardShell pageTitle="Dashboard" activeNav="home">
-      <PageHeader title={`Welcome back, ${userName}`} subtitle={`${date} · live store data`} />
+      <DashboardHeader
+        title={`Welcome back, ${userName}`}
+        subtitle={`${date} · live store data`}
+        initialLabel={initialLabel}
+      />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Revenue" value={formatINR(summary.revenueToday)} subtitle="Captured minus refunds" trendType="neutral" />
-        <StatCard label="Paid orders" value={summary.ordersToday} subtitle="All time" trendType="neutral" />
+        <StatCard label="Paid orders" value={summary.ordersToday} subtitle="Selected range" trendType="neutral" />
         <StatCard label="Average order" value={formatINR(summary.averageOrder)} subtitle="Paid orders only" trendType="neutral" />
         <StatCard label="Conversion" value={`${summary.conversionRate.toFixed(1)}%`} subtitle="Sessions to orders" trendType="neutral" />
       </div>

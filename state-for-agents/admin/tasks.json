@@ -8,8 +8,8 @@
     "reference": "Figma WmpPcdGcXerVgqNpgr6Q6S + production screenshots"
   },
   "summary": {
-    "total": 462,
-    "done": 406,
+    "total": 463,
+    "done": 407,
     "in_progress": 3,
     "backlog": 53
   },
@@ -17,7 +17,7 @@
     "branch": "feat/dharmil-admin",
     "tip": "4c0d8d2",
     "unpushed": [],
-    "next_up": "TL-COMMENT-AUDIT",
+    "next_up": "TL-UI-DASH-CALENDAR",
     "pending_verifications": [
       "admin journal editor + list full keyboard/focus/Reset Demo pass at 360/768/1024/1440 (CDP route-load check passed; interactive pass pending)",
       "SQL dry-run: apply 001 + 002 + 006-cms.sql against a real PostgreSQL instance; verify generated blogs.search_vector, slug/CHECK constraints, FK RESTRICT/CASCADE behavior, and partial indexes. psql remains unavailable locally.",
@@ -8158,6 +8158,24 @@
         "Decision records move to DOC/adr and code comments are deleted."
       ],
       "verified": false,
+      "pushed": false,
+      "follow_ups": []
+    },
+    {
+      "id": "TL-UI-DASH-CALENDAR",
+      "title": "Restore dashboard date-range calendar and filter live data",
+      "status": "done",
+      "owner": "agent",
+      "parent": "TL-BE-LIVE-DATA",
+      "started": "2026-11-22",
+      "finished": "2026-11-22",
+      "log": "Restored DashboardHeader with the calendar button and removed the fake online badge. Date range is now a URL query and adminGetDashboard filters payments, refunds, paid orders, daily stats and recent orders by the selected range. Browser QA confirmed the picker opens, applying Last 7 days updates the URL and live dashboard values. Fixed SQL fragments for refunds and joined order_items alias.",
+      "design_match": "n/a",
+      "key_decisions": [
+        "Date range is a URL query so server reads can filter live data.",
+        "No fabricated online-customer badge."
+      ],
+      "verified": true,
       "pushed": false,
       "follow_ups": []
     }

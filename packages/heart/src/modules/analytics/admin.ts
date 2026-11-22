@@ -14,9 +14,9 @@ async function requirePermission(actorId: string, permission: string): Promise<v
   if (rows[0]?.ok !== true) throw new AppError('FORBIDDEN', `${permission} is required.`);
 }
 
-export async function adminGetDashboard(actorId: string) {
+export async function adminGetDashboard(actorId: string, range?: svc.DateRangeFilter) {
   await requirePermission(actorId, 'order.view');
-  return svc.getDashboardSummary();
+  return svc.getDashboardSummary(range);
 }
 
 export async function adminGetReport(actorId: string) {

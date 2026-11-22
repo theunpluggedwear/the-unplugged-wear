@@ -102,16 +102,48 @@ export async function detectAbandonedCarts(hoursIdle = 24): Promise<number> {
   return rows[0]?.n ?? 0;
 }
 
-export async function getDashboardSummary(): Promise<DashboardSummary> {
+export interface DateRangeFilter {
+  from?: string | null;
+  to?: string | null;
+}
+
+function rangeBounds(range?: DateRangeFilter): { from: Date | null; to: Date | null } {
+  const from = range?.from ? new Date(`${range.from}T00:00:00+05:30`) : null;
+  const to = range?.to ? new Date(`${range.to}T23:59:59+05:30`) : null;
+  return {
+    from: from && !Number.isNaN(from.getTime()) ? from : null,
+    to: to && !Number.isNaN(to.getTime()) ? to : null,
+  };
+}
+
+export async function getDashboardSummary(range?: DateRangeFilter): Promise<DashboardSummary> {
   const db = getDb();
-  const [kpi, trend, alerts, top, recent] = await Promise.all([
+  const { from, to } = rangeBounds(range);
+  const paymentWindow = from && to
+    ? sql`AND paid_at >= ${from} AND paid_at <= ${to}`
+    : from ? sql`AND paid_at >= ${from}` : to ? sql`AND paid_at <= ${to}` : sql``;
+  const refundWindow = from && to
+    ? sql`AND created_at >= ${from} AND created_at <= ${to}`
+    : from ? sql`AND created_at >= ${from}` : to ? sql`AND created_at <= ${to}` : sql``;
+  const orderWindow = from && to
+    ? sql`AND created_at >= ${from} AND created_at <= ${to}`
+    : from ? sql`AND created_at >= ${from}` : to ? sql`AND created_at <= ${to}` : sql``;
+  const joinedOrderWindow = from && to
+    ? sql`AND o.created_at >= ${from} AND o.created_at <= ${to}`
+    : from ? sql`AND o.created_at >= ${from}` : to ? sql`AND o.created_at <= ${to}` : sql``;
+  const dailyWindow = from && to
+    ? sql`AND date >= ${from} AND date <= ${to}`
+    : from ? sql`AND date >= ${from}` : to ? sql`AND date <= ${to}` : sql``;
+
+  const [kpi, trend, alerts, top, recent, sessions, conversions] = await Promise.all([
     db.execute<{ revenue: string; orders: string }>(sql`
       SELECT
-        COALESCE((SELECT sum(amount) FROM payments WHERE status IN ('captured','refunded')), 0)
-        - COALESCE((SELECT sum(amount) FROM refunds), 0) AS revenue,
-        (SELECT count(*) FROM orders WHERE payment_status = 'paid') AS orders`),
+        COALESCE((SELECT sum(amount) FROM payments WHERE status IN ('captured','refunded') ${paymentWindow}), 0)
+        - COALESCE((SELECT sum(amount) FROM refunds WHERE true ${refundWindow}), 0) AS revenue,
+        (SELECT count(*) FROM orders WHERE payment_status = 'paid' ${orderWindow}) AS orders`),
     db.execute<{ day: string; value: string }>(sql`
-      SELECT to_char(date, 'DD Mon') AS day, revenue AS value FROM daily_stats ORDER BY date DESC LIMIT 7`),
+      SELECT to_char(date, 'DD Mon') AS day, revenue AS value FROM daily_stats WHERE true ${dailyWindow}
+      ORDER BY date DESC LIMIT 7`),
     db.execute<{ name: string; units_left: number; threshold: number }>(sql`
       SELECT name, stock AS units_left, COALESCE(low_stock_threshold, 5) AS threshold
       FROM products WHERE status = 'active' AND stock <= COALESCE(low_stock_threshold, 5)
@@ -119,18 +151,19 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     db.execute<{ name: string; revenue: string; units: string }>(sql`
       SELECT oi.product_name AS name, sum(oi.line_total) AS revenue, sum(oi.qty) AS units
       FROM order_items oi JOIN orders o ON o.id = oi.order_id
-      WHERE o.payment_status = 'paid'
+      WHERE o.payment_status = 'paid' ${joinedOrderWindow}
       GROUP BY oi.product_name ORDER BY revenue DESC LIMIT 5`),
     db.execute<{ order_number: string; customer_name: string; total: string; status: string }>(sql`
       SELECT order_number,
         COALESCE(NULLIF(guest_name, ''), 'Customer') AS customer_name,
         grand_total AS total, status
-      FROM orders ORDER BY created_at DESC LIMIT 6`),
+      FROM orders WHERE true ${orderWindow} ORDER BY created_at DESC LIMIT 6`),
+    db.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM analytics_sessions`),
+    db.execute<{ n: number }>(sql`SELECT COALESCE(sum(conversions), 0)::int AS n FROM daily_stats WHERE true ${dailyWindow}`),
   ]);
+
   const revenue = num(kpi.rows[0]?.revenue);
   const orders = num(kpi.rows[0]?.orders);
-  const sessions = await db.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM analytics_sessions`);
-  const conversions = await db.execute<{ n: number }>(sql`SELECT COALESCE(sum(conversions), 0)::int AS n FROM daily_stats`);
   const sessionCount = sessions.rows[0]?.n ?? 0;
   return {
     revenueToday: revenue,
