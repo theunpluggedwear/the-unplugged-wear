@@ -8,16 +8,16 @@
     "reference": "Figma WmpPcdGcXerVgqNpgr6Q6S + production screenshots"
   },
   "summary": {
-    "total": 464,
-    "done": 408,
+    "total": 465,
+    "done": 410,
     "in_progress": 3,
-    "backlog": 53
+    "backlog": 52
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "456669e",
+    "tip": "85986e4",
     "unpushed": [],
-    "next_up": "TL-UI-DESIGN-PLAN",
+    "next_up": null,
     "pending_verifications": [
       "admin journal editor + list full keyboard/focus/Reset Demo pass at 360/768/1024/1440 (CDP route-load check passed; interactive pass pending)",
       "SQL dry-run: apply 001 + 002 + 006-cms.sql against a real PostgreSQL instance; verify generated blogs.search_vector, slug/CHECK constraints, FK RESTRICT/CASCADE behavior, and partial indexes. psql remains unavailable locally.",
@@ -1786,13 +1786,15 @@
     {
       "id": "TL-UI-IMG",
       "title": "ImageWithFallback fallbackTone + product next/image pass",
-      "status": "backlog",
-      "owner": "unassigned",
-      "log": "Parked image-system completion",
-      "design_match": "pending",
-      "verified": false,
+      "status": "done",
+      "owner": "agent",
+      "log": "ImageWithFallback now supports optimized/fill/sizes with tokenized fallback tone; product grid/table cards, gallery stage/thumbnails and carousel images all use the shared primitive with unoptimized Next Image. Browser QA at /products confirmed graceful tokenized fallback for broken images. Gates: typecheck, test 75/75, build, lint:comments 3016/3016.",
+      "design_match": "n/a",
+      "verified": true,
       "pushed": false,
-      "follow_ups": []
+      "follow_ups": [],
+      "started": "2026-11-22",
+      "finished": "2026-11-22"
     },
     {
       "id": "TL-UI-A2",
@@ -4608,13 +4610,14 @@
     {
       "id": "TL-UI-DESIGN-PLAN",
       "title": "Design Assets — revisit planning only (keep demo-only now)",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
-      "log": "Decision 2026-10-19: keep current page unplanned, no DB table (design_assets deliberately dropped in TL-DASH-DB1); revisit only if Qikink design upload is scoped",
-      "design_match": "pending",
-      "verified": false,
+      "log": "Superseded. Design Assets screen is now live and DB-backed via design_assets, adminListDesigns, saveDesignAction and deleteDesignAction. Old 2026-10-19 parking note removed.",
+      "design_match": "n/a",
+      "verified": true,
       "pushed": false,
-      "follow_ups": []
+      "follow_ups": [],
+      "finished": "2026-11-22"
     },
     {
       "id": "TL-UI-PEDIT-PRICING-CARD",
@@ -8202,6 +8205,21 @@
         "Delete mocks/fixtures.ts, blogFixtures.ts, variants.ts and Reset Demo after all screens are live.",
         "Replace remaining mock/sandbox adapters only when credentials exist."
       ]
+    },
+    {
+      "id": "TL-INT-QIKINK-DESIGN-UPLOAD",
+      "title": "Qikink design upload workflow — deferred",
+      "status": "backlog",
+      "owner": "unassigned",
+      "parent": "TL-INT-PHASE",
+      "started": null,
+      "finished": null,
+      "log": "Deferred. Needs owner scope for uploading design files to Qikink and likely storefront changes.",
+      "design_match": "n/a",
+      "key_decisions": [],
+      "verified": false,
+      "pushed": false,
+      "follow_ups": []
     }
   ],
   "workflow": {
