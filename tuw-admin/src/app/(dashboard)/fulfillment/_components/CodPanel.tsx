@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Banknote } from 'lucide-react';
 import type { RemittanceRow } from '@tuw/heart/modules/fulfillment';
 import { Badge, Button, ContentCard, EmptyState, Input, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui';
-import type { ToastMessage } from '@/mocks/state';
+import type { ToastMessage } from '@/components/providers/ToastProvider';
 import { getCodAction, recordRemittanceAction } from '@/server/fulfillment-actions';
 
 

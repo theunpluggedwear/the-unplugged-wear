@@ -1,7 +1,7 @@
 export const instant = false;
 import { adminListCollections, adminListProducts } from '@tuw/heart/modules/catalog';
 import { session } from '@/server/session';
-import type { CollectionItem, ProductItem } from '@/mocks/fixtures';
+import type { CollectionItem, ProductItem } from '@/lib/admin-dto';
 import CollectionsView from './_components/CollectionsView';
 
 export default async function CollectionsPage() {

@@ -6,7 +6,7 @@ import { RotateCcw, Search, Download } from 'lucide-react';
 import type { RefundRow, RefundableOrder } from '@tuw/heart/modules/orders';
 import DashboardShell from '@/components/layout/DashboardShell';
 import { ContentCard, StatCard, Badge, Button, Input, Select, Drawer, Pagination, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, FilterPills, PageHeader, HeroCard, DrawerSection, KeyValueList } from '@/components/ui';
-import { useAdminState } from '@/mocks/state';
+import { useToast } from '@/components/providers/ToastProvider';
 import { issueRefundAction, listRefundsAction, markRefundPaidAction, refundableOrderAction, rejectRefundAction } from '@/server/money-actions';
 import { MONO_ID_STYLE } from '@/lib/format';
 
@@ -26,7 +26,7 @@ const STATUS: Record<RefundRow['status'], { label: string; variant: 'success' | 
 const REASONS = ['Customer cancellation', 'Damaged or misprinted item', 'Item could not be printed', 'Late delivery goodwill', 'Exchange price difference', 'Other'];
 
 export default function RefundsView({ initial, perms, openForOrder }: { initial: ListResult; perms: string[]; openForOrder?: string }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const router = useRouter();
   const canRefund = perms.includes('order.refund');
 

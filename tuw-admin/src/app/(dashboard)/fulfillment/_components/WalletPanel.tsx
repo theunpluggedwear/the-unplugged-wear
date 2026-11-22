@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Wallet } from 'lucide-react';
 import type { WalletEntryRow, WalletSummary } from '@tuw/heart/modules/fulfillment';
 import { Badge, Button, ContentCard, EmptyState, Input, Select, StatCard, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui';
-import type { ToastMessage } from '@/mocks/state';
+import type { ToastMessage } from '@/components/providers/ToastProvider';
 import { getWalletAction, recordWalletEntryAction } from '@/server/fulfillment-actions';
 
 

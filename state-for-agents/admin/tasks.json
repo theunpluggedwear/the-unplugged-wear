@@ -9,15 +9,15 @@
   },
   "summary": {
     "total": 464,
-    "done": 407,
+    "done": 408,
     "in_progress": 3,
-    "backlog": 54
+    "backlog": 53
   },
   "session": {
     "branch": "feat/dharmil-admin",
     "tip": "e2aac97",
     "unpushed": [],
-    "next_up": "TL-COMMENT-AUDIT",
+    "next_up": "TL-UI-DESIGN-PLAN",
     "pending_verifications": [
       "admin journal editor + list full keyboard/focus/Reset Demo pass at 360/768/1024/1440 (CDP route-load check passed; interactive pass pending)",
       "SQL dry-run: apply 001 + 002 + 006-cms.sql against a real PostgreSQL instance; verify generated blogs.search_vector, slug/CHECK constraints, FK RESTRICT/CASCADE behavior, and partial indexes. psql remains unavailable locally.",
@@ -7577,12 +7577,12 @@
     {
       "id": "TL-BE-17.06",
       "title": "Remove the admin demo state once every admin screen is live: mocks/state.tsx, fixtures.ts, blogFixtures.ts, variants.ts (34 files import @/mocks) and the Reset Demo control",
-      "status": "backlog",
-      "owner": "unassigned",
+      "status": "done",
+      "owner": "agent",
       "parent": "TL-BE-17",
-      "started": null,
-      "finished": null,
-      "log": "Not started. Keep localStorage only for per-user UI preferences (sidebar collapse, frequent searches); rewrite tests that read fixtures.",
+      "started": "2026-11-22",
+      "finished": "2026-11-22",
+      "log": "Removed AdminStateProvider and all mocks business data. Added ToastProvider, Header reads real DB notifications and live staff claims, deleted obsolete demo views and Reset Demo control, moved variant helpers to heart catalog/variants, added types-only admin-dto.ts, deleted mocks folder. Verified no useAdminState/@mocks/Reset Demo references remain; typecheck, 75 tests, build and browser QA pass.",
       "files": [
         "tuw-admin/src/mocks/state.tsx",
         "tuw-admin/src/mocks/fixtures.ts",
@@ -7593,9 +7593,13 @@
         "tuw-admin/tests/business-logic.test.mjs",
         "tuw-admin/tests/seed-integrity.test.mjs"
       ],
-      "design_match": null,
-      "key_decisions": [],
-      "verified": false,
+      "design_match": "n/a",
+      "key_decisions": [
+        "Toast state is UI-only; no business data remains in providers.",
+        "Header notifications come only from the DB.",
+        "Fixture types are replaced by types-only DTOs; no fixture data remains."
+      ],
+      "verified": true,
       "pushed": false,
       "follow_ups": [
         "Added by the 2026-11-10 admin screen audit"

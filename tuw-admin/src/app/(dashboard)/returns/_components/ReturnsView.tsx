@@ -31,7 +31,7 @@ import {
   DrawerSection,
   ItemsRow,
 } from '@/components/ui';
-import { useAdminState } from '@/mocks/state';
+import { useToast } from '@/components/providers/ToastProvider';
 import {
   getReturnAction,
   listReturnsAction,
@@ -102,7 +102,7 @@ const MOVE_LABEL: Record<ReturnStatus, string> = {
 };
 
 export default function ReturnsView({ initial, perms, openRma }: { initial: ListResult; perms: string[]; openRma?: string }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const canManage = perms.includes('return.manage');
 
   const [list, setList] = useState<ListResult>(initial);

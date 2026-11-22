@@ -16,7 +16,7 @@ import {
   PageHeader, Pagination, PanelLayout, Select, StatCard, Table, TableBody, TableCell, TableHead,
   TableHeader, TableRow, Textarea,
 } from '@/components/ui';
-import { useAdminState } from '@/mocks/state';
+import { useToast } from '@/components/providers/ToastProvider';
 import {
   cancelFulfillmentAction, createClaimAction, getFulfillmentAction, listFulfillmentAction,
   reshipAction, retryFulfillmentAction, setProviderStateAction, submitWaitingAction,
@@ -78,7 +78,7 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
   autoSubmit: boolean;
   health: { configured: boolean; baseUrl: string; simulated: boolean };
 }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const canManage = perms.includes('shipment.manage');
 
   const [mode, setMode] = useState<'board' | 'wallet' | 'cod'>('board');

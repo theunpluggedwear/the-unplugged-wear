@@ -13,7 +13,7 @@ import {
   KeyValueList,
 } from '@/components/ui';
 import { Edit3, Layers } from 'lucide-react';
-import type { CollectionItem, ProductItem } from '@/mocks/fixtures';
+import type { CollectionItem, ProductItem } from '@/lib/admin-dto';
 import { collectionCount, resolveCollectionProducts } from '@tuw/heart/modules/catalog/rules';
 import { MONO_ID_STYLE } from '@/lib/format';
 

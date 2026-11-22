@@ -27,7 +27,7 @@ import {
   DrawerSection,
   ItemsRow,
 } from '@/components/ui';
-import { useAdminState } from '@/mocks/state';
+import { useToast } from '@/components/providers/ToastProvider';
 import { getOrderAction, listOrdersAction, setOrderStatusAction, setOrdersStatusAction } from '@/server/order-actions';
 
 
@@ -62,7 +62,7 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
   page: number;
   perPage: number;
 }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();

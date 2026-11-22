@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import DashboardShell from '@/components/layout/DashboardShell';
 import { ContentCard, StatCard, Badge, Button, Input, Drawer, Pagination, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, FilterPills, PageHeader, Tabs, DropdownMenu, Switch, UpliftSurface } from '@/components/ui';
 import { Plus, Download, Trash2, ChevronDown } from 'lucide-react';
-import { useAdminState } from '@/mocks/state';
+import { useToast } from '@/components/providers/ToastProvider';
 import type { AdminDiscountCode as DiscountCode } from '@tuw/heart/modules/orders';
 import type { ProductDiscountRow } from '@tuw/heart/modules/catalog';
 import { createDiscountAction, deleteDiscountAction, setDiscountActiveAction, setProductDiscountActiveAction } from '@/server/discount-actions';
@@ -14,7 +14,7 @@ import { MONO_ID_STYLE } from '@/lib/format';
 
 
 export default function DiscountsView({ initialCodes, initialSchedules, perms }: { initialCodes: DiscountCode[]; initialSchedules: ProductDiscountRow[]; perms: string[] }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const canManage = perms.includes('discount.manage');
   const [discountCodes, setDiscountCodes] = useState<DiscountCode[]>(initialCodes);
   const [scheduleRows, setScheduleRows] = useState<ProductDiscountRow[]>(initialSchedules);

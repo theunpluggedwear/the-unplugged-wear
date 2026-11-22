@@ -1,7 +1,7 @@
 
 
 
-import type { CollectionItem, ProductItem } from '@/mocks/fixtures';
+import type { CollectionItem, ProductItem } from '@/lib/admin-dto';
 import { isValidSlug, isSlugTaken, slugify } from '@tuw/heart/modules/catalog/rules';
 import type { SearchableSelectOption } from '@/components/ui';
 

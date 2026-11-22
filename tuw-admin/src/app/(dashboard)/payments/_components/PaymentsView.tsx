@@ -7,7 +7,7 @@ import { Download, Search, Banknote } from 'lucide-react';
 import type { PaymentRow } from '@tuw/heart/modules/orders';
 import DashboardShell from '@/components/layout/DashboardShell';
 import { ContentCard, StatCard, Badge, Button, Input, Drawer, Pagination, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, PageHeader, HeroCard, KeyValueList, FilterPills } from '@/components/ui';
-import { useAdminState } from '@/mocks/state';
+import { useToast } from '@/components/providers/ToastProvider';
 import { listPaymentsAction, markCodCollectedAction } from '@/server/money-actions';
 import { MONO_ID_STYLE } from '@/lib/format';
 
@@ -26,7 +26,7 @@ const STATUS: Record<string, { label: string; variant: 'success' | 'warning' | '
 };
 
 export default function PaymentsView({ initial, providers, perms }: { initial: ListResult; providers: ProviderCard[]; perms: string[] }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const router = useRouter();
   const canRefund = perms.includes('order.refund');
   const [list, setList] = useState<ListResult>(initial);

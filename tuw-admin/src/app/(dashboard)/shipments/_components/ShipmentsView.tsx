@@ -9,7 +9,7 @@ import {
   Modal, PageHeader, Pagination, PanelLayout, Select, Table, TableBody, TableCell, TableHead,
   TableHeader, TableRow, Textarea,
 } from '@/components/ui';
-import { useAdminState } from '@/mocks/state';
+import { useToast } from '@/components/providers/ToastProvider';
 import { addTrackingAction, getShipmentAction, listShipmentsAction, setShipmentStatusAction } from '@/server/fulfillment-actions';
 import { MONO_ID_STYLE } from '@/lib/format';
 
@@ -36,7 +36,7 @@ type Detail = {
 };
 
 export default function ShipmentsView({ initial, perms }: { initial: ListResult; perms: string[] }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const canManage = perms.includes('shipment.manage');
 
   const [list, setList] = useState<ListResult>(initial);

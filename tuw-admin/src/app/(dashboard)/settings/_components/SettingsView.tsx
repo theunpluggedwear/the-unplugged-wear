@@ -2,12 +2,11 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Save, Check, AlertCircle, RefreshCw, Library, ShieldCheck } from 'lucide-react';
+import { Save, Check, AlertCircle, Library, ShieldCheck } from 'lucide-react';
 import DashboardShell from '@/components/layout/DashboardShell';
 import { Button, Input, Textarea, Select, Switch, ContentCard, Badge, PageHeader, LinkButton } from '@/components/ui';
 import type { SettingsValues, SettingKey } from '@tuw/heart/modules/settings';
 import type { Provider } from '@tuw/heart/integrations/registry';
-import { useAdminState } from '@/mocks/state';
 import { saveSettingsAction, updateProviderAction } from '@/server/settings-actions';
 import { SETTINGS_TABS, type SettingsTab } from './tabs';
 
@@ -115,7 +114,6 @@ const PROVIDER_NOTES: Record<string, string> = {
 interface Notice { tone: 'ok' | 'warn' | 'error'; text: string }
 
 export default function SettingsView({ tab, values, providers: initialProviders }: { tab: SettingsTab; values: SettingsValues; providers: Provider[] }) {
-  const { resetDemoData } = useAdminState();
   const section = FIELDS[tab];
   const fields = useMemo(() => section?.fields ?? [], [section]);
   const [saved, setSaved] = useState(values);
@@ -306,15 +304,6 @@ export default function SettingsView({ tab, values, providers: initialProviders 
                     <p style={{ fontSize: 13, color: 'var(--tuw-text-secondary, #5D6772)', margin: '4px 0 0' }}>Define colors, sizes, fabrics, and other product attributes once — link them into any product.</p>
                   </div>
                   <LinkButton href="/settings/attributes" variant="secondary" size="sm" icon={<Library size={14} />}>Open Attribute Library</LinkButton>
-                </div>
-                <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--tuw-border-subtle, #E2E4E6)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                  <div>
-                    <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--tuw-text-primary, #262626)', margin: 0 }}>Demo screens</h3>
-                    <p style={{ fontSize: 13, color: 'var(--tuw-text-secondary, #5D6772)', margin: '4px 0 0' }}>Reset the screens that still run on demo data (orders, products, content…) to their baseline. Settings, customers and team are real and are not affected.</p>
-                  </div>
-                  <Button variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={() => { if (window.confirm('Reset the demo screens back to baseline fixtures?')) resetDemoData(); }}>
-                    Reset Demo State
-                  </Button>
                 </div>
               </>
             )}

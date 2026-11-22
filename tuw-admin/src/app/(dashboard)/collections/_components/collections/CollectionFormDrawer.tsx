@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Drawer, Input, SearchableMultiSelect, SearchableSelect, Textarea } from '@/components/ui';
 import type { SearchableSelectOption } from '@/components/ui';
-import type { CollectionItem, ProductItem } from '@/mocks/fixtures';
+import type { CollectionItem, ProductItem } from '@/lib/admin-dto';
 import {
   draftFromCollection,
   draftToPayload,

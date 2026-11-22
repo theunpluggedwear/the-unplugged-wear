@@ -7,11 +7,10 @@ import Link from 'next/link';
 import { Plus, Filter, Search, Edit3, Trash2, CheckCircle2, Eye, AlertTriangle, LayoutGrid, List, Tag, ChevronDown, Download, Archive, GripVertical, Upload, Images, Focus, Library, RotateCcw, X } from 'lucide-react';
 import DashboardShell from '@/components/layout/DashboardShell';
 import { StatCard, ContentCard, SurfaceCard, UpliftSurface, Button, Badge, IconButton, Input, Drawer, Modal, Pagination, FilterPills, PageHeader, ViewToggle, DropdownMenu, Checkbox, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, MediaFrame, FormTextarea, Tabs, Stepper, Switch, DrawerSection, DrawerCard, SearchableSelect, Disclosure, Carousel, LinkButton } from '@/components/ui';
-import { useAdminState } from '@/mocks/state';
-import { ProductItem } from '@/mocks/fixtures';
-import { resolveVariants, variantStockTotal, buildVariantSku, deriveVariantPrice, recomputeVariants, minFromPrice, pruneAdjustments, roundPrice, hasPriceSpread, adjustmentKey, sumAdjustments } from '@/mocks/variants';
-import type { ProductVariant, ProductAttribute, PhotoSettings, ProductDiscount, ProductGender, StockMovement } from '@/mocks/fixtures';
+import { useToast } from '@/components/providers/ToastProvider';
+import { resolveVariants, variantStockTotal, buildVariantSku, deriveVariantPrice, recomputeVariants, minFromPrice, pruneAdjustments, roundPrice, hasPriceSpread, adjustmentKey, sumAdjustments } from '@tuw/heart/modules/catalog/variants';
 import type { LibraryAttribute, SizeChart } from '@tuw/heart/modules/catalog';
+import type { ProductItem, ProductVariant, ProductAttribute, PhotoSettings, ProductDiscount, ProductGender, StockMovement } from '@/lib/admin-dto';
 import PartnerSkuPanel from './PartnerSkuPanel';
 import { saveSizeChartAction, deleteSizeChartAction, createProductAction, deleteProductsAction, getProductAction, importListingAction, setProductsStatusAction, updateProductAction } from '@/server/catalog-actions';
 import { attributeDisplayLabel, normalizeAttributeDisplayType, parseCompareAtPrice, slugify, UNCATEGORIZED_CATEGORY } from '@tuw/heart/modules/catalog/rules';
@@ -109,7 +108,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
   
   const assetSrc = (url: string) => (url.startsWith('/') ? `${storefrontOrigin}${url}` : url);
   
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const router = useRouter();
   const [products, setProducts] = useState<ProductItem[]>(initialProducts);
   useEffect(() => setProducts(initialProducts), [initialProducts]);

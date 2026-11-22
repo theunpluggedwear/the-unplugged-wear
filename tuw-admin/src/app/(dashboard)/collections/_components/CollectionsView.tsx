@@ -21,8 +21,8 @@ import {
   PageHeader,
 } from '@/components/ui';
 import { Plus, Search, MoreHorizontal } from 'lucide-react';
-import { useAdminState } from '@/mocks/state';
-import type { CollectionItem, ProductItem } from '@/mocks/fixtures';
+import { useToast } from '@/components/providers/ToastProvider';
+import type { CollectionItem, ProductItem } from '@/lib/admin-dto';
 import { deleteCollectionAction, saveCollectionAction } from '@/server/catalog-actions';
 import { collectionCount, uniqueSlug } from '@tuw/heart/modules/catalog/rules';
 import CollectionFormDrawer, { type CollectionSaveResult } from './collections/CollectionFormDrawer';
@@ -32,7 +32,7 @@ import { MONO_ID_STYLE } from '@/lib/format';
 
 
 export default function CollectionsView({ initialCollections, products, canManage }: { initialCollections: CollectionItem[]; products: ProductItem[]; canManage: boolean }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const [collections, setCollections] = useState(initialCollections);
   useEffect(() => setCollections(initialCollections), [initialCollections]);
   const storefrontNote = (storefront: { ok: true } | { ok: false; reason: string }) =>

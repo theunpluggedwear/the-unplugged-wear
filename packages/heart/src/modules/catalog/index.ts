@@ -4,6 +4,7 @@ import 'server-only';
 // products, variants, images, attribute links, collections, size charts,
 // product source rows and import jobs (DOC/backend/04, 07).
 export * from './read.ts';
+export * from './variants.ts';
 export * from './admin.ts';
 export * from './search.ts';
 export * from './library.ts';

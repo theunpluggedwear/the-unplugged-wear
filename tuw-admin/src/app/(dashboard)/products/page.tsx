@@ -1,7 +1,7 @@
 export const instant = false;
 import { adminListCategories, adminListProducts, listLibrary, listSizeCharts } from '@tuw/heart/modules/catalog';
 import { session } from '@/server/session';
-import type { ProductItem } from '@/mocks/fixtures';
+import type { ProductItem } from '@/lib/admin-dto';
 import ProductsView from './_components/ProductsView';
 
 

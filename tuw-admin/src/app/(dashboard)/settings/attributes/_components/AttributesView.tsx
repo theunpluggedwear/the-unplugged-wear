@@ -5,7 +5,7 @@ import Link from 'next/link';
 import DashboardShell from '@/components/layout/DashboardShell';
 import { ContentCard, SurfaceCard, Badge, Button, Input, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, PageHeader, Switch, UpliftSurface, DropdownMenu } from '@/components/ui';
 import { Plus, Trash2, ArrowLeft, ChevronDown, X } from 'lucide-react';
-import { useAdminState } from '@/mocks/state';
+import { useToast } from '@/components/providers/ToastProvider';
 import type { LibraryAttribute } from '@tuw/heart/modules/catalog';
 import { addAttributeValueAction, createAttributeAction, deleteAttributeAction, removeAttributeValueAction, updateAttributeAction } from '@/server/catalog-actions';
 import {
@@ -75,7 +75,7 @@ function ValuePreview({ attr, value }: { attr: LibraryAttribute; value: string }
 
 
 export default function AttributesView({ initialLibrary, canManage }: { initialLibrary: LibraryAttribute[]; canManage: boolean }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const [libraryAttributes, setLibrary] = useState(initialLibrary);
   const [busy, setBusy] = useState(false);
 
