@@ -15,9 +15,9 @@
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "aa7d275",
+    "tip": "f70a4a2",
     "unpushed": [],
-    "next_up": "TL-UI-DASH-CALENDAR",
+    "next_up": "TL-COMMENT-AUDIT",
     "pending_verifications": [
       "admin journal editor + list full keyboard/focus/Reset Demo pass at 360/768/1024/1440 (CDP route-load check passed; interactive pass pending)",
       "SQL dry-run: apply 001 + 002 + 006-cms.sql against a real PostgreSQL instance; verify generated blogs.search_vector, slug/CHECK constraints, FK RESTRICT/CASCADE behavior, and partial indexes. psql remains unavailable locally.",
