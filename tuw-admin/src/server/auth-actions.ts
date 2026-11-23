@@ -5,29 +5,37 @@ import * as auth from '@tuw/heart/modules/auth';
 import { authSchemas } from '@tuw/heart/modules/auth';
 import { safeNext } from '@tuw/heart/next/session';
 import { guards, session } from './session';
+import { limitAuthAttempt } from './auth-rate-limit';
 
 
 
 
 export const loginAction = guards.action({ access: 'public', input: authSchemas.login }, async ({ input }) => {
-  const tokens = await auth.login({ email: input.email, password: input.password, app: 'admin' }, await session.requestMeta());
+  const meta = await session.requestMeta();
+  await limitAuthAttempt('login', meta.ip, input.email);
+  const tokens = await auth.login({ email: input.email, password: input.password, app: 'admin' }, meta);
   await session.setSession(tokens, input.remember ?? false);
   return { next: safeNext(input.next, '/dashboard') };
 });
 
 export const forgotPasswordAction = guards.action({ access: 'public', input: authSchemas.forgot }, async ({ input }) => {
-  const { devLink } = await auth.requestPasswordReset(input.email, await session.requestMeta(), 'admin');
+  const meta = await session.requestMeta();
+  await limitAuthAttempt('forgot', meta.ip, input.email);
+  const { devLink } = await auth.requestPasswordReset(input.email, meta, 'admin');
   return { devLink: devLink ?? null };
 });
 
 export const resetPasswordAction = guards.action({ access: 'public', input: authSchemas.reset }, async ({ input }) => {
+  await limitAuthAttempt('reset', (await session.requestMeta()).ip);
   await auth.resetPassword(input.token, input.password);
   await session.clearSession();
   return { done: true };
 });
 
 export const acceptInviteAction = guards.action({ access: 'public', input: authSchemas.acceptInvite }, async ({ input }) => {
-  const tokens = await auth.acceptInvite(input, await session.requestMeta());
+  const meta = await session.requestMeta();
+  await limitAuthAttempt('invite', meta.ip);
+  const tokens = await auth.acceptInvite(input, meta);
   await session.setSession(tokens, true);
   return { next: '/dashboard' };
 });

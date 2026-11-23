@@ -1,4 +1,7 @@
+import { limitAuthAttempt, clientIp } from '@/server/auth-rate-limit';
 import { session } from '@/server/session';
 
-
-export const GET = (request: Request) => session.refreshRoute(request);
+export async function GET(request: Request) {
+  await limitAuthAttempt('refresh', clientIp(request));
+  return session.refreshRoute(request);
+}
