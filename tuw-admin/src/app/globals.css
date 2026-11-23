@@ -2159,3 +2159,19 @@
   background-color: var(--tuw-bg-surface, #FFFFFF) !important;
   box-shadow: var(--shadow-nav-edge, inset 0 -2px 0 #d6d6d6) !important;
 }
+
+.tuw-nav-matrix-row {
+  background-color: var(--tuw-bg-surface, #FFFFFF);
+  border: 1px solid var(--tuw-border-subtle, #E9E9E9);
+  border-radius: var(--radius-nav, 10px);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tuw-nav-matrix-row:hover {
+  background-color: var(--color-nav-branch-hover, rgba(0, 0, 0, 0.04));
+}
+
+.tuw-nav-matrix-row:focus-within {
+  background-color: var(--tuw-bg-surface, #FFFFFF);
+  box-shadow: var(--shadow-nav-edge, inset 0 -2px 0 #d6d6d6);
+}

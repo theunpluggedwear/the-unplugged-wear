@@ -46,23 +46,44 @@ import {
 type Notice = { tone: 'success' | 'error'; text: string };
 
 const KIND_LABEL: Record<MatrixRow['kind'], string> = {
-  item: 'Item',
+  item: 'Menu item',
   column: 'Column',
   link: 'Link',
-  feature: 'Feature',
+  feature: 'Feature tile',
   shopAll: 'Shop all',
+};
+
+const FIELD_TEXT: Record<NavMode, Record<MatrixRow['kind'], { name: string; nameHint: string; link: string; linkHint: string }>> = {
+  mobile: {
+    item: { name: 'Menu name', nameHint: 'Top-level link in the drawer', link: 'Menu link', linkHint: 'Where this item goes' },
+    column: { name: 'Column heading', nameHint: 'Groups the links beneath it', link: 'No link', linkHint: 'A group has no destination' },
+    link: { name: 'Link text', nameHint: 'What customers click', link: 'Destination', linkHint: 'Page or shop URL' },
+    feature: { name: 'Feature title', nameHint: 'Title of the image card', link: 'Image link', linkHint: 'Where the tile goes' },
+    shopAll: { name: 'Shop-all text', nameHint: 'Footer link label', link: 'Shop-all link', linkHint: 'Where the footer link goes' },
+  },
+  desktop: {
+    item: { name: 'Menu name', nameHint: 'Top tab in the desktop header', link: 'Menu link', linkHint: 'Where this tab goes' },
+    column: { name: 'Column heading', nameHint: 'Groups the links beneath it', link: 'No link', linkHint: 'A group has no destination' },
+    link: { name: 'Link text', nameHint: 'What customers click', link: 'Destination', linkHint: 'Page or shop URL' },
+    feature: { name: 'Feature title', nameHint: 'Title of the image card on the right', link: 'Image link', linkHint: 'Where the tile goes' },
+    shopAll: { name: 'Shop-all text', nameHint: 'Link at the foot of the panel', link: 'Shop-all link', linkHint: 'Where the footer link goes' },
+  },
 };
 
 function EditableCell({
   id,
   value,
   onCommit,
+  fieldLabel,
+  hint,
   max = 100,
   placeholder = 'Not set',
 }: {
   id: string;
   value: string;
   onCommit: (value: string) => void;
+  fieldLabel: string;
+  hint?: string;
   max?: number;
   placeholder?: string;
 }) {
@@ -98,45 +119,62 @@ function EditableCell({
     setError(null);
   }
 
+  const caption = (
+    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--tuw-text-secondary, #5D6772)' }}>
+      {fieldLabel}
+    </div>
+  );
+  const helper = hint ? (
+    <div style={{ fontSize: 11, lineHeight: 16, color: 'var(--tuw-text-secondary, #5D6772)' }}>{hint}</div>
+  ) : null;
+
   if (!editing) {
     return (
-      <button
-        type="button"
-        onClick={begin}
-        aria-label={`Edit ${id}`}
-        style={{
-          width: '100%',
-          textAlign: 'left',
-          padding: '6px 2px',
-          background: 'transparent',
-          border: 'none',
-          borderBottom: '1px dashed var(--tuw-border-control, #D1D5DB)',
-          fontFamily: 'var(--font-main)',
-          fontSize: '14px',
-          lineHeight: '22px',
-          color: value ? 'var(--tuw-text-primary, #262626)' : 'var(--tuw-text-secondary, #5D6772)',
-          cursor: 'pointer',
-        }}
-      >
-        {value || placeholder}
-      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+        {caption}
+        <button
+          type="button"
+          onClick={begin}
+          aria-label={`Edit ${fieldLabel} (${id})`}
+          style={{
+            width: '100%',
+            textAlign: 'left',
+            padding: '6px 2px',
+            background: 'transparent',
+            border: 'none',
+            borderBottom: '1px dashed var(--tuw-border-control, #D1D5DB)',
+            fontFamily: 'var(--font-main)',
+            fontSize: '14px',
+            lineHeight: '22px',
+            color: value ? 'var(--tuw-text-primary, #262626)' : 'var(--tuw-text-secondary, #5D6772)',
+            cursor: 'pointer',
+          }}
+        >
+          {value || placeholder}
+        </button>
+        {helper}
+      </div>
     );
   }
 
   return (
-    <Input
-      id={`cell-${id}`}
-      ref={inputRef}
-      value={draft}
-      onChange={(event) => setDraft(event.target.value)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') { event.preventDefault(); commit(); }
-        if (event.key === 'Escape') { event.preventDefault(); cancel(); }
-      }}
-      onBlur={commit}
-      error={error ?? undefined}
-      fullWidth
-    />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+      {caption}
+      <Input
+        id={`cell-${id}`}
+        ref={inputRef}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') { event.preventDefault(); commit(); }
+          if (event.key === 'Escape') { event.preventDefault(); cancel(); }
+        }}
+        onBlur={commit}
+        error={error ?? undefined}
+        fullWidth
+      />
+      {helper}
+    </div>
   );
 }
 
@@ -316,42 +354,31 @@ export default function NavigationManager({
     }
     const canMove = row.kind !== 'shopAll';
     return (
-      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
         {row.kind === 'item' && row.capacity && row.capacity.used < caps.columns ? (
-          <IconButton
-            label={`Add column to ${row.label || 'item'}`}
-            icon={<Plus size={14} />}
-            size="sm"
-            onClick={() => addColumn(row.siblingIndex)}
-          />
+          <Button variant="outline" size="sm" icon={<Plus size={14} />} onClick={() => addColumn(row.siblingIndex)}>
+            Column
+          </Button>
         ) : null}
         {row.kind === 'column' && row.capacity && row.capacity.used < caps.links ? (
-          <IconButton
-            label={`Add link to ${row.label || 'column'}`}
-            icon={<Plus size={14} />}
-            size="sm"
-            onClick={() => addLink(Number(row.path[0]), row.siblingIndex)}
-          />
+          <Button variant="outline" size="sm" icon={<Plus size={14} />} onClick={() => addLink(Number(row.path[0]), row.siblingIndex)}>
+            Link
+          </Button>
         ) : null}
         {mode === 'desktop' && row.kind === 'item' && (getAtPath(items, [row.siblingIndex, 'features']) as unknown[] | undefined)?.length !== caps.features ? (
-          <IconButton
-            label={`Add feature tile to ${row.label || 'item'}`}
-            icon={<Plus size={14} />}
-            size="sm"
-            onClick={() => addFeature(row.siblingIndex)}
-          />
+          <Button variant="outline" size="sm" icon={<Plus size={14} />} onClick={() => addFeature(row.siblingIndex)}>
+            Feature
+          </Button>
         ) : null}
         {mode === 'desktop' && row.kind === 'item' && !getAtPath(items, [row.siblingIndex, 'shopAll']) ? (
-          <IconButton
-            label={`Add shop-all link to ${row.label || 'item'}`}
-            icon={<Plus size={14} />}
-            size="sm"
-            onClick={() => addShopAll(row.siblingIndex)}
-          />
+          <Button variant="outline" size="sm" icon={<Plus size={14} />} onClick={() => addShopAll(row.siblingIndex)}>
+            Shop all
+          </Button>
         ) : null}
         {canMove ? (
           <IconButton
             label={`Move ${KIND_LABEL[row.kind].toLowerCase()} up`}
+            tooltip="Move up"
             icon={<ArrowUp size={14} />}
             size="sm"
             disabled={row.siblingIndex === 0}
@@ -361,6 +388,7 @@ export default function NavigationManager({
         {canMove ? (
           <IconButton
             label={`Move ${KIND_LABEL[row.kind].toLowerCase()} down`}
+            tooltip="Move down"
             icon={<ArrowDown size={14} />}
             size="sm"
             disabled={row.siblingIndex === row.siblingCount - 1}
@@ -369,6 +397,7 @@ export default function NavigationManager({
         ) : null}
         <IconButton
           label={`Remove ${KIND_LABEL[row.kind].toLowerCase()} ${row.label || ''}`.trim()}
+          tooltip="Remove"
           icon={<Trash2 size={14} />}
           variant="danger"
           size="sm"
@@ -449,6 +478,12 @@ export default function NavigationManager({
           </Button>
         </div>
 
+        <div style={{ fontSize: 13, lineHeight: 20, color: 'var(--tuw-text-secondary, #5D6772)', marginBottom: 14 }}>
+          {mode === 'mobile'
+            ? 'Each menu item becomes a top-level link in the phone and tablet drawer. Columns group the links shown inside it.'
+            : 'Each menu item becomes a top tab in the desktop mega-menu. Columns group the links, and feature tiles are the image cards on the right.'}
+        </div>
+
         {items.length === 0 ? (
           <EmptyState
             title={mode === 'mobile' ? 'No mobile menu items' : 'No desktop menu items'}
@@ -457,20 +492,20 @@ export default function NavigationManager({
               : 'Add items to draft the desktop mega-menu.'}
           />
         ) : (
-          <Table>
-            <TableHeader>
+          <Table style={{ borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+            <TableHeader style={{ background: 'transparent', borderBottom: 'none' }}>
               <TableRow hoverable={false}>
-                <TableHead style={{ width: '30%' }}>Item / column / link</TableHead>
-                <TableHead style={{ width: '27%' }}>Label</TableHead>
-                <TableHead style={{ width: '25%' }}>Link / URL</TableHead>
-                <TableHead style={{ width: '18%' }}>Capacity</TableHead>
-                <TableHead style={{ width: 210 }}>Actions</TableHead>
+                <TableHead style={{ width: '28%', background: 'var(--tuw-bg-selected, #F8F5FF)', borderTopLeftRadius: 'var(--radius-nav, 10px)', borderBottomLeftRadius: 'var(--radius-nav, 10px)' }}>Structure</TableHead>
+                <TableHead style={{ width: '27%', background: 'var(--tuw-bg-selected, #F8F5FF)' }}>Name</TableHead>
+                <TableHead style={{ width: '23%', background: 'var(--tuw-bg-selected, #F8F5FF)' }}>Link</TableHead>
+                <TableHead style={{ width: '14%', background: 'var(--tuw-bg-selected, #F8F5FF)' }}>Capacity</TableHead>
+                <TableHead style={{ width: 200, background: 'var(--tuw-bg-selected, #F8F5FF)', borderTopRightRadius: 'var(--radius-nav, 10px)', borderBottomRightRadius: 'var(--radius-nav, 10px)' }}>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {result.rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>
+                <TableRow key={row.id} className="tuw-nav-matrix-row">
+                  <TableCell style={{ padding: '10px 12px 10px 16px', borderTopLeftRadius: 'var(--radius-nav, 10px)', borderBottomLeftRadius: 'var(--radius-nav, 10px)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       {Array.from({ length: row.depth }, (_, level) => (
                         <span
@@ -478,9 +513,12 @@ export default function NavigationManager({
                           aria-hidden="true"
                           style={{
                             display: 'inline-block',
-                            width: 16,
-                            height: 20,
-                            borderLeft: '2px solid var(--tuw-border-subtle, #E9E9E9)',
+                            width: 14,
+                            height: 26,
+                            flexShrink: 0,
+                            borderLeft: '1px solid var(--color-nav-guide, #DDDDDD)',
+                            borderBottom: '1px solid var(--color-nav-guide, #DDDDDD)',
+                            borderBottomLeftRadius: 'var(--radius-nav, 10px)',
                           }}
                         />
                       ))}
@@ -507,41 +545,50 @@ export default function NavigationManager({
                       </Badge>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell style={{ padding: '10px 12px' }}>
                     <EditableCell
                       id={`${mode}-${row.id}-label`}
                       value={row.label}
                       onCommit={(value) => editField(row, 'label', value)}
+                      fieldLabel={FIELD_TEXT[mode][row.kind].name}
+                      hint={[FIELD_TEXT[mode][row.kind].nameHint, row.meta].filter(Boolean).join(' · ')}
                       max={row.kind === 'feature' ? 200 : 100}
-                      placeholder={row.kind === 'feature' ? 'Feature title' : 'Label'}
+                      placeholder={row.kind === 'feature' ? 'e.g. Summer essentials' : row.kind === 'column' ? 'e.g. Clothing' : row.kind === 'shopAll' ? 'e.g. Shop all men' : 'e.g. Shop'}
                     />
-                    {row.meta ? (
-                      <div style={{ fontSize: 12, color: 'var(--tuw-text-secondary, #5D6772)', marginTop: 2 }}>
-                        {row.meta}
-                      </div>
-                    ) : null}
                   </TableCell>
-                  <TableCell>
+                  <TableCell style={{ padding: '10px 12px' }}>
                     {row.kind === 'column' ? (
-                      <span style={{ color: 'var(--tuw-text-secondary, #5D6772)' }}>—</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--tuw-text-secondary, #5D6772)' }}>
+                          {FIELD_TEXT[mode][row.kind].link}
+                        </div>
+                        <div style={{ fontSize: 14, color: 'var(--tuw-text-secondary, #5D6772)' }}>A group — no destination</div>
+                        <div style={{ fontSize: 11, color: 'var(--tuw-text-secondary, #5D6772)' }}>
+                          {FIELD_TEXT[mode][row.kind].linkHint}
+                        </div>
+                      </div>
                     ) : (
                       <EditableCell
                         id={`${mode}-${row.id}-href`}
                         value={row.href}
                         onCommit={(value) => editField(row, 'href', value)}
+                        fieldLabel={FIELD_TEXT[mode][row.kind].link}
+                        hint={FIELD_TEXT[mode][row.kind].linkHint}
                         max={500}
-                        placeholder="URL"
+                        placeholder="e.g. /shop"
                       />
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell style={{ padding: '10px 12px' }}>
                     {row.capacity ? (
                       <CapacityBar used={row.capacity.used} max={row.capacity.max} noun={row.capacity.noun} />
                     ) : (
                       <span style={{ color: 'var(--tuw-text-secondary, #5D6772)' }}>—</span>
                     )}
                   </TableCell>
-                  <TableCell>{renderActions(row)}</TableCell>
+                  <TableCell style={{ padding: '10px 12px', borderTopRightRadius: 'var(--radius-nav, 10px)', borderBottomRightRadius: 'var(--radius-nav, 10px)' }}>
+                    {renderActions(row)}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

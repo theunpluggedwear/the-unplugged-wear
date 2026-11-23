@@ -238,3 +238,12 @@
 - [x] The desktop tab carries a visible draft notice: the storefront still renders its built-in menu; wiring `navbar.desktop` into `tuw-website` is a separate task.
 - [x] Browser QA at 360/768/1024/1440: no page-level horizontal overflow (the `Table` wrapper scrolls internally below 1440). QA admin and QA nav rows were deleted afterwards.
 - [x] Gates: `pnpm run typecheck`, `pnpm run test:admin` (85/85), `pnpm run build:admin`, `pnpm lint:comments` (3012/3016). Full `pnpm run test` still has pre-existing storefront failures (missing `qikink` files and homepage typography assertions); no storefront file was touched.
+
+### Navigation matrix UX pass (2026-11-24)
+
+- [x] Replaced the vague `Label` / `Link / URL` / `Item / column / link` headers with `Structure · Name · Link · Capacity · Actions`. Every row now shows a contextual field name and helper: Menu name / Column heading / Link text / Feature title / Shop-all text, with hints such as "Groups the links beneath it" and "What customers click". A one-line explainer sits above the table on each tab.
+- [x] Column rows now state "A group — no destination" instead of a bare dash, so it is clear why they have no link.
+- [x] Rows are rounded white cards using the sidebar's own tokens: `--radius-nav` 10px, `--tuw-bg-surface`, `--tuw-border-subtle`, `--shadow-nav-edge` and `--color-nav-branch-hover`. Hover applies the nav wash; `:focus-within` applies the sidebar's inset bottom edge. Tree guides are curved elbows (`border-bottom-left-radius: var(--radius-nav)`) like the sidebar's `navTree`. Header corners are rounded too.
+- [x] The three ambiguous `+` icon buttons are now labelled chips (`Column`, `Feature`, `Shop all`) and column rows use a labelled `Link` chip. Move/remove remain icon buttons with `title` tooltips as a secondary cue.
+- [x] Browser QA confirmed the computed row radius is 10px, row background white, focus inset shadow `rgb(214,214,214) 0px -2px 0px inset`, curved guide radius 10px, the labelled chips and tooltips present on both tabs, and no page-level horizontal overflow at 360/768/1024/1440 (table scrolls internally below 1024).
+- [x] Mobile & tablet remains the default tab. Gates re-run clean after the pass.
