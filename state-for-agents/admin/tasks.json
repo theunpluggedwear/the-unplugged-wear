@@ -9,13 +9,13 @@
   },
   "summary": {
     "total": 469,
-    "done": 427,
+    "done": 428,
     "in_progress": 13,
-    "backlog": 29
+    "backlog": 28
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "a6317a1",
+    "tip": "7edc942",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -7751,19 +7751,20 @@
     {
       "id": "TL-BE-17.11",
       "title": "Admin sidebar/menus hide items the staff role cannot use (from access-token permissions)",
-      "status": "backlog",
-      "owner": "unassigned",
+      "status": "done",
+      "owner": "agent",
       "parent": "TL-BE-17",
       "started": null,
       "finished": null,
-      "log": "Not started. Sidebar still uses the demo persona canPerformAction from mocks/state. Hiding is UX only — guards already enforce.",
+      "log": "Nav items now carry the same permissions their pages check, and the layout passes signed-in staff permissions into the shell. Filtered items and whole groups are hidden while guards remain the enforcement layer. Verified with admin and support-role accounts: correct link sets, hidden route still redirected to access-denied, no overflow at 360/768/1024/1440.",
       "files": [
         "tuw-admin/src/components/layout/Sidebar.tsx"
       ],
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
+      "finished": "2026-11-23",
       "follow_ups": []
     },
     {
