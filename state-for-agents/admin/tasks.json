@@ -8,14 +8,14 @@
     "reference": "Figma WmpPcdGcXerVgqNpgr6Q6S + production screenshots"
   },
   "summary": {
-    "total": 470,
-    "done": 434,
+    "total": 471,
+    "done": 435,
     "in_progress": 13,
     "backlog": 23
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "80d0096",
+    "tip": "7bfb4cd",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -8298,6 +8298,26 @@
       "verified": false,
       "pushed": false,
       "follow_ups": []
+    },
+    {
+      "id": "TL-UI-NAV-MATRIX",
+      "title": "Expandable tree matrix for mobile and desktop store navigation",
+      "status": "done",
+      "owner": "agent",
+      "started": "2026-11-24",
+      "finished": "2026-11-24",
+      "log": "Replaced the plain nested Input cards on /content/navigation with a tree data table composed only from existing UI primitives (Table, Input, IconButton, Button, Badge, Tabs, ContentCard, EmptyState). Two tabs cover mobile/tablet (20/6/30) and desktop mega-menu (8/4/10/2 plus feature tiles and shop-all). Tree guides, cross-level search with ancestor retention, capacity progress bars, and click-to-edit cells with Enter/blur commit and Escape cancel. New guarded heart schema/service for navigation_settings.navbar.desktop; opaque link filters and image-tile fields preserved on save. Desktop tab states plainly that the storefront still uses its built-in menu; wiring is a separate task. Gates: typecheck, admin tests 85/85, admin build, comment ratchet 3012/3016. Browser QA at 360/768/1024/1440 over the Tailscale URL included save/reload persistence, search, collapse, keyboard edit/cancel and an opaque-metadata round trip; QA admin and nav rows cleaned afterwards.",
+      "design_match": "yes",
+      "key_decisions": [
+        "Admin-only: desktop edits are stored as a draft; storefront wiring stays a separate task.",
+        "Reused existing UI primitives; no new grid component or dependency.",
+        "Desktop link filters and image-tile metadata are preserved but not edited in the matrix."
+      ],
+      "verified": true,
+      "pushed": false,
+      "follow_ups": [
+        "Wire tuw-website header/nav to navigation_settings.navbar.desktop with NAV_ITEMS fallback when storefront work is approved."
+      ]
     }
   ],
   "workflow": {
