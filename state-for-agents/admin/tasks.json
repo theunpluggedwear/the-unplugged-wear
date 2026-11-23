@@ -9,13 +9,13 @@
   },
   "summary": {
     "total": 469,
-    "done": 428,
+    "done": 429,
     "in_progress": 13,
-    "backlog": 28
+    "backlog": 27
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "7edc942",
+    "tip": "b9b659f",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -7575,16 +7575,17 @@
     {
       "id": "TL-BE-17.02",
       "title": "CI workflow: pnpm typecheck, test, build + db:migrate on a temp schema",
-      "status": "backlog",
-      "owner": "unassigned",
+      "status": "done",
+      "owner": "agent",
       "parent": "TL-BE-17",
       "started": null,
       "finished": null,
-      "log": "Not started.",
+      "log": "Added .github/workflows/ci.yml: clean lockfile install, all-workspace typecheck, comment ratchet, temp Postgres schema + migrations, full tests and both production builds on every push and PR. Verified from a detached worktree without .env.local that a fresh install and admin build succeed from committed files only.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
+      "finished": "2026-11-23",
       "follow_ups": []
     },
     {
