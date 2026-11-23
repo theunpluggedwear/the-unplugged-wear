@@ -31,6 +31,39 @@ export const mobileNavItem = z.object({
 export const mobileNav = z.array(mobileNavItem).max(20);
 export const saveMobileNav = z.object({ items: mobileNav });
 
+export const navFilter = z.record(z.string(), z.unknown());
+
+export const desktopNavLink = z.object({
+  label: z.string().trim().min(1).max(100),
+  href: z.string().trim().min(1).max(500),
+  filter: navFilter.optional(),
+});
+
+export const desktopNavFeature = z.object({
+  productSlug: z.string().trim().max(200).optional(),
+  image: z.string().trim().max(500).optional(),
+  imagePosition: z.string().trim().max(100).optional(),
+  title: z.string().trim().max(200).optional(),
+  caption: z.string().trim().max(300).optional(),
+  href: z.string().trim().max(500).optional(),
+});
+
+export const desktopNavColumn = z.object({
+  title: z.string().trim().min(1).max(100),
+  links: z.array(desktopNavLink).max(10),
+});
+
+export const desktopNavItem = z.object({
+  label: z.string().trim().min(1).max(100),
+  href: z.string().trim().min(1).max(500),
+  columns: z.array(desktopNavColumn).max(4).optional(),
+  features: z.array(desktopNavFeature).max(2).optional(),
+  shopAll: desktopNavLink.optional(),
+});
+
+export const desktopNav = z.array(desktopNavItem).max(8);
+export const saveDesktopNav = z.object({ items: desktopNav });
+
 export const saveNavigation = z.object({
   navbar: z.object({
     mobile: mobileNav.default([]),

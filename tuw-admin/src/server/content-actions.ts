@@ -35,6 +35,11 @@ export const saveMobileNavAction = guards.action({ permission: 'content.manage',
   return { items, storefront: await refresh(CMS_TAGS.nav) };
 });
 
+export const saveDesktopNavAction = guards.action({ permission: 'content.manage', input: s.saveDesktopNav }, async ({ input, ctx }) => {
+  const items = await content.adminSaveDesktopNav(input.items, ctx.user!.id);
+  return { items, storefront: await refresh(CMS_TAGS.nav) };
+});
+
 export const listFaqsAction = guards.action({ permission: 'content.manage', input: s.faqList }, ({ ctx }) =>
   content.adminListFaqs(ctx.user!.id));
 

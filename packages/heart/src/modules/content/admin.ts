@@ -45,6 +45,16 @@ export async function adminSaveMobileNav(items: svc.MobileNavItem[], actorId: st
   return svc.saveMobileNav(items, actorId);
 }
 
+export async function adminGetDesktopNav(actorId: string) {
+  await requireContentManager(actorId);
+  return svc.getStorefrontDesktopNav();
+}
+
+export async function adminSaveDesktopNav(items: svc.DesktopNavItem[], actorId: string) {
+  await requireContentManager(actorId);
+  return svc.saveDesktopNav(items, actorId);
+}
+
 export async function adminGetTheme(actorId: string) {
   await requireContentManager(actorId);
   return svc.getTheme();

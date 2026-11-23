@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 import { getDb, withTransaction } from '../../platform/db/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
-import { mobileNav } from './schemas.ts';
+import { mobileNav, desktopNav } from './schemas.ts';
 
 export const CMS_TAGS = {
   home: 'cms:home',
@@ -78,6 +78,20 @@ export async function getStorefrontMobileNav(): Promise<MobileNavItem[]> {
 export async function saveMobileNav(items: MobileNavItem[], actorId: string): Promise<MobileNavItem[]> {
   const navbar = await getNavigation();
   await saveNavigation({ ...navbar, mobile: items }, actorId);
+  return items;
+}
+
+export type DesktopNavItem = typeof desktopNav._output[number];
+
+export async function getStorefrontDesktopNav(): Promise<DesktopNavItem[]> {
+  const navbar = await getNavigation();
+  const parsed = desktopNav.safeParse(navbar.desktop ?? []);
+  return parsed.success ? parsed.data : [];
+}
+
+export async function saveDesktopNav(items: DesktopNavItem[], actorId: string): Promise<DesktopNavItem[]> {
+  const navbar = await getNavigation();
+  await saveNavigation({ ...navbar, desktop: items }, actorId);
   return items;
 }
 

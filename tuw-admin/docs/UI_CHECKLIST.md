@@ -225,3 +225,16 @@
 - [x] `npx tsc --noEmit` passes in both apps; `npx next build` succeeds with `/fulfillment` and `/shipments` as Partial Prerender routes, and every fulfilment cron is declared in `vercel.json`.
 - [ ] Browser pass of the board, the drawer actions, the COD/wallet panels and the shipments table at 360/768/1024/1440, plus keyboard focus and Reset Demo. User verification pending.
 - [ ] Live Qikink: the store's current keys are sandbox keys, so no live order has been sent yet; the first live submission, cancellation and sync still need a real key. Reverse pickup and reverse AWB stay with TL-INT-R2.
+
+## Store Navigation tree matrix (TL-UI-NAV-MATRIX, 2026-11-24)
+
+- [x] `/content/navigation` now uses an expandable tree table built only from the existing `Table`, `Input`, `IconButton`, `Button`, `Badge`, `Tabs`, `ContentCard` and `EmptyState` primitives. No new UI primitive or grid dependency.
+- [x] Two tabs: Mobile & tablet (3 levels, caps 20/6/30) and Desktop mega-menu (item / column / link plus feature tiles and shop-all, caps 8/4/10/2). Tree-guide indentation and chevrons show depth; `aria-expanded` toggles with Enter/Space.
+- [x] Cross-level search keeps matching ancestors, auto-reveals matches, reports match count, and disables Collapse/Expand all while active. Collapse hides descendants without losing data.
+- [x] Inline editing: click a cell, Enter or blur commits, Escape discards; empty/over-length values stay in the field with an inline error and are never saved. Focus-visible rings and labelled icon buttons verified.
+- [x] Capacity bars always show `used / limit`, use semantic warning/error colours at thresholds and expose `role="progressbar"` with aria values. Add controls stop at the cap and state the reason.
+- [x] Save persists both documents through `saveMobileNavAction` / `saveDesktopNavAction` with `content.manage` rechecked in the DAL; a reload through the Tailscale URL restored the tree. Refresh failure is reported truthfully rather than hidden.
+- [x] Desktop `filter` objects, feature `productSlug`/`imagePosition` and shop-all filters were injected into `navigation_settings.navbar.desktop`, then an unrelated label edit was saved: all opaque fields and the mobile document were still present afterwards.
+- [x] The desktop tab carries a visible draft notice: the storefront still renders its built-in menu; wiring `navbar.desktop` into `tuw-website` is a separate task.
+- [x] Browser QA at 360/768/1024/1440: no page-level horizontal overflow (the `Table` wrapper scrolls internally below 1440). QA admin and QA nav rows were deleted afterwards.
+- [x] Gates: `pnpm run typecheck`, `pnpm run test:admin` (85/85), `pnpm run build:admin`, `pnpm lint:comments` (3012/3016). Full `pnpm run test` still has pre-existing storefront failures (missing `qikink` files and homepage typography assertions); no storefront file was touched.
