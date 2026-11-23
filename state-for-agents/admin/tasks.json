@@ -8,14 +8,14 @@
     "reference": "Figma WmpPcdGcXerVgqNpgr6Q6S + production screenshots"
   },
   "summary": {
-    "total": 468,
-    "done": 426,
+    "total": 469,
+    "done": 427,
     "in_progress": 13,
     "backlog": 29
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "3d14cd9",
+    "tip": "a6317a1",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -4517,6 +4517,18 @@
         "Media tab card stack",
         "Variants & Stock tab card stack"
       ]
+    },
+    {
+      "id": "TL-UI-PAGE-SKELETONS",
+      "title": "Shape loading skeletons to match each admin page",
+      "status": "done",
+      "owner": "agent",
+      "log": "Replaced the generic PageSkeleton, which drew a second sidebar inside main, with a shared Skeleton kit and per-route skeletons that mirror each page's header, stats, filters, cards and tables. Added dashboard, reports and abandoned loading files and neutralised the layout fallback. Browser captured page-specific loading labels on cold navigation with no duplicate nav and no overflow at 360/768/1024/1440; production build passes.",
+      "design_match": "n/a",
+      "verified": true,
+      "pushed": false,
+      "started": "2026-11-23",
+      "finished": "2026-11-23"
     },
     {
       "id": "TL-UI-PEDIT-SPECS-CARDS",
