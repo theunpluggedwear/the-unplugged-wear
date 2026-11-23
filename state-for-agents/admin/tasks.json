@@ -8,14 +8,14 @@
     "reference": "Figma WmpPcdGcXerVgqNpgr6Q6S + production screenshots"
   },
   "summary": {
-    "total": 469,
-    "done": 430,
+    "total": 470,
+    "done": 431,
     "in_progress": 13,
     "backlog": 26
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "374a2db",
+    "tip": "7eb7723",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -4589,6 +4589,18 @@
       "pushed": false,
       "finished": "2026-11-23",
       "follow_ups": []
+    },
+    {
+      "id": "TL-UI-PRODUCTS-LIST-DEFAULT",
+      "title": "Open the product catalog in list view",
+      "status": "done",
+      "owner": "agent",
+      "log": "Changed the ProductsView default from grid to table so SKU, price and stock are visible on first load. The existing grid/table toggle still works. Browser verified the table is selected on first load with six rows and no overflow at 360/768/1024/1440.",
+      "design_match": "n/a",
+      "verified": true,
+      "pushed": false,
+      "started": "2026-11-23",
+      "finished": "2026-11-23"
     },
     {
       "id": "TL-UI-PEDIT-RESET",
