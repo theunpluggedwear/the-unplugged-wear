@@ -9,13 +9,13 @@
   },
   "summary": {
     "total": 469,
-    "done": 431,
-    "in_progress": 12,
+    "done": 430,
+    "in_progress": 13,
     "backlog": 26
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "b3961be",
+    "tip": "374a2db",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -5196,15 +5196,15 @@
     {
       "id": "TL-INT-EMAIL",
       "title": "Transactional email provider (verification, reset, orders, newsletter double opt-in, gift cards, back-in-stock)",
-      "status": "done",
+      "status": "in_progress",
       "owner": "agent",
       "parent": "TL-INT-PHASE",
       "started": null,
       "finished": null,
-      "log": "Recommended Resend (or AWS SES at volume); domain verification needed; delivery logged in email_logs. Real Resend adapter added, selected automatically when RESEND_API_KEY and EMAIL_FROM are set. Domain verification and keys remain an owner/deploy step.",
+      "log": "Resend adapter is implemented and auto-selected when keys are present, but a live send returned 403 because the gmail.com sender domain is not verified. Blocked on owner verifying a domain and setting EMAIL_FROM.",
       "design_match": "n/a",
       "key_decisions": [],
-      "verified": true,
+      "verified": false,
       "pushed": false
     },
     {
