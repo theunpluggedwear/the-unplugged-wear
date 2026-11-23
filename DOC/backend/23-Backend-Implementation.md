@@ -161,3 +161,57 @@ The seed has exactly the registry's keys (21 since `shipping.express_fee`, migra
    live API, GST invoice PDFs/emails — see the `TL-INT-*` backlog in
    `state-for-agents/admin/tasks.json`.
 3. Styling (Complete the Look) ships after the core store (file 19).
+
+## 9. Environment matrix (TL-BE-17.01)
+
+Two apps deploy separately but share one database and one backend package.
+A variable set in only one app is invisible to the other — for example
+`RESEND_API_KEY` in `tuw-website` does not configure the admin's email
+transport. Use this table when setting up a machine or a Vercel project.
+
+`Admin` and `Website` mean the variable is read by that app's process
+(including code it bundles from `packages/heart`). "Required" means the app
+cannot work correctly without it; integration keys are optional and leave the
+built-in sandbox/simulator active when blank.
+
+| Variable | Admin | Website | Required | Purpose | Where to set |
+|---|---|---|---|---|---|
+| `DATABASE_URL` | yes | yes | yes | pooled Postgres connection for app reads/writes | `.env.local` in each app; Vercel env for both (same value) |
+| `DATABASE_URL_UNPOOLED` | yes | yes | yes | migrations, integration tests, DDL | same — direct connection, not the pooler |
+| `DATABASE_POOL_MAX` | yes | yes | no | connection pool size (default 5) | same |
+| `DATABASE_POOL_IDLE_MS` | yes | yes | no | idle connection timeout (default 300000) | same |
+| `AUTH_SECRET` | yes | yes | yes | token signing and rate-limit key hashing | same value in both apps; never shared with the browser |
+| `AUTH_SHOW_DEV_LINKS` | yes | yes | no | dev-only: show verification/reset links on screen | local dev only; ignored in production |
+| `CRON_SECRET` | yes | — | yes | `Authorization: Bearer` for `/api/cron/<job>` | admin only |
+| `REVALIDATE_SECRET` | yes | yes | yes | admin → storefront `x-revalidate-secret` | same value in both apps |
+| `STOREFRONT_URL` | yes | — | yes | origin admin calls for cache revalidation and links | admin only; no trailing slash |
+| `APP_URL` | — | yes | yes | public origin used in emails and link builders | website only |
+| `RESEND_API_KEY` | yes | yes | no | real email transport via the adapter in `integrations/email` | both apps; blank uses the local outbox |
+| `EMAIL_FROM` | yes | yes | no | verified-domain sender for real email | both apps; gmail.com is not a verified Resend domain |
+| `EMAIL_PROVIDER` | yes | yes | no | explicit adapter override; blank auto-selects a live adapter | both apps; `resend` or `outbox` |
+| `QIKINK_CLIENT_ID` | yes | — | no | live Qikink API credentials | admin only; blank both keys keeps the simulator |
+| `QIKINK_CLIENT_SECRET` | yes | — | no | live Qikink API credentials | admin only |
+| `QIKINK_BASE_URL` | yes | — | no | canonical Qikink endpoint override | admin only; defaults to `https://api.qikink.com` |
+| `QIKINK_ENDPOINT` | yes | — | no | legacy endpoint override, still honoured as fallback | admin only; prefer `QIKINK_BASE_URL` |
+| `RAZORPAY_KEY_ID` | yes | yes | no | payments + invoice provider key | both apps |
+| `RAZORPAY_KEY_SECRET` | yes | yes | no | Razorpay server-side secret | both apps |
+| `RAZORPAY_WEBHOOK_SECRET` | yes | yes | no | webhook signature verification | both apps |
+| `RAZORPAY_WEBHOOK_SECRET_PREVIOUS` | yes | yes | no | old secret during rotation | both apps; remove after rotation |
+| `PAYMENT_PROVIDER` | yes | yes | no | explicit gateway override; blank uses admin registry | both apps; setting it disables staff switching |
+| `INVOICE_PROVIDER` | yes | yes | no | explicit invoice adapter override | both apps; blank uses admin registry |
+| `FULFILLMENT_SUBMIT_ENABLED` | yes | — | no | kill switch; `false` blocks partner submission | admin only |
+| `TUW_INTERNAL_PAGES` | — | yes | no | build-time flag: `1` exposes `/checklist` and `/design-system` in production | website only; leave unset in deployed builds |
+| `NODE_ENV` | managed | managed | yes | set by Next.js / Vercel, never by hand | — |
+
+Non-obvious rules:
+
+- An explicit `*_PROVIDER` variable wins over the admin registry row. Leave it
+  blank if staff should choose the provider in admin.
+- `EMAIL_FROM` must be on a domain verified in Resend. A send-only API key
+  cannot list domains (`GET /api/domains` returns 401 by design).
+- `REVALIDATE_SECRET` and `AUTH_SECRET` must match across the two apps where
+  used; mismatches show up as failed revalidation or invalid tokens.
+- Secrets are never committed. `.env*.local` files are gitignored; use the
+  Vercel dashboard for deployed environments and rotate any key that was
+  pasted into chat or a ticket.
+
