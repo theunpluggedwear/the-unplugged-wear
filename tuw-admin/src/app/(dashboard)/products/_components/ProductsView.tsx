@@ -327,6 +327,11 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const [specsClothingCardOpen, setSpecsClothingCardOpen] = useState(false);
   const [specsSizeChartCardOpen, setSpecsSizeChartCardOpen] = useState(false);
   const [specsMonogramCardOpen, setSpecsMonogramCardOpen] = useState(false);
+  const [mediaGalleryCardOpen, setMediaGalleryCardOpen] = useState(false);
+  const [mediaPresentationCardOpen, setMediaPresentationCardOpen] = useState(false);
+  const [variantsMatrixCardOpen, setVariantsMatrixCardOpen] = useState(true);
+  const [variantsPricingCardOpen, setVariantsPricingCardOpen] = useState(false);
+  const [variantsStockCardOpen, setVariantsStockCardOpen] = useState(false);
   const addDiscountRef = useRef<HTMLDivElement>(null);
 
   const openCreateDrawer = () => {
@@ -343,6 +348,11 @@ export default function ProductsView({ initialProducts, categories, perms, store
     setSpecsClothingCardOpen(false);
     setSpecsSizeChartCardOpen(false);
     setSpecsMonogramCardOpen(false);
+    setMediaGalleryCardOpen(false);
+    setMediaPresentationCardOpen(false);
+    setVariantsMatrixCardOpen(true);
+    setVariantsPricingCardOpen(false);
+    setVariantsStockCardOpen(false);
     setProductTab('general');
     setDrawerView('compact');
     autoExpandedRef.current = false;
@@ -509,6 +519,11 @@ export default function ProductsView({ initialProducts, categories, perms, store
     setSpecsClothingCardOpen(false);
     setSpecsSizeChartCardOpen(false);
     setSpecsMonogramCardOpen(false);
+    setMediaGalleryCardOpen(false);
+    setMediaPresentationCardOpen(false);
+    setVariantsMatrixCardOpen(true);
+    setVariantsPricingCardOpen(false);
+    setVariantsStockCardOpen(false);
     setDrawerView('compact');
     autoExpandedRef.current = false;
   };
@@ -1068,6 +1083,11 @@ export default function ProductsView({ initialProducts, categories, perms, store
     setSpecsClothingCardOpen(false);
     setSpecsSizeChartCardOpen(false);
     setSpecsMonogramCardOpen(false);
+    setMediaGalleryCardOpen(false);
+    setMediaPresentationCardOpen(false);
+    setVariantsMatrixCardOpen(true);
+    setVariantsPricingCardOpen(false);
+    setVariantsStockCardOpen(false);
     setProductTab('general');
     setFormCompareError(null);
     setDrawerView('compact');
@@ -3251,31 +3271,31 @@ export default function ProductsView({ initialProducts, categories, perms, store
           </form>
           ) : productTab === 'media' ? (
           <div ref={mediaWrapRef} data-field="images" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {mediaWide ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '9fr 11fr', gap: 20, alignItems: 'start' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: mediaWide ? '9fr 11fr' : '1fr', gap: mediaWide ? 20 : 16, alignItems: 'start' }}>
+              <DrawerCard
+                title="Gallery & cover"
+                description="Ordered storefront photos and the primary cover"
+                collapsible
+                isOpen={mediaGalleryCardOpen}
+                onToggle={setMediaGalleryCardOpen}
+              >
                 {stageHeader}
                 {stageCarousel}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
                 {panelHeader}
                 {mediaCards ? assetCards : assetRows}
                 {addUrlRow}
                 {dropzone}
+              </DrawerCard>
+              <DrawerCard
+                title="Presentation"
+                description="Layout, aspect ratio and storefront visibility"
+                collapsible
+                isOpen={mediaPresentationCardOpen}
+                onToggle={setMediaPresentationCardOpen}
+              >
                 {presentationSection}
-              </div>
+              </DrawerCard>
             </div>
-            ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {stageHeader}
-              {stageCarousel}
-              {panelHeader}
-              {mediaCards ? assetCards : assetRows}
-              {addUrlRow}
-              {dropzone}
-              {presentationSection}
-            </div>
-            )}
             <input
               ref={photoInputRef}
               type="file"
@@ -3291,33 +3311,12 @@ export default function ProductsView({ initialProducts, categories, perms, store
           </div>
           ) : productTab === 'variants' ? (
           <div data-field="variants" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <span style={{ fontSize: 13, color: 'var(--tuw-text-secondary, #5D6772)' }}>
-                {formVariants.length} variants · {variantStockTotal(formVariants)} units in stock
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {
-}
-                {variantSpread && variantLowest !== null && (
-                  <Badge
-                    size="sm"
-                    variant="neutral"
-                    className="tuw-tabular-nums"
-                    title="Lowest variant price — the storefront lists this as “From”"
-                  >
-                    From ₹{variantLowest.toFixed(2)}
-                  </Badge>
-                )}
-                <Button variant="secondary" size="sm" icon={<Plus size={14} />} onClick={addVariant}>
-                  Add Variant
-                </Button>
-              </div>
-            </div>
-            {
-}
-            <Disclosure
-              title="Per-value price adjustments"
-              subtitle="Value upcharges added on top of the base price."
+            <DrawerCard
+              title="Price adjustments"
+              description="Value upcharges added on top of the base price"
+              collapsible
+              isOpen={variantsPricingCardOpen}
+              onToggle={setVariantsPricingCardOpen}
               badge={
                 Object.keys(formAdjustments).length > 0 ? (
                   <Badge variant="info">{Object.keys(formAdjustments).length}</Badge>
@@ -3376,7 +3375,34 @@ export default function ProductsView({ initialProducts, categories, perms, store
                   Upcharges only. Clearing a field — or removing the value — drops its adjustment.
                 </p>
               </div>
-            </Disclosure>
+            </DrawerCard>
+            <DrawerCard
+              title="Variant matrix"
+              description="Color × size combinations with SKU, price and stock"
+              collapsible
+              isOpen={variantsMatrixCardOpen}
+              onToggle={setVariantsMatrixCardOpen}
+              action={
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {variantSpread && variantLowest !== null && (
+                    <Badge
+                      size="sm"
+                      variant="neutral"
+                      className="tuw-tabular-nums"
+                      title="Lowest variant price — the storefront lists this as “From”"
+                    >
+                      From ₹{variantLowest.toFixed(2)}
+                    </Badge>
+                  )}
+                  <Button variant="secondary" size="sm" icon={<Plus size={14} />} onClick={addVariant}>
+                    Add Variant
+                  </Button>
+                </div>
+              }
+            >
+              <span style={{ fontSize: 13, color: 'var(--tuw-text-secondary, #5D6772)' }}>
+                {formVariants.length} variants · {variantStockTotal(formVariants)} units in stock
+              </span>
             <Table>
               <TableHeader>
                 <TableRow hoverable={false}>
@@ -3545,9 +3571,13 @@ export default function ProductsView({ initialProducts, categories, perms, store
                 ))}
               </TableBody>
             </Table>
-            <Disclosure
+            </DrawerCard>
+            <DrawerCard
               title={`Stock history (${editingProduct ? stockMovements.filter((m) => m.productId === editingProduct.id).length : 0})`}
-              subtitle="Ledger of stock changes — every save that moves units appends here."
+              description="Ledger of stock changes — every save that moves units appends here"
+              collapsible
+              isOpen={variantsStockCardOpen}
+              onToggle={setVariantsStockCardOpen}
             >
               {editingProduct && stockMovements.some((m) => m.productId === editingProduct.id) ? (
                 <Table>
@@ -3585,7 +3615,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
                   No movements yet — edit stock and save to grow this ledger.
                 </div>
               )}
-            </Disclosure>
+            </DrawerCard>
           </div>
           ) : productTab === 'specs' ? (
           <div
