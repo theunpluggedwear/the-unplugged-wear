@@ -6,7 +6,7 @@ import { createTestDatabase, hasTestDatabase } from '../../platform/test/index.t
 import { getDb } from '../../platform/db/index.ts';
 import { sql } from 'drizzle-orm';
 
-function withEnv<T>(values: Record<string, string | undefined>, run: () => T): T {
+async function withEnv<T>(values: Record<string, string | undefined>, run: () => T | Promise<T>): Promise<T> {
   const saved = new Map<string, string | undefined>();
   for (const [key, value] of Object.entries(values)) {
     saved.set(key, process.env[key]);
@@ -14,7 +14,7 @@ function withEnv<T>(values: Record<string, string | undefined>, run: () => T): T
     else process.env[key] = value;
   }
   try {
-    return run();
+    return await run();
   } finally {
     for (const [key, value] of saved) {
       if (value === undefined) delete process.env[key];
@@ -23,19 +23,19 @@ function withEnv<T>(values: Record<string, string | undefined>, run: () => T): T
   }
 }
 
-test('the transport follows configuration, with real keys taking over automatically', () => {
-  withEnv({ EMAIL_PROVIDER: undefined, RESEND_API_KEY: undefined, EMAIL_FROM: undefined }, () => {
+test('the transport follows configuration, with real keys taking over automatically', async () => {
+  await withEnv({ EMAIL_PROVIDER: undefined, RESEND_API_KEY: undefined, EMAIL_FROM: undefined }, () => {
     assert.equal(getEmailSender().slug, 'outbox');
     assert.equal(getEmailSender().liveReady(), false);
   });
-  withEnv({ EMAIL_PROVIDER: undefined, RESEND_API_KEY: 're_test', EMAIL_FROM: 'shop@example.com' }, () => {
+  await withEnv({ EMAIL_PROVIDER: undefined, RESEND_API_KEY: 're_test', EMAIL_FROM: 'shop@example.com' }, () => {
     assert.equal(getEmailSender().slug, 'resend');
     assert.equal(resendSender.liveReady(), true);
   });
-  withEnv({ EMAIL_PROVIDER: 'outbox', RESEND_API_KEY: 're_test', EMAIL_FROM: 'shop@example.com' }, () => {
+  await withEnv({ EMAIL_PROVIDER: 'outbox', RESEND_API_KEY: 're_test', EMAIL_FROM: 'shop@example.com' }, () => {
     assert.equal(getEmailSender().slug, 'outbox');
   });
-  withEnv({ EMAIL_PROVIDER: 'mock_email', RESEND_API_KEY: undefined, EMAIL_FROM: undefined }, () => {
+  await withEnv({ EMAIL_PROVIDER: 'mock_email', RESEND_API_KEY: undefined, EMAIL_FROM: undefined }, () => {
     assert.equal(getEmailSender().slug, 'outbox');
   });
   assert.equal(outboxSender.slug, 'outbox');
@@ -48,7 +48,7 @@ test('templates render the link as escaped HTML', async () => {
   assert.match(rendered.html, /a=1&amp;b=2/);
 });
 
-test('queued emails are drained once and dedupe keys stay unique', { skip: !hasTestDatabase() && 'no database' }, async () => {
+test('queued emails are drained once and dedupe keys stay unique', { skip: !hasTestDatabase() && 'no database' }, async () => withEnv({ EMAIL_PROVIDER: 'outbox' }, async () => {
   const dbTest = await createTestDatabase();
   try {
     const first = await outboxSender.send({
@@ -71,8 +71,8 @@ test('queued emails are drained once and dedupe keys stay unique', { skip: !hasT
     const after = await getDb().execute<{ status: string; delivered_error: string | null }>(
       sql`SELECT status, error AS delivered_error FROM email_logs WHERE id = ${first.logId!}::uuid`,
     );
-    assert.equal(after.rows[0]?.status, 'sent');
+    assert.equal(after.rows[0]?.status, 'sent', `worker error: ${after.rows[0]?.delivered_error}`);
   } finally {
     await dbTest.drop();
   }
-});
+}));

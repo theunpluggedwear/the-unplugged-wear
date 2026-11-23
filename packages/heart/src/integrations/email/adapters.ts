@@ -75,7 +75,10 @@ export const resendSender: EmailSender = {
         html: body.html,
       }),
     });
-    if (!response.ok) throw new Error(`Resend rejected the email (${response.status}).`);
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      throw new Error(`Resend rejected the email (${response.status}): ${detail.slice(0, 240)}`);
+    }
     const result = await response.json() as { id?: string };
     if (!result.id) throw new Error('Resend returned no message id.');
     await getPool().query(`UPDATE email_logs SET status = 'sent', error = NULL WHERE id = $1`, [email.logId]);
