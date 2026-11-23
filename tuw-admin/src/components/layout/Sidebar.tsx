@@ -38,6 +38,7 @@ interface SidebarProps {
   onToggleCollapse: () => void;
   mobileMenuOpen?: boolean;
   onCloseMobileMenu?: () => void;
+  permissions: string[];
 }
 
 
@@ -152,13 +153,39 @@ const FOOTER_ITEMS: FooterItemDef[] = [
   { href: '/login', label: 'Log out', icon: LogOut, match: [], variant: 'danger' },
 ];
 
+const NAV_PERMISSIONS: Readonly<Record<string, string>> = {
+  '/orders': 'order.view',
+  '/customers': 'customer.view',
+  '/reports': 'report.view',
+  '/fulfillment': 'shipment.manage',
+  '/shipments': 'shipment.manage',
+  '/returns': 'return.view',
+  '/refunds': 'order.view',
+  '/payments': 'order.view',
+  '/abandoned': 'order.view',
+  '/designs': 'content.manage',
+  '/content': 'content.manage',
+  '/team': 'user.manage',
+  '/settings': 'settings.manage',
+  '/support': 'customer.view',
+};
+
 export default function Sidebar({
   isCollapsed,
   onToggleCollapse,
   mobileMenuOpen = false,
   onCloseMobileMenu,
+  permissions,
 }: SidebarProps) {
   const pathname = usePathname();
+  const canSee = (href: string) => {
+    const required = NAV_PERMISSIONS[href];
+    return !required || permissions.includes(required);
+  };
+  const visibleGroups = NAV_GROUPS
+    .map((group) => ({ ...group, items: group.items.filter((item) => canSee(item.href)) }))
+    .filter((group) => group.items.length > 0);
+  const visibleFooter = FOOTER_ITEMS.filter((item) => canSee(item.href));
 
   
   React.useEffect(() => {
@@ -288,7 +315,7 @@ export default function Sidebar({
 
       {}
       <div className={cn('flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain mt-0.5 pb-6 pr-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden', isCollapsed ? 'gap-0' : 'gap-2.5')}>
-        {NAV_GROUPS.map((group) => {
+        {visibleGroups.map((group) => {
           const actives = group.items.map((item) => item.match.some((p) => getIsActive(p)));
           const stemIdx = actives.findIndex(Boolean);
           const open = !isCollapsed ? isGroupOpen(group.key) : true;
@@ -316,7 +343,7 @@ export default function Sidebar({
       {}
       <div className="flex flex-col gap-0.5 border-t border-subtle bg-canvas pt-2 pb-0 mt-auto shrink-0 z-10">
         <ul className="list-none flex flex-col gap-[3px]">
-          {FOOTER_ITEMS.map((item) => {
+          {visibleFooter.map((item) => {
             const active = item.match.some((p) => getIsActive(p));
             return (
             <li key={item.href}>

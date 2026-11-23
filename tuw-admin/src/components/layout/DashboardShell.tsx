@@ -11,6 +11,7 @@ interface DashboardShellProps {
   children: React.ReactNode;
   pageTitle?: string;
   activeNav?: string;
+  permissions: string[];
 }
 
 let globalIsCollapsed: boolean = false;
@@ -18,6 +19,7 @@ let globalIsCollapsed: boolean = false;
 export default function DashboardShell({
   children,
   pageTitle,
+  permissions,
 }: DashboardShellProps) {
   const pathname = usePathname();
   const title = pageTitle ?? pageTitleFor(pathname);
@@ -68,6 +70,7 @@ export default function DashboardShell({
         onToggleCollapse={handleToggleCollapse}
         mobileMenuOpen={mobileMenuOpen}
         onCloseMobileMenu={() => setMobileMenuOpen(false)}
+        permissions={permissions}
       />
 
       {}
