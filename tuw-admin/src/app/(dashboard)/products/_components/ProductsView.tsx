@@ -1168,15 +1168,46 @@ export default function ProductsView({ initialProducts, categories, perms, store
   };
 
   
+  const revealField = (field: string) => {
+    const base = field.split(/[.[]/)[0] || field;
+    let tab: 'general' | 'media' | 'variants' | 'specs' = 'general';
+    let opener: ((open: boolean) => void) | null = null;
+    if (base.startsWith('variants') || base === 'colors' || base === 'sizes' || base === 'stock') {
+      tab = 'variants';
+    } else if (base === 'images' || base === 'photoSettings') {
+      tab = 'media';
+    } else if (['fabricGsm', 'cut', 'modelDims', 'care', 'monogram'].includes(base)) {
+      tab = 'specs';
+      opener = base === 'monogram' ? setSpecsMonogramCardOpen : setSpecsClothingCardOpen;
+    } else if (['name', 'slug', 'description', 'styleCode', 'internalSerialNo', 'category', 'gender', 'publicationStatus', 'productKind', 'exchangePolicy'].includes(base)) {
+      opener = setBasicCardOpen;
+    } else if (['price', 'basePrice', 'compareAtPrice', 'taxRate', 'hsnCode', 'lowStockThreshold', 'priceAdjustments'].includes(base)) {
+      opener = setPricingCardOpen;
+    } else if (base === 'discounts') {
+      opener = setDiscountsCardOpen;
+    } else if (['partner', 'weight', 'shippingWeight', 'dimensions', 'sizeChartId'].includes(base)) {
+      opener = setFulfillmentCardOpen;
+    } else if (base === 'attributes') {
+      opener = setAttributesCardOpen;
+    } else {
+      opener = setBasicCardOpen;
+    }
+    setProductTab(tab);
+    opener?.(true);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const anchor = document.querySelector<HTMLElement>(`[data-field="${base}"]`);
+      if (!anchor) return;
+      anchor.scrollIntoView({ block: 'center' });
+      const focusable = anchor.matches('input, select, textarea, button')
+        ? anchor
+        : anchor.querySelector<HTMLElement>('input, select, textarea, button, [tabindex="0"]');
+      focusable?.focus();
+    }));
+  };
+
   const showSaveError = (error: { message: string; details: { field?: string }[] }) => {
     const fieldName = error.details[0]?.field ?? '';
-    if (fieldName.startsWith('variants')) setProductTab('variants');
-    else if (fieldName.startsWith('images')) setProductTab('media');
-    else if (fieldName) {
-      setProductTab('general');
-      setBasicCardOpen(true);
-      setPricingCardOpen(true);
-    }
+    if (fieldName) revealField(fieldName);
     showToast({ type: 'warning', title: 'Not Saved', description: error.message });
   };
 
@@ -1202,8 +1233,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     e.preventDefault();
     if (saving) return;
     if (!isValidHsnCode(formHsn)) {
-      setPricingCardOpen(true);
-      setProductTab('general');
+      revealField('hsnCode');
       showToast({
         type: 'warning',
         title: 'Check HSN Code',
@@ -1217,8 +1247,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
       const compare = parseCompareAtPrice(formComparePrice, priceNum);
       if (compare.error) {
         setFormCompareError(compare.error);
-        setPricingCardOpen(true);
-        setProductTab('general');
+        revealField('compareAtPrice');
         showToast({ type: 'warning', title: 'Check Compare-at Price', description: compare.error });
         return;
       }
@@ -1292,7 +1321,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     const draftError = variantDraftError();
     if (draftError) {
       showToast({ type: 'warning', title: 'Check Variants', description: draftError });
-      setProductTab('variants');
+      revealField('variants');
       return;
     }
     const draftVariants = formVariants.length > 0 ? formVariants : resolveVariants(editingProduct);
@@ -1304,8 +1333,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     const compare = parseCompareAtPrice(formComparePrice, minPrice);
     if (compare.error) {
       setFormCompareError(compare.error);
-      setPricingCardOpen(true);
-      setProductTab('general');
+      revealField('compareAtPrice');
       showToast({ type: 'warning', title: 'Check Compare-at Price', description: compare.error });
       return;
     }
@@ -2716,6 +2744,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
               onToggle={setBasicCardOpen}
             >
               <Input
+                data-field="name"
                 label="Product Title"
                 placeholder="e.g. Urbanist Heavyweight Tee"
                 value={formName}
@@ -2724,6 +2753,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
                 required
               />
               <Input
+                data-field="slug"
                 label="URL Slug"
                 placeholder="e.g. urbanist-heavyweight-tee"
                 value={formSlug}
@@ -2732,6 +2762,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
                 required
               />
               <FormTextarea
+                data-field="description"
                 label="Description"
                 rows={4}
                 fontSize={14}
@@ -2741,6 +2772,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
               />
               <div style={pairedFieldGrid}>
                 <Input
+                  data-field="styleCode"
                   label="Style Code"
                   placeholder="e.g. FC34"
                   value={formStyleCode}
@@ -2748,13 +2780,15 @@ export default function ProductsView({ initialProducts, categories, perms, store
                   maxLength={50}
                   labelTooltip="Internal production reference — not shown to customers."
                 />
-                <SearchableSelect
-                  label="Category"
-                  options={categoryOptions}
-                  value={formCategory}
-                  onChange={(value) => setFormCategory(value)}
-                  required
-                />
+                <div data-field="category">
+                  <SearchableSelect
+                    label="Category"
+                    options={categoryOptions}
+                    value={formCategory}
+                    onChange={(value) => setFormCategory(value)}
+                    required
+                  />
+                </div>
               </div>
               {formSerialNo ? (
                 <p
@@ -2799,6 +2833,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
             >
               <div style={pairedFieldGrid}>
                 <Input
+                  data-field="price"
                   label="Base price (₹)"
                   type="text"
                   inputMode="decimal"
@@ -2807,6 +2842,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
                   required
                 />
                 <Input
+                  data-field="compareAtPrice"
                   label="Compare-at price (₹)"
                   type="text"
                   inputMode="decimal"
@@ -2824,6 +2860,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
               </div>
               <div style={pairedFieldGrid}>
                 <Input
+                  data-field="stock"
                   label="Stock Quantity"
                   type="number"
                   min={0}
@@ -2832,6 +2869,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
                   required
                 />
                 <Input
+                  data-field="taxRate"
                   label="Tax Rate (%)"
                   type="number"
                   step="0.01"
@@ -2842,6 +2880,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
                 />
               </div>
               <Input
+                data-field="hsnCode"
                 label="HSN code"
                 inputMode="numeric"
                 placeholder="e.g. 61091000"
@@ -3005,7 +3044,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
                   })}
                 </div>
               )}
-              <div ref={addDiscountRef} style={{ display: 'flex' }}>
+              <div ref={addDiscountRef} data-field="discounts" style={{ display: 'flex' }}>
                 <Button variant="secondary" size="sm" icon={<Plus size={14} />} type="button" onClick={addDiscount}>
                   Add Discount
                 </Button>
@@ -3019,6 +3058,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
               onToggle={setFulfillmentCardOpen}
             >
               <div style={pairedFieldGrid}>
+                <div data-field="partner">
                 <SearchableSelect
                   label="Print partner"
                   options={PARTNER_OPTIONS}
@@ -3026,6 +3066,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
                   onChange={(value) => setFormPartner(value as ProductItem['partner'])}
                   required
                 />
+                </div>
                 <SearchableSelect
                   label="Exchange policy"
                   options={[
@@ -3048,6 +3089,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
                   onChange={(value) => setFormProductKind(value as typeof formProductKind)}
                 />
                 <Input
+                  data-field="lowStockThreshold"
                   label="Low stock alert at"
                   placeholder="Store default"
                   inputMode="numeric"
@@ -3057,6 +3099,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
               </div>
               <div style={pairedFieldGrid}>
                 <Input
+                  data-field="weight"
                   label="Weight (g)"
                   placeholder="e.g. 180"
                   inputMode="numeric"
@@ -3064,6 +3107,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
                   onChange={(e) => setFormWeight(e.target.value)}
                 />
                 <Input
+                  data-field="shippingWeight"
                   label="Shipping weight (g)"
                   placeholder="e.g. 250"
                   inputMode="numeric"
@@ -3072,6 +3116,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
                 />
               </div>
               <Input
+                data-field="dimensions"
                 label="Package dimensions (cm)"
                 placeholder="e.g. 18 × 20 × 2.3"
                 value={formDims}
@@ -3086,7 +3131,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
               onToggle={setAttributesCardOpen}
               className="tuw-pedit-general-wide"
             >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div data-field="attributes" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {libraryAttributes.filter((a) => a.enabled).length > 0 ? (
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -3205,7 +3250,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
             </DrawerCard>
           </form>
           ) : productTab === 'media' ? (
-          <div ref={mediaWrapRef} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div ref={mediaWrapRef} data-field="images" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {mediaWide ? (
             <div style={{ display: 'grid', gridTemplateColumns: '9fr 11fr', gap: 20, alignItems: 'start' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
@@ -3245,7 +3290,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
             />
           </div>
           ) : productTab === 'variants' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div data-field="variants" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <span style={{ fontSize: 13, color: 'var(--tuw-text-secondary, #5D6772)' }}>
                 {formVariants.length} variants · {variantStockTotal(formVariants)} units in stock
@@ -3570,24 +3615,28 @@ export default function ProductsView({ initialProducts, categories, perms, store
               bodyGap={16}
             >
                 <Input
+                  data-field="fabricGsm"
                   label="Fabric Composition & GSM"
                   placeholder="460 GSM Heavyweight French Terry Cotton"
                   value={formFabricGsm}
                   onChange={(e) => setFormFabricGsm(e.target.value)}
                 />
                 <Input
+                  data-field="cut"
                   label="Cut & Silhouette"
                   placeholder="Boxy Drop-Shoulder"
                   value={formCut}
                   onChange={(e) => setFormCut(e.target.value)}
                 />
                 <Input
+                  data-field="modelDims"
                   label="Model Dimensions"
                   placeholder="Model is 6'1&quot; wearing Size L"
                   value={formModelDims}
                   onChange={(e) => setFormModelDims(e.target.value)}
                 />
                 <FormTextarea
+                  data-field="care"
                   label="Care & Wash Instructions"
                   rows={3}
                   placeholder="Cold wash inside out, lay flat to dry"
@@ -3837,12 +3886,14 @@ export default function ProductsView({ initialProducts, categories, perms, store
               onToggle={setSpecsMonogramCardOpen}
               bodyGap={16}
             >
+                <div data-field="monogram">
                 <Switch
                   label="Offer monogramming"
                   description="On-demand chest initials with upcharge"
                   checked={formMonogramEnabled}
                   onChange={setFormMonogramEnabled}
                 />
+                </div>
                 {formMonogramEnabled ? (
                 <div style={pairedFieldGrid}>
                   <Input
