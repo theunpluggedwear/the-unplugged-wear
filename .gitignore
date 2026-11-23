@@ -48,6 +48,7 @@ assets/
 .agents/
 
 session-*
+!tuw-admin/src/server/session-actions.ts
 1 0 *
 
 tuw-admin/Figma*
