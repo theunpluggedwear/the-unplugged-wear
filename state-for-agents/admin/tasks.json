@@ -9,13 +9,13 @@
   },
   "summary": {
     "total": 470,
-    "done": 432,
+    "done": 433,
     "in_progress": 13,
-    "backlog": 25
+    "backlog": 24
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "03363a6",
+    "tip": "bb60839",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -7785,16 +7785,17 @@
     {
       "id": "TL-BE-17.12",
       "title": "Rate limits on login, refresh, reset and register (per IP + per email)",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-17",
       "started": null,
       "finished": null,
-      "log": "Not started. DOC/backend/13 limits (login/refresh 10/s per IP). Lockout per account already exists; add an IP limiter (Postgres-backed or Vercel firewall rule).",
+      "log": "Public admin auth actions and the refresh route now use the DB-backed limiter with per-IP 10/s buckets and per-email 5/min where applicable. Account lockout remains the second layer. Verified the 11th attempt is blocked and refresh writes rate_limit_hits.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
+      "finished": "2026-11-23",
       "follow_ups": []
     },
     {
