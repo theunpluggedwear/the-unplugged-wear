@@ -1,5 +1,5 @@
-import PageSkeleton from '@/components/layout/PageSkeleton';
+import { DiscountsSkeleton } from '@/components/layout/page-skeletons';
 
 export default function Loading() {
-  return <PageSkeleton pageTitle="Discounts" />;
+  return <DiscountsSkeleton />;
 }
