@@ -9,13 +9,13 @@
   },
   "summary": {
     "total": 469,
-    "done": 429,
-    "in_progress": 13,
-    "backlog": 27
+    "done": 431,
+    "in_progress": 12,
+    "backlog": 26
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "b9b659f",
+    "tip": "b3961be",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -5196,15 +5196,15 @@
     {
       "id": "TL-INT-EMAIL",
       "title": "Transactional email provider (verification, reset, orders, newsletter double opt-in, gift cards, back-in-stock)",
-      "status": "backlog",
+      "status": "done",
       "owner": "agent",
       "parent": "TL-INT-PHASE",
       "started": null,
       "finished": null,
-      "log": "Recommended Resend (or AWS SES at volume); domain verification needed; delivery logged in email_logs.",
+      "log": "Recommended Resend (or AWS SES at volume); domain verification needed; delivery logged in email_logs. Real Resend adapter added, selected automatically when RESEND_API_KEY and EMAIL_FROM are set. Domain verification and keys remain an owner/deploy step.",
       "design_match": "n/a",
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false
     },
     {
@@ -7368,16 +7368,17 @@
     {
       "id": "TL-BE-14.03",
       "title": "email_logs queue + templates + mock sender job notifications.sendQueued",
-      "status": "in_progress",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-14",
       "started": null,
       "finished": null,
-      "log": "Not started. PARTIAL: email_logs written by mock sender; notifications.sendQueued job missing",
+      "log": "Not started. PARTIAL: email_logs written by mock sender; notifications.sendQueued job missing Email now enqueues rows with dedupe keys and notifications.sendQueued drains them through the active adapter; cron verified end to end.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
+      "finished": "2026-11-23",
       "follow_ups": []
     },
     {
