@@ -236,7 +236,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const [publicationFilter, setPublicationFilter] = useState<'all' | 'published' | 'draft' | 'archived'>('all');
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [view, setView] = useState<'grid' | 'table'>('grid');
+  const [view, setView] = useState<'grid' | 'table'>('table');
   
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const changeView = (v: 'grid' | 'table') => {
