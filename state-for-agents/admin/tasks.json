@@ -9,13 +9,13 @@
   },
   "summary": {
     "total": 470,
-    "done": 433,
+    "done": 434,
     "in_progress": 13,
-    "backlog": 24
+    "backlog": 23
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "bb60839",
+    "tip": "80d0096",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -7574,16 +7574,17 @@
     {
       "id": "TL-BE-17.01",
       "title": "Env var matrix per app/environment (DATABASE_URL*, AUTH_SECRET, CRON_SECRET, REVALIDATE_SECRET) in DOC/backend/23",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-17",
       "started": null,
       "finished": null,
-      "log": "Not started.",
+      "log": "Added the environment matrix to DOC/backend/23, updated both .env.example files with all supported variables, and added a drift test over process.env reads. The test caught TUW_INTERNAL_PAGES, which is now documented.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
+      "finished": "2026-11-23",
       "follow_ups": []
     },
     {
