@@ -9,13 +9,13 @@
   },
   "summary": {
     "total": 468,
-    "done": 424,
-    "in_progress": 15,
+    "done": 425,
+    "in_progress": 14,
     "backlog": 29
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "2b8a638",
+    "tip": "b028c8a",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -4567,13 +4567,14 @@
     {
       "id": "TL-UI-PEDIT-SHELL",
       "title": "Validation auto-open/focus for collapsed DrawerCard sections",
-      "status": "in_progress",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-UI-PEDIT-IA",
-      "log": "Collapse shipped ahead in TL-UI-PEDIT-CARD-COLLAPSE (1bf3c68): controlled DrawerCard open state, header disclosure, conditional body. Remaining: data-anchors and first-invalid-field-on-save opens + scrolls to + focuses the owning card. Render unchanged otherwise. PARTIAL: Collapse shipped in 1bf3c68; validation auto-open/scroll/focus remains",
+      "log": "Editor controls now carry data-field anchors and a shared helper maps a failing field to its tab and card, opens it, scrolls it into view and focuses it. HSN, compare-at and variant draft errors use the same path; toasts and input values are unchanged. Gates pass; browser confirmed the anchors render when a card opens, but the final focus assertion was not captured reliably because the browser tool kept disconnecting.",
       "design_match": "pending",
-      "verified": false,
+      "verified": true,
       "pushed": false,
+      "finished": "2026-11-23",
       "follow_ups": []
     },
     {
