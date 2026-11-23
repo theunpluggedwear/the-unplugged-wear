@@ -6,7 +6,7 @@ import { submitDueOrders, syncOpenFulfillment } from '../../modules/fulfillment/
 import { expireDue } from '../../modules/gift-cards/index.ts';
 import { reconcilePendingPayments, retryFailedWebhooks } from '../../modules/payments/index.ts';
 import { reconcileInvoiceDocuments } from '../../modules/invoices/index.ts';
-import { detectAbandonedCarts, rollupDaily } from '../../modules/analytics/index.ts';
+import { detectAbandonedCarts, maintainAnalyticsPartitions, rollupDaily } from '../../modules/analytics/index.ts';
 import { sendQueuedEmails } from '../../integrations/email/index.ts';
 import { sweepRateLimits } from '../ratelimit/index.ts';
 
@@ -87,6 +87,15 @@ export function loadJobs(): void {
     name: 'notifications.sendQueued',
     description: 'Drain queued emails through the active transport.',
     run: async () => ({ processed: await sendQueuedEmails() }),
+  });
+
+  registerJob({
+    name: 'analytics.maintainPartitions',
+    description: 'Create next month analytics partitions and drop expired raw event partitions.',
+    run: async () => {
+      const result = await maintainAnalyticsPartitions();
+      return { processed: result.created.length + result.dropped.length };
+    },
   });
 }
 
