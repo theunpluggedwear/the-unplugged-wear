@@ -9,13 +9,13 @@
   },
   "summary": {
     "total": 468,
-    "done": 425,
-    "in_progress": 14,
+    "done": 426,
+    "in_progress": 13,
     "backlog": 29
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "b028c8a",
+    "tip": "3d14cd9",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -4505,13 +4505,14 @@
     {
       "id": "TL-UI-PEDIT-TABS-CARDS",
       "title": "Media and Variants & Stock — apply the DrawerCard stack",
-      "status": "in_progress",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-UI-PEDIT-IA",
-      "log": "General (2645eb0) and Clothing Specs (c86e718) card stacks shipped. Remaining: Media → Gallery & cover / Presentation cards; Variants & Stock → Matrix / Price adjustments / Stock history cards. Preserve VPRICE pin/draft, expand-once width, media wide layout, size-chart CRUD, attribute linking exactly. Replaces the old TL-UI-PEDIT-HEAD heading pass. PARTIAL: General and Clothing Specs stacks shipped; Media and Variants card stacks remain",
+      "log": "Media now uses Gallery & cover and Presentation cards; Variants uses Price adjustments, Variant matrix and Stock history cards. Wide media layout, pin/draft prices and stock ledger unchanged. Browser verified card titles and collapse states, plus no overflow at 360/768/1024/1440.",
       "design_match": "pending",
-      "verified": false,
+      "verified": true,
       "pushed": false,
+      "finished": "2026-11-23",
       "follow_ups": [
         "Media tab card stack",
         "Variants & Stock tab card stack"
