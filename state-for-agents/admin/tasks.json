@@ -9,13 +9,13 @@
   },
   "summary": {
     "total": 470,
-    "done": 431,
+    "done": 432,
     "in_progress": 13,
-    "backlog": 26
+    "backlog": 25
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "7eb7723",
+    "tip": "03363a6",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -7442,16 +7442,17 @@
     {
       "id": "TL-BE-15.01",
       "title": "Event ingest endpoint + partition maintenance (monthly partitions, 30-day raw retention)",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-15",
       "started": null,
       "finished": null,
-      "log": "Not started.",
+      "log": "Added guarded POST /api/events in the storefront with zod validation and rate limits, heart event writers with UUIDv7-derived idempotent timestamps, and analytics.maintainPartitions job with monthly creation and retention drops. Verified by integration test and a live request.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
+      "finished": "2026-11-23",
       "follow_ups": [],
       "storefront_tasks": [
         "TL-WEB-BE-36"
