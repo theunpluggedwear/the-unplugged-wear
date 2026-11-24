@@ -1,16 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { DesktopNavItem, MobileNavItem } from '@tuw/heart/modules/content';
+import type { MenuItem } from '@tuw/heart/modules/content';
 import {
   ArrowDown,
   ArrowUp,
   ChevronDown,
   ChevronRight,
-  Monitor,
   Plus,
   Search,
-  Smartphone,
   Trash2,
   X,
 } from 'lucide-react';
@@ -28,9 +26,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Tabs,
 } from '@/components/ui';
-import { saveDesktopNavAction, saveMobileNavAction } from '@/server/content-actions';
+import { saveMenuAction } from '@/server/content-actions';
 import {
   NAV_CAPS,
   getAtPath,
@@ -39,7 +36,6 @@ import {
   toRows,
   visibleRows,
   type MatrixRow,
-  type NavMode,
   type Path,
 } from '@/lib/navigation-matrix';
 
@@ -53,21 +49,12 @@ const KIND_LABEL: Record<MatrixRow['kind'], string> = {
   shopAll: 'Shop all',
 };
 
-const FIELD_TEXT: Record<NavMode, Record<MatrixRow['kind'], { name: string; nameHint: string; link: string; linkHint: string }>> = {
-  mobile: {
-    item: { name: 'Menu name', nameHint: 'Top-level link in the drawer', link: 'Menu link', linkHint: 'Where this item goes' },
-    column: { name: 'Column heading', nameHint: 'Groups the links beneath it', link: 'No link', linkHint: 'A group has no destination' },
-    link: { name: 'Link text', nameHint: 'What customers click', link: 'Destination', linkHint: 'Page or shop URL' },
-    feature: { name: 'Feature title', nameHint: 'Title of the image card', link: 'Image link', linkHint: 'Where the tile goes' },
-    shopAll: { name: 'Shop-all text', nameHint: 'Footer link label', link: 'Shop-all link', linkHint: 'Where the footer link goes' },
-  },
-  desktop: {
-    item: { name: 'Menu name', nameHint: 'Top tab in the desktop header', link: 'Menu link', linkHint: 'Where this tab goes' },
-    column: { name: 'Column heading', nameHint: 'Groups the links beneath it', link: 'No link', linkHint: 'A group has no destination' },
-    link: { name: 'Link text', nameHint: 'What customers click', link: 'Destination', linkHint: 'Page or shop URL' },
-    feature: { name: 'Feature title', nameHint: 'Title of the image card on the right', link: 'Image link', linkHint: 'Where the tile goes' },
-    shopAll: { name: 'Shop-all text', nameHint: 'Link at the foot of the panel', link: 'Shop-all link', linkHint: 'Where the footer link goes' },
-  },
+const FIELD_TEXT: Record<MatrixRow['kind'], { name: string; nameHint: string; link: string; linkHint: string }> = {
+  item: { name: 'Menu name', nameHint: 'Shown in both the drawer and the header', link: 'Menu link', linkHint: 'Where this item goes' },
+  column: { name: 'Column heading', nameHint: 'Groups the links beneath it', link: 'No link', linkHint: 'A group has no destination' },
+  link: { name: 'Link text', nameHint: 'What customers click', link: 'Destination', linkHint: 'Page or shop URL' },
+  feature: { name: 'Feature title', nameHint: 'Title of the image card', link: 'Image link', linkHint: 'Where the tile goes' },
+  shopAll: { name: 'Shop-all text', nameHint: 'Link at the foot of the panel', link: 'Shop-all link', linkHint: 'Where the footer link goes' },
 };
 
 function EditableCell({
@@ -210,40 +197,27 @@ function CapacityBar({ used, max, noun }: { used: number; max: number; noun: str
   );
 }
 
-export default function NavigationManager({
-  mobile,
-  desktop,
-}: {
-  mobile: MobileNavItem[];
-  desktop: DesktopNavItem[];
-}) {
-  const [mode, setMode] = useState<NavMode>('mobile');
-  const [mobileItems, setMobileItems] = useState<MobileNavItem[]>(mobile);
-  const [desktopItems, setDesktopItems] = useState<DesktopNavItem[]>(desktop);
+export default function NavigationManager({ items: initial }: { items: MenuItem[] }) {
+  const [items, setItems] = useState<MenuItem[]>(initial);
   const [query, setQuery] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [busy, setBusy] = useState(false);
-  const [dirty, setDirty] = useState<Record<NavMode, boolean>>({ mobile: false, desktop: false });
+  const [dirty, setDirty] = useState(false);
 
-  const items = mode === 'mobile' ? mobileItems : desktopItems;
-  const caps = NAV_CAPS[mode];
-  const rows = useMemo(() => toRows(items as Parameters<typeof toRows>[0], mode), [items, mode]);
+  const caps = NAV_CAPS;
+  const rows = useMemo(() => toRows(items), [items]);
   const result = useMemo(() => visibleRows(rows, query, collapsed), [rows, query, collapsed]);
   const isSearching = Boolean(query.trim());
 
   function markDirty() {
-    setDirty((current) => ({ ...current, [mode]: true }));
+    setDirty(true);
     setConfirmId(null);
   }
 
   function updateAt(path: Path, update: (current: unknown) => unknown) {
-    if (mode === 'mobile') {
-      setMobileItems((current) => patchAtPath(current, path, update) as MobileNavItem[]);
-    } else {
-      setDesktopItems((current) => patchAtPath(current, path, update) as DesktopNavItem[]);
-    }
+    setItems((current) => patchAtPath(current, path, update) as MenuItem[]);
     markDirty();
   }
 
@@ -258,11 +232,7 @@ export default function NavigationManager({
   }
 
   function addItem() {
-    if (mode === 'mobile') {
-      setMobileItems((current) => [...current, { label: '', href: '', columns: [] }]);
-    } else {
-      setDesktopItems((current) => [...current, { label: '', href: '', columns: [], features: [] }]);
-    }
+    setItems((current) => [...current, { label: '', href: '', columns: [], features: [] }]);
     markDirty();
   }
 
@@ -309,21 +279,11 @@ export default function NavigationManager({
       ((current as unknown[] | undefined) ?? []).filter((_, index) => index !== row.siblingIndex));
   }
 
-  function switchMode(next: NavMode) {
-    setMode(next);
-    setQuery('');
-    setCollapsed(new Set());
-    setConfirmId(null);
-    setNotice(null);
-  }
-
   async function save() {
     setBusy(true);
     setNotice(null);
     try {
-      const saved = mode === 'mobile'
-        ? await saveMobileNavAction({ items: mobileItems })
-        : await saveDesktopNavAction({ items: desktopItems });
+      const saved = await saveMenuAction({ items });
       if (!saved.ok) {
         setNotice({ tone: 'error', text: saved.error.message });
         return;
@@ -331,20 +291,18 @@ export default function NavigationManager({
       const refreshNote = saved.data.storefront.ok
         ? ''
         : ` Storefront refresh failed: ${saved.data.storefront.reason}`;
-      const headline = mode === 'mobile'
-        ? 'Mobile navigation saved.'
-        : 'Desktop menu saved as a draft — the storefront still uses its built-in menu.';
-      setNotice({ tone: saved.data.storefront.ok ? 'success' : 'error', text: headline + refreshNote });
-      setDirty((current) => ({ ...current, [mode]: false }));
+      setNotice({
+        tone: saved.data.storefront.ok ? 'success' : 'error',
+        text: 'Menu saved as a draft — the storefront still uses its built-in menu.' + refreshNote,
+      });
+      setDirty(false);
     } finally {
       setBusy(false);
     }
   }
 
-  const confirming = (row: MatrixRow) => confirmId === row.id;
-
   function renderActions(row: MatrixRow) {
-    if (confirming(row)) {
+    if (confirmId === row.id) {
       return (
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
           <Button variant="danger" size="sm" onClick={() => remove(row)}>Confirm remove</Button>
@@ -365,44 +323,23 @@ export default function NavigationManager({
             Link
           </Button>
         ) : null}
-        {mode === 'desktop' && row.kind === 'item' && (getAtPath(items, [row.siblingIndex, 'features']) as unknown[] | undefined)?.length !== caps.features ? (
+        {row.kind === 'item' && (getAtPath(items, [row.siblingIndex, 'features']) as unknown[] | undefined)?.length !== caps.features ? (
           <Button variant="outline" size="sm" icon={<Plus size={14} />} onClick={() => addFeature(row.siblingIndex)}>
             Feature
           </Button>
         ) : null}
-        {mode === 'desktop' && row.kind === 'item' && !getAtPath(items, [row.siblingIndex, 'shopAll']) ? (
+        {row.kind === 'item' && !getAtPath(items, [row.siblingIndex, 'shopAll']) ? (
           <Button variant="outline" size="sm" icon={<Plus size={14} />} onClick={() => addShopAll(row.siblingIndex)}>
             Shop all
           </Button>
         ) : null}
         {canMove ? (
-          <IconButton
-            label={`Move ${KIND_LABEL[row.kind].toLowerCase()} up`}
-            tooltip="Move up"
-            icon={<ArrowUp size={14} />}
-            size="sm"
-            disabled={row.siblingIndex === 0}
-            onClick={() => move(row, -1)}
-          />
+          <IconButton label={`Move ${KIND_LABEL[row.kind].toLowerCase()} up`} tooltip="Move up" icon={<ArrowUp size={14} />} size="sm" disabled={row.siblingIndex === 0} onClick={() => move(row, -1)} />
         ) : null}
         {canMove ? (
-          <IconButton
-            label={`Move ${KIND_LABEL[row.kind].toLowerCase()} down`}
-            tooltip="Move down"
-            icon={<ArrowDown size={14} />}
-            size="sm"
-            disabled={row.siblingIndex === row.siblingCount - 1}
-            onClick={() => move(row, 1)}
-          />
+          <IconButton label={`Move ${KIND_LABEL[row.kind].toLowerCase()} down`} tooltip="Move down" icon={<ArrowDown size={14} />} size="sm" disabled={row.siblingIndex === row.siblingCount - 1} onClick={() => move(row, 1)} />
         ) : null}
-        <IconButton
-          label={`Remove ${KIND_LABEL[row.kind].toLowerCase()} ${row.label || ''}`.trim()}
-          tooltip="Remove"
-          icon={<Trash2 size={14} />}
-          variant="danger"
-          size="sm"
-          onClick={() => setConfirmId(row.id)}
-        />
+        <IconButton label={`Remove ${KIND_LABEL[row.kind].toLowerCase()} ${row.label || ''}`.trim()} tooltip="Remove" icon={<Trash2 size={14} />} variant="danger" size="sm" onClick={() => setConfirmId(row.id)} />
       </div>
     );
   }
@@ -411,22 +348,12 @@ export default function NavigationManager({
     <div className="space-y-6">
       <PageHeader
         title="Store Navigation"
-        subtitle={`Phone, tablet and desktop mega-menu. Saved to the CMS — ${dirty[mode] ? 'unsaved changes' : 'up to date'}.`}
+        subtitle={`One menu for the phone drawer and the desktop header. Saved to the CMS — ${dirty ? 'unsaved changes' : 'up to date'}.`}
         actions={
           <Button variant="primary" size="md" disabled={busy} onClick={() => void save()}>
             {busy ? 'Saving…' : 'Save navigation'}
           </Button>
         }
-      />
-
-      <Tabs
-        ariaLabel="Navigation target"
-        activeTab={mode}
-        onChange={(id) => switchMode(id as NavMode)}
-        tabs={[
-          { id: 'mobile', label: 'Mobile & tablet', icon: <Smartphone size={15} />, badge: mobileItems.length },
-          { id: 'desktop', label: 'Desktop mega-menu', icon: <Monitor size={15} />, badge: desktopItems.length },
-        ]}
       />
 
       {notice ? (
@@ -436,16 +363,6 @@ export default function NavigationManager({
         >
           {notice.text}
         </p>
-      ) : null}
-
-      {mode === 'desktop' ? (
-        <ContentCard>
-          <div style={{ fontSize: 13, color: 'var(--tuw-text-warning, #856300)', lineHeight: 20 }}>
-            Draft editor. Desktop edits are stored in the CMS but the storefront still renders its built-in menu;
-            wiring the storefront to read this document is a separate task. Shop filters and image-tile fields are
-            preserved on save and are not edited in this table.
-          </div>
-        </ContentCard>
       ) : null}
 
       <ContentCard>
@@ -465,12 +382,7 @@ export default function NavigationManager({
           <span style={{ fontSize: 12, color: 'var(--tuw-text-secondary, #5D6772)' }}>
             {isSearching ? `${result.matches} matches · ancestors kept` : `${rows.length} rows`}
           </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={isSearching}
-            onClick={() => setCollapsed(new Set(rows.filter((row) => row.hasChildren).map((row) => row.id)))}
-          >
+          <Button variant="ghost" size="sm" disabled={isSearching} onClick={() => setCollapsed(new Set(rows.filter((row) => row.hasChildren).map((row) => row.id)))}>
             Collapse all
           </Button>
           <Button variant="ghost" size="sm" disabled={isSearching} onClick={() => setCollapsed(new Set())}>
@@ -480,10 +392,8 @@ export default function NavigationManager({
 
         {items.length === 0 ? (
           <EmptyState
-            title={mode === 'mobile' ? 'No mobile menu items' : 'No desktop menu items'}
-            description={mode === 'mobile'
-              ? 'Add items to build the phone and tablet drawer menu.'
-              : 'Add items to draft the desktop mega-menu.'}
+            title="No menu items"
+            description="Add items to build the menu shown in the phone drawer and the desktop header."
           />
         ) : (
           <Table style={{ borderCollapse: 'separate', borderSpacing: '0 8px' }}>
@@ -541,11 +451,11 @@ export default function NavigationManager({
                   </TableCell>
                   <TableCell style={{ padding: '10px 12px' }}>
                     <EditableCell
-                      id={`${mode}-${row.id}-label`}
+                      id={`menu-${row.id}-label`}
                       value={row.label}
                       onCommit={(value) => editField(row, 'label', value)}
-                      fieldLabel={FIELD_TEXT[mode][row.kind].name}
-                      hint={[FIELD_TEXT[mode][row.kind].nameHint, row.meta].filter(Boolean).join(' · ')}
+                      fieldLabel={FIELD_TEXT[row.kind].name}
+                      hint={[FIELD_TEXT[row.kind].nameHint, row.meta].filter(Boolean).join(' · ')}
                       max={row.kind === 'feature' ? 200 : 100}
                       placeholder={row.kind === 'feature' ? 'e.g. Summer essentials' : row.kind === 'column' ? 'e.g. Clothing' : row.kind === 'shopAll' ? 'e.g. Shop all men' : 'e.g. Shop'}
                     />
@@ -554,20 +464,18 @@ export default function NavigationManager({
                     {row.kind === 'column' ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--tuw-text-secondary, #5D6772)' }}>
-                          {FIELD_TEXT[mode][row.kind].link}
+                          {FIELD_TEXT[row.kind].link}
                         </div>
                         <div style={{ fontSize: 14, color: 'var(--tuw-text-secondary, #5D6772)' }}>A group — no destination</div>
-                        <div style={{ fontSize: 11, color: 'var(--tuw-text-secondary, #5D6772)' }}>
-                          {FIELD_TEXT[mode][row.kind].linkHint}
-                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--tuw-text-secondary, #5D6772)' }}>{FIELD_TEXT[row.kind].linkHint}</div>
                       </div>
                     ) : (
                       <EditableCell
-                        id={`${mode}-${row.id}-href`}
+                        id={`menu-${row.id}-href`}
                         value={row.href}
                         onCommit={(value) => editField(row, 'href', value)}
-                        fieldLabel={FIELD_TEXT[mode][row.kind].link}
-                        hint={FIELD_TEXT[mode][row.kind].linkHint}
+                        fieldLabel={FIELD_TEXT[row.kind].link}
+                        hint={FIELD_TEXT[row.kind].linkHint}
                         max={500}
                         placeholder="e.g. /shop"
                       />

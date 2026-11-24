@@ -27,16 +27,11 @@ export const saveNavigationAction = guards.action({ permission: 'content.manage'
   return { navbar, storefront: await refresh(CMS_TAGS.nav) };
 });
 
-export const getMobileNavAction = guards.action({ permission: 'content.manage', input: s.getNavigationInput }, ({ ctx }) =>
-  content.adminGetMobileNav(ctx.user!.id));
+export const getMenuAction = guards.action({ permission: 'content.manage', input: s.getNavigationInput }, ({ ctx }) =>
+  content.adminGetMenu(ctx.user!.id));
 
-export const saveMobileNavAction = guards.action({ permission: 'content.manage', input: s.saveMobileNav }, async ({ input, ctx }) => {
-  const items = await content.adminSaveMobileNav(input.items, ctx.user!.id);
-  return { items, storefront: await refresh(CMS_TAGS.nav) };
-});
-
-export const saveDesktopNavAction = guards.action({ permission: 'content.manage', input: s.saveDesktopNav }, async ({ input, ctx }) => {
-  const items = await content.adminSaveDesktopNav(input.items, ctx.user!.id);
+export const saveMenuAction = guards.action({ permission: 'content.manage', input: s.saveMenu }, async ({ input, ctx }) => {
+  const items = await content.adminSaveMenu(input.items, ctx.user!.id);
   return { items, storefront: await refresh(CMS_TAGS.nav) };
 });
 

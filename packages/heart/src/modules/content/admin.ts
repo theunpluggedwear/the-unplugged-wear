@@ -35,24 +35,14 @@ export async function adminSaveNavigation(navbar: Record<string, unknown>, actor
   return svc.saveNavigation(navbar, actorId);
 }
 
-export async function adminGetMobileNav(actorId: string) {
+export async function adminGetMenu(actorId: string) {
   await requireContentManager(actorId);
-  return svc.getStorefrontMobileNav();
+  return svc.getStorefrontMenu();
 }
 
-export async function adminSaveMobileNav(items: svc.MobileNavItem[], actorId: string) {
+export async function adminSaveMenu(items: svc.MenuItem[], actorId: string) {
   await requireContentManager(actorId);
-  return svc.saveMobileNav(items, actorId);
-}
-
-export async function adminGetDesktopNav(actorId: string) {
-  await requireContentManager(actorId);
-  return svc.getStorefrontDesktopNav();
-}
-
-export async function adminSaveDesktopNav(items: svc.DesktopNavItem[], actorId: string) {
-  await requireContentManager(actorId);
-  return svc.saveDesktopNav(items, actorId);
+  return svc.saveMenu(items, actorId);
 }
 
 export async function adminGetTheme(actorId: string) {

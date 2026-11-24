@@ -1,7 +1,7 @@
 export const instant = false;
 import React from 'react';
 import Link from 'next/link';
-import { adminGetMobileNav } from '@tuw/heart/modules/content';
+import { adminGetMenu } from '@tuw/heart/modules/content';
 import { adminListPosts } from '@tuw/heart/modules/marketing';
 import { Badge, ContentCard, PageHeader } from '@/components/ui';
 import { BookOpen, Menu, ArrowRight } from 'lucide-react';
@@ -9,9 +9,9 @@ import { session } from '@/server/session';
 
 export default async function ContentOverviewPage() {
   const claims = await session.requireStaff('content.manage', '/content');
-  const [published, mobile] = await Promise.all([
+  const [published, menu] = await Promise.all([
     adminListPosts({ status: 'published', page: 1, perPage: 1 }, claims.sub),
-    adminGetMobileNav(claims.sub),
+    adminGetMenu(claims.sub),
   ]);
   const sections = [
     {
@@ -23,10 +23,10 @@ export default async function ContentOverviewPage() {
     },
     {
       title: 'Store Navigation',
-      description: 'Phone and tablet drawer menu. Desktop mega-menu is unchanged.',
+      description: 'One menu for the phone drawer and the desktop header.',
       href: '/content/navigation',
       icon: <Menu size={24} color="var(--tuw-action-primary)" />,
-      badge: `${mobile.length} Mobile Items`,
+      badge: `${menu.length} Menu Items`,
     },
   ];
 

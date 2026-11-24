@@ -1,4 +1,3 @@
-export type NavMode = 'mobile' | 'desktop';
 export type NavKind = 'item' | 'column' | 'link' | 'feature' | 'shopAll';
 export type Path = (number | string)[];
 
@@ -44,24 +43,19 @@ export interface MatrixRow {
   searchText: string;
 }
 
-export const NAV_CAPS: Record<NavMode, { items: number; columns: number; links: number; features: number }> = {
-  mobile: { items: 20, columns: 6, links: 30, features: 0 },
-  desktop: { items: 8, columns: 4, links: 10, features: 2 },
-};
+export const NAV_CAPS = { items: 20, columns: 6, links: 30, features: 2 };
 
-export function toRows(items: NavItemShape[], mode: NavMode): MatrixRow[] {
-  const caps = NAV_CAPS[mode];
+export function toRows(items: NavItemShape[]): MatrixRow[] {
+  const caps = NAV_CAPS;
   const rows: MatrixRow[] = [];
   items.forEach((item, i) => {
     const columns = item.columns ?? [];
     const features = item.features ?? [];
     const itemId = String(i);
-    const itemMeta = mode === 'desktop'
-      ? [
-          features.length ? `${features.length}/${caps.features} feature tiles` : null,
-          item.shopAll ? 'Shop-all link' : null,
-        ].filter(Boolean).join(' · ')
-      : undefined;
+    const itemMeta = [
+      features.length ? `${features.length}/${caps.features} feature tiles` : null,
+      item.shopAll ? 'Shop-all link' : null,
+    ].filter(Boolean).join(' · ');
     rows.push({
       id: itemId,
       path: [i],
@@ -75,7 +69,7 @@ export function toRows(items: NavItemShape[], mode: NavMode): MatrixRow[] {
       meta: itemMeta,
       capacity: { used: columns.length, max: caps.columns, noun: 'columns' },
       parentId: null,
-      hasChildren: columns.length > 0 || (mode === 'desktop' && (features.length > 0 || Boolean(item.shopAll))),
+      hasChildren: columns.length > 0 || features.length > 0 || Boolean(item.shopAll),
       searchText: [item.label, item.href, itemMeta].filter(Boolean).join(' ').toLowerCase(),
     });
 
@@ -116,42 +110,40 @@ export function toRows(items: NavItemShape[], mode: NavMode): MatrixRow[] {
       });
     });
 
-    if (mode === 'desktop') {
-      features.forEach((feature, f) => {
-        const featureLabel = feature.title || feature.productSlug || feature.image || 'Feature tile';
-        rows.push({
-          id: `${i}.f${f}`,
-          path: [i, 'features', f],
-          arrayPath: [i, 'features'],
-          siblingIndex: f,
-          siblingCount: features.length,
-          depth: 1,
-          kind: 'feature',
-          label: featureLabel,
-          href: feature.href ?? '',
-          meta: 'Image tile · other fields preserved',
-          parentId: itemId,
-          hasChildren: false,
-          searchText: [featureLabel, feature.href, feature.productSlug].filter(Boolean).join(' ').toLowerCase(),
-        });
+    features.forEach((feature, f) => {
+      const featureLabel = feature.title || feature.productSlug || feature.image || 'Feature tile';
+      rows.push({
+        id: `${i}.f${f}`,
+        path: [i, 'features', f],
+        arrayPath: [i, 'features'],
+        siblingIndex: f,
+        siblingCount: features.length,
+        depth: 1,
+        kind: 'feature',
+        label: featureLabel,
+        href: feature.href ?? '',
+        meta: 'Desktop header only · other fields preserved',
+        parentId: itemId,
+        hasChildren: false,
+        searchText: [featureLabel, feature.href, feature.productSlug].filter(Boolean).join(' ').toLowerCase(),
       });
-      if (item.shopAll) {
-        rows.push({
-          id: `${i}.shop`,
-          path: [i, 'shopAll'],
-          arrayPath: [],
-          siblingIndex: 0,
-          siblingCount: 1,
-          depth: 1,
-          kind: 'shopAll',
-          label: item.shopAll.label,
-          href: item.shopAll.href,
-          meta: 'Shop-all link · filter preserved',
-          parentId: itemId,
-          hasChildren: false,
-          searchText: [item.shopAll.label, item.shopAll.href].join(' ').toLowerCase(),
-        });
-      }
+    });
+    if (item.shopAll) {
+      rows.push({
+        id: `${i}.shop`,
+        path: [i, 'shopAll'],
+        arrayPath: [],
+        siblingIndex: 0,
+        siblingCount: 1,
+        depth: 1,
+        kind: 'shopAll',
+        label: item.shopAll.label,
+        href: item.shopAll.href,
+        meta: 'Desktop header only · filter preserved',
+        parentId: itemId,
+        hasChildren: false,
+        searchText: [item.shopAll.label, item.shopAll.href].join(' ').toLowerCase(),
+      });
     }
   });
   return rows;

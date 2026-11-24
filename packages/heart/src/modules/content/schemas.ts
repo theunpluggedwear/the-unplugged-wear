@@ -64,6 +64,22 @@ export const desktopNavItem = z.object({
 export const desktopNav = z.array(desktopNavItem).max(8);
 export const saveDesktopNav = z.object({ items: desktopNav });
 
+export const menuLink = desktopNavLink;
+export const menuFeature = desktopNavFeature;
+export const menuColumn = z.object({
+  title: z.string().trim().min(1).max(100),
+  links: z.array(menuLink).max(30),
+});
+export const menuItem = z.object({
+  label: z.string().trim().min(1).max(100),
+  href: z.string().trim().min(1).max(500),
+  columns: z.array(menuColumn).max(6).optional(),
+  features: z.array(menuFeature).max(2).optional(),
+  shopAll: menuLink.optional(),
+});
+export const menu = z.array(menuItem).max(20);
+export const saveMenu = z.object({ items: menu });
+
 export const saveNavigation = z.object({
   navbar: z.object({
     mobile: mobileNav.default([]),

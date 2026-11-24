@@ -3,7 +3,10 @@ import { sql } from 'drizzle-orm';
 import { getDb, withTransaction } from '../../platform/db/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
-import { mobileNav, desktopNav } from './schemas.ts';
+import { menu } from './schemas.ts';
+import { mergeLegacyMenu, type MenuItem } from './menu-merge.ts';
+
+export type { MenuItem } from './menu-merge.ts';
 
 export const CMS_TAGS = {
   home: 'cms:home',
@@ -66,32 +69,18 @@ export async function saveNavigation(navbar: Record<string, unknown>, actorId: s
   return navbar;
 }
 
-export type MobileNavItem = typeof mobileNav._output[number];
-
-/** Typed read for phones/tablets. Returns [] until a CMS menu is saved. */
-export async function getStorefrontMobileNav(): Promise<MobileNavItem[]> {
+export async function getStorefrontMenu(): Promise<MenuItem[]> {
   const navbar = await getNavigation();
-  const parsed = mobileNav.safeParse(navbar.mobile ?? []);
-  return parsed.success ? parsed.data : [];
+  if (navbar.menu !== undefined) {
+    const current = menu.safeParse(navbar.menu);
+    return current.success ? current.data : [];
+  }
+  return mergeLegacyMenu(navbar.mobile, navbar.desktop);
 }
 
-export async function saveMobileNav(items: MobileNavItem[], actorId: string): Promise<MobileNavItem[]> {
+export async function saveMenu(items: MenuItem[], actorId: string): Promise<MenuItem[]> {
   const navbar = await getNavigation();
-  await saveNavigation({ ...navbar, mobile: items }, actorId);
-  return items;
-}
-
-export type DesktopNavItem = typeof desktopNav._output[number];
-
-export async function getStorefrontDesktopNav(): Promise<DesktopNavItem[]> {
-  const navbar = await getNavigation();
-  const parsed = desktopNav.safeParse(navbar.desktop ?? []);
-  return parsed.success ? parsed.data : [];
-}
-
-export async function saveDesktopNav(items: DesktopNavItem[], actorId: string): Promise<DesktopNavItem[]> {
-  const navbar = await getNavigation();
-  await saveNavigation({ ...navbar, desktop: items }, actorId);
+  await saveNavigation({ ...navbar, menu: items }, actorId);
   return items;
 }
 

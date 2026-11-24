@@ -228,14 +228,14 @@
 
 ## Store Navigation tree matrix (TL-UI-NAV-MATRIX, 2026-11-24)
 
-- [x] `/content/navigation` now uses an expandable tree table built only from the existing `Table`, `Input`, `IconButton`, `Button`, `Badge`, `Tabs`, `ContentCard` and `EmptyState` primitives. No new UI primitive or grid dependency.
-- [x] Two tabs: Mobile & tablet (3 levels, caps 20/6/30) and Desktop mega-menu (item / column / link plus feature tiles and shop-all, caps 8/4/10/2). Tree-guide indentation and chevrons show depth; `aria-expanded` toggles with Enter/Space.
+- [x] `/content/navigation` uses an expandable tree table built only from the existing `Table`, `Input`, `IconButton`, `Button`, `Badge`, `ContentCard` and `EmptyState` primitives. No new UI primitive or grid dependency.
+- [x] One shared menu, no tabs: items / columns / links plus desktop-only feature tiles and shop-all, caps 20/6/30/2. Tree-guide indentation and chevrons show depth; `aria-expanded` toggles with Enter/Space.
 - [x] Cross-level search keeps matching ancestors, auto-reveals matches, reports match count, and disables Collapse/Expand all while active. Collapse hides descendants without losing data.
 - [x] Inline editing: click a cell, Enter or blur commits, Escape discards; empty/over-length values stay in the field with an inline error and are never saved. Focus-visible rings and labelled icon buttons verified.
 - [x] Capacity bars always show `used / limit`, use semantic warning/error colours at thresholds and expose `role="progressbar"` with aria values. Add controls stop at the cap and state the reason.
-- [x] Save persists both documents through `saveMobileNavAction` / `saveDesktopNavAction` with `content.manage` rechecked in the DAL; a reload through the Tailscale URL restored the tree. Refresh failure is reported truthfully rather than hidden.
-- [x] Desktop `filter` objects, feature `productSlug`/`imagePosition` and shop-all filters were injected into `navigation_settings.navbar.desktop`, then an unrelated label edit was saved: all opaque fields and the mobile document were still present afterwards.
-- [x] The desktop tab carries a visible draft notice: the storefront still renders its built-in menu; wiring `navbar.desktop` into `tuw-website` is a separate task.
+- [x] Save persists one `navbar.menu` document through `saveMenuAction` with `content.manage` rechecked in the DAL; a reload through the Tailscale URL restored the tree. Refresh failure is reported truthfully rather than hidden.
+- [x] A legacy `navbar.mobile` + `navbar.desktop` pair with one overlapping item was merged on read into one list of three items with no duplicates; the desktop item's `filter`, feature `productSlug` and shop-all filter survived, and both legacy keys remained untouched after saving.
+- [x] The page states plainly that the menu is a draft: the storefront still renders its built-in `NAV_ITEMS`; wiring `navbar.menu` into `tuw-website` is a separate task.
 - [x] Browser QA at 360/768/1024/1440: no page-level horizontal overflow (the `Table` wrapper scrolls internally below 1440). QA admin and QA nav rows were deleted afterwards.
 - [x] Gates: `pnpm run typecheck`, `pnpm run test:admin` (85/85), `pnpm run build:admin`, `pnpm lint:comments` (3012/3016). Full `pnpm run test` still has pre-existing storefront failures (missing `qikink` files and homepage typography assertions); no storefront file was touched.
 
@@ -245,5 +245,13 @@
 - [x] Column rows now state "A group — no destination" instead of a bare dash, so it is clear why they have no link.
 - [x] Rows are rounded white cards using the sidebar's own tokens: `--radius-nav` 10px, `--tuw-bg-surface`, `--tuw-border-subtle`, `--shadow-nav-edge` and `--color-nav-branch-hover`. Hover applies the nav wash; `:focus-within` applies the sidebar's inset bottom edge. Tree guides are curved elbows (`border-bottom-left-radius: var(--radius-nav)`) like the sidebar's `navTree`. Header corners are rounded too.
 - [x] The three ambiguous `+` icon buttons are now labelled chips (`Column`, `Feature`, `Shop all`) and column rows use a labelled `Link` chip. Move/remove remain icon buttons with `title` tooltips as a secondary cue.
-- [x] Browser QA confirmed the computed row radius is 10px, row background white, focus inset shadow `rgb(214,214,214) 0px -2px 0px inset`, curved guide radius 10px, the labelled chips and tooltips present on both tabs, and no page-level horizontal overflow at 360/768/1024/1440 (table scrolls internally below 1024).
-- [x] Mobile & tablet remains the default tab. Gates re-run clean after the pass.
+- [x] Browser QA confirmed the computed row radius is 10px, row background white, focus inset shadow `rgb(214,214,214) 0px -2px 0px inset`, curved guide radius 10px, the labelled chips and tooltips present, and no page-level horizontal overflow at 360/768/1024/1440 (table scrolls internally below 1024).
+- [x] Gates re-run clean after the pass.
+
+### One shared menu for drawer and header (2026-11-24)
+
+- [x] Removed the two tabs and the two separate documents. Store Navigation is now one table backed by `navigation_settings.navbar.menu`, matching the storefront's single `NAV_ITEMS` list that feeds both `Header` and `MobileMenu`.
+- [x] Unified caps: 20 items, 6 columns, 30 links, 2 feature tiles. Feature tiles and shop-all stay editable on the item and are labelled "Desktop header only"; the phone drawer ignores them.
+- [x] Legacy `mobile` / `desktop` documents are merged on read by normalised label + href, carrying over filters, features and shop-all, and appending items that exist in only one document. An explicit empty `menu` is respected, so clearing the menu is not undone by the fallback.
+- [x] New pure merge helper with 5 unit tests; admin suite now 90/90. Full typecheck, admin build and comment ratchet (3011/3016) pass.
+- [x] Browser QA: seeded overlapping legacy documents, confirmed one merged list of three items with no duplicates, saved, and verified `navbar.menu` was written while both legacy keys remained. Search, labelled chips and responsive widths re-checked. QA admin and nav rows cleaned afterwards.
