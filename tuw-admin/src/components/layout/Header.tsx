@@ -38,8 +38,32 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
   const navSuppressedRef = React.useRef<string | null>(null);
   const navSourceRef = React.useRef<'hover' | 'click' | null>(null);
   const navRef = React.useRef<HTMLDivElement>(null);
-  const navAnim = usePopoverAnimation(openKey !== null, () => setRenderedKey(null));
+  const leaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navAnim = usePopoverAnimation(openKey !== null, () => setRenderedKey(null), 150);
   const activeGroup = getActiveGroupForPath(pathname);
+
+  const clearLeaveTimer = React.useCallback(() => {
+    if (leaveTimerRef.current !== null) {
+      clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleClose = React.useCallback(() => {
+    clearLeaveTimer();
+    leaveTimerRef.current = setTimeout(() => {
+      setOpenKey(null);
+      navSuppressedRef.current = null;
+      navSourceRef.current = null;
+    }, 120);
+  }, [clearLeaveTimer]);
+
+  const handleGroupEnter = React.useCallback((groupKey: string) => {
+    clearLeaveTimer();
+    if (navSuppressedRef.current === groupKey || navSuppressedRef.current === 'all') return;
+    setOpenKey(groupKey);
+    navSourceRef.current = 'hover';
+  }, [clearLeaveTimer]);
 
   useEffect(() => {
     let live = true;
@@ -54,20 +78,26 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
   }, [openKey]);
 
   useEffect(() => {
+    clearLeaveTimer();
     setOpenKey(null);
     setRenderedKey(null);
     navSourceRef.current = null;
-  }, [pathname]);
+  }, [pathname, clearLeaveTimer]);
+
+  useEffect(() => {
+    return () => clearLeaveTimer();
+  }, [clearLeaveTimer]);
 
   useEffect(() => {
     const close = (event: PointerEvent) => {
       if (navRef.current?.contains(event.target as Node)) return;
+      clearLeaveTimer();
       setOpenKey(null);
       navSourceRef.current = null;
     };
     document.addEventListener('pointerdown', close);
     return () => document.removeEventListener('pointerdown', close);
-  }, []);
+  }, [clearLeaveTimer]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -76,6 +106,7 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
         setIsSearchOpen((prev) => !prev);
       }
       if (e.key === 'Escape') {
+        clearLeaveTimer();
         setIsSearchOpen(false);
         setOpenKey(null);
         navSuppressedRef.current = 'all';
@@ -84,7 +115,7 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [clearLeaveTimer]);
 
   const handleNavigate = (href: string) => {
     setIsSearchOpen(false);
@@ -113,12 +144,8 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
         <div
           className="topBarCenter"
           ref={navRef}
-          onMouseLeave={() => {
-            setOpenKey(null);
-            navSuppressedRef.current = null;
-            navSourceRef.current = null;
-          }}
-          onMouseEnter={() => navAnim.cancelClose()}
+          onMouseLeave={scheduleClose}
+          onMouseEnter={clearLeaveTimer}
           onPointerDown={(event) => event.stopPropagation()}
         >
           <div className="topNavTriggers">
@@ -133,17 +160,10 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
                   aria-haspopup="true"
                   aria-expanded={isOpen}
                   aria-controls={`mega-${group.key}`}
-                  onMouseEnter={() => {
-                    if (navSuppressedRef.current === group.key || navSuppressedRef.current === 'all') return;
-                    setOpenKey(group.key);
-                    navSourceRef.current = 'hover';
-                  }}
-                  onFocus={() => {
-                    if (navSuppressedRef.current === group.key || navSuppressedRef.current === 'all') return;
-                    setOpenKey(group.key);
-                    navSourceRef.current = 'hover';
-                  }}
+                  onMouseEnter={() => handleGroupEnter(group.key)}
+                  onFocus={() => handleGroupEnter(group.key)}
                   onClick={() => {
+                    clearLeaveTimer();
                     if (openKey === group.key) {
                       setOpenKey(null);
                       navSuppressedRef.current = group.key;
@@ -168,7 +188,8 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
               id={`mega-${rendered.key}`}
               role="menu"
               aria-label={`${rendered.label} menu`}
-              className={cn('megaMenu', navAnim.phase === 'closing' ? 'animate-[popoverOut_0.15s_ease-in]' : 'animate-[popoverIn_0.18s_ease-out]')}
+              className={cn('megaMenu', navAnim.phase === 'closing' ? 'megaMenuClosing' : 'megaMenuOpening')}
+              onMouseEnter={clearLeaveTimer}
             >
               <div className="megaMenuHead">
                 <span className="megaMenuTitle">{rendered.label}</span>
@@ -185,6 +206,7 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
                       role="menuitem"
                       className={cn('megaMenuItem', active && 'tuw-3d-active')}
                       onClick={() => {
+                        clearLeaveTimer();
                         setOpenKey(null);
                         navSuppressedRef.current = 'all';
                         navSourceRef.current = null;
