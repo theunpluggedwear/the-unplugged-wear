@@ -39,6 +39,7 @@ const TITLES: ReadonlyArray<readonly [string, string]> = [
   ['/design-system', 'Design System'],
   ['/gift-cards', 'Gift Cards'],
   ['/support', 'Support'],
+  ['/notifications', 'Notifications'],
   ['/access-denied', 'No access'],
   ['/accept-invite', 'Accept Invite'],
 ];

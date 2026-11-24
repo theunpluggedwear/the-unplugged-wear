@@ -303,3 +303,13 @@ Every scenario was run against the production build over the Tailscale URL with 
 - [x] Clicking a notification awaits the guarded mark-read action before navigating; the badge fell 7 → 6 and `read_at` was set for that row in Postgres. Mark all read cleared the badge and set all seven rows. A failed action now leaves the item unread and shows a `role="alert"` message instead of optimistically lying.
 - [x] Retention: `pruneNotifications()` deletes rows older than 30 days, registered as `notifications.pruneOld` and scheduled daily at 03:15 UTC in `tuw-admin/vercel.json`. Manual cron call with `CRON_SECRET` returned `processed: 1` for a 60-day-old QA row; all seven recent rows survived.
 - [x] Gates: full typecheck, 96/96 admin tests, admin build, comment ratchet 3011/3016. QA admin and seeded notification rows deleted.
+
+### Admin notification archive (2026-11-24)
+
+- [x] Added `/notifications` as an admin-only archive of stored alerts. Server Component guards with `session.requireStaff('product.update', '/notifications')` and reads up to 200 rows from `listNotifications`. A `NotificationsView` client component filters by category, toggles unread-only, marks single/all rows read through the existing guarded actions, pages results and links to each alert's target.
+- [x] Extracted kind→category/tone/time helpers into `tuw-admin/src/lib/notifications.ts` so the bell and the archive share one mapping instead of duplicating it.
+- [x] Added a System sidebar entry for Notifications (permission `product.update`) and a page title. Added Support to the same group, with a `contact_form` source badge in the ticket list.
+- [x] `/support?ticket=<uuid>` preselects the requested thread, so notification deep links can target a conversation instead of the generic inbox.
+- [x] Added a guard test covering the 30-day retention constant, prune job registration and cron entry.
+- [x] Browser QA with seven seeded alerts: archive showed 7 rows and `7 unread`; Payment filter showed payment + refund; unread-only kept all 7; marking one read dropped the badge to 6 and the row switched to Read. Deep link selected the requested ticket. No page-level overflow at 360/768/1024/1440 (table scrolls internally below 1024). QA admin, tickets and alerts deleted.
+- [x] Storefront-dependent work (contact form → support ticket, customer bell) remains pending in the tracker with an explicit deferral note; no storefront file was touched. Gates: full typecheck, 98/98 admin tests, admin build, comment ratchet 3011/3016.

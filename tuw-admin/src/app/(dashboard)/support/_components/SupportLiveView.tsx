@@ -5,9 +5,10 @@ import { Badge, Button, ContentCard, PageHeader, Table, TableBody, TableCell, Ta
 import type { SupportTicketRow } from '@tuw/heart/modules/support';
 import { replyTicketAction, setTicketStatusAction } from '@/server/support-actions';
 
-export default function SupportLiveView({ initial }: { initial: SupportTicketRow[] }) {
+export default function SupportLiveView({ initial, selectedId: requestedId }: { initial: SupportTicketRow[]; selectedId: string | null }) {
   const [tickets, setTickets] = useState(initial);
-  const [selectedId, setSelectedId] = useState<string | null>(initial[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    initial.some((ticket) => ticket.id === requestedId) ? requestedId : (initial[0]?.id ?? null));
   const [reply, setReply] = useState('');
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -54,7 +55,11 @@ export default function SupportLiveView({ initial }: { initial: SupportTicketRow
               <TableRow key={t.id} hoverable={false}>
                 <TableCell>{t.subject}</TableCell>
                 <TableCell>{t.customerName}{t.customerEmail ? ` · ${t.customerEmail}` : ''}</TableCell>
-                <TableCell>{t.source}</TableCell>
+                <TableCell>
+                  <Badge variant={t.source === 'contact_form' ? 'info' : 'neutral'} size="sm">
+                    {t.source === 'contact_form' ? 'Contact form' : t.source}
+                  </Badge>
+                </TableCell>
                 <TableCell><Badge variant={t.status === 'resolved' ? 'success' : t.status === 'pending' ? 'warning' : 'info'}>{t.status}</Badge></TableCell>
                 <TableCell><Button variant="secondary" size="sm" onClick={() => setSelectedId(t.id)}>Open</Button></TableCell>
               </TableRow>

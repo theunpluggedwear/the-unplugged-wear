@@ -8,10 +8,10 @@
     "reference": "Figma WmpPcdGcXerVgqNpgr6Q6S + production screenshots"
   },
   "summary": {
-    "total": 473,
-    "done": 437,
-    "in_progress": 13,
-    "backlog": 23
+    "total": 474,
+    "done": 438,
+    "in_progress": 10,
+    "backlog": 26
   },
   "session": {
     "branch": "feat/dharmil-admin",
@@ -7324,12 +7324,12 @@
     {
       "id": "TL-BE-14",
       "title": "Support & notifications",
-      "status": "in_progress",
+      "status": "backlog",
       "owner": "unassigned",
       "parent": "TL-BE-CORE",
       "started": null,
       "finished": null,
-      "log": "Not started. Scope: Contact form → support tickets, admin inbox + replies, in-app notifications bell, email log + templates (mock sender). PARTIAL: Admin support inbox and bell are live; contact-to-ticket, customer bell and queue job remain",
+      "log": "Not started. Scope: Contact form → support tickets, admin inbox + replies, in-app notifications bell, email log + templates (mock sender). PARTIAL: Admin support inbox and bell are live; contact-to-ticket, customer bell and queue job remain PENDING (2026-11-24): remaining scope needs storefront changes, which the owner deferred. Admin-side pieces are complete and verified; reopen when storefront scope is approved.",
       "wiring": "modules/support and modules/notifications; other modules emit events, notifications subscribes; job notifications.sendQueued.",
       "done_when": "Contact form creates a ticket staff can answer; order/stock/payment events ring the admin bell; every email is logged with dedupe.",
       "depends_on": [
@@ -7347,12 +7347,12 @@
     {
       "id": "TL-BE-14.01",
       "title": "Contact form (support.create, guest fields) + admin /support inbox and replies",
-      "status": "in_progress",
+      "status": "backlog",
       "owner": "unassigned",
       "parent": "TL-BE-14",
       "started": null,
       "finished": null,
-      "log": "Not started. PARTIAL: Admin /support inbox and replies live; contact route is still a demo outbox, not support.create",
+      "log": "Not started. PARTIAL: Admin /support inbox and replies live; contact route is still a demo outbox, not support.create PENDING (2026-11-24): remaining scope needs storefront changes, which the owner deferred. Admin-side pieces are complete and verified; reopen when storefront scope is approved.",
       "design_match": null,
       "key_decisions": [],
       "verified": false,
@@ -7365,12 +7365,12 @@
     {
       "id": "TL-BE-14.02",
       "title": "Notifications bell (unread count, mark read) for staff and customers",
-      "status": "in_progress",
+      "status": "backlog",
       "owner": "unassigned",
       "parent": "TL-BE-14",
       "started": null,
       "finished": null,
-      "log": "Not started. PARTIAL: Admin bell and mark-read live; customer-side bell absent",
+      "log": "Not started. PARTIAL: Admin bell and mark-read live; customer-side bell absent PENDING (2026-11-24): remaining scope needs storefront changes, which the owner deferred. Admin-side pieces are complete and verified; reopen when storefront scope is approved.",
       "design_match": null,
       "key_decisions": [],
       "verified": false,
@@ -8358,6 +8358,24 @@
       "follow_ups": [
         "Full /notifications page and contact-to-ticket wiring remain under TL-BE-14."
       ]
+    },
+    {
+      "id": "TL-BE-14.06",
+      "title": "Admin notification archive and support deep link",
+      "status": "done",
+      "owner": "agent",
+      "parent": "TL-BE-14",
+      "started": "2026-11-24",
+      "finished": "2026-11-24",
+      "log": "Added an admin-only /notifications archive backed by listNotifications: category filters, unread-only switch, per-row mark read, mark all read, paging and deep links, using existing UI primitives and the shared notification category/time helper. Added a System sidebar entry guarded by product.update and a page title. Support inbox now accepts ?ticket=<uuid> and preselects that thread; contact_form tickets show a labelled badge. Added a guard test for the 30-day prune constant, job registration and cron entry. Browser QA at 360/768/1024/1440 with seven seeded alerts confirmed filters, read actions, paging-safe rows, no page overflow and deep-link selection. 98/98 admin tests, full typecheck, build and comment ratchet pass.",
+      "design_match": "yes",
+      "key_decisions": [
+        "Storefront-dependent work (contact-to-ticket, customer bell) stays pending and untouched.",
+        "Archive is read/mark-read only; notifications are pruned after 30 days."
+      ],
+      "verified": true,
+      "pushed": false,
+      "follow_ups": []
     }
   ],
   "workflow": {

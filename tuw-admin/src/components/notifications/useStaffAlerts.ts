@@ -2,37 +2,10 @@
 
 import React from 'react';
 import { listNotificationsAction, markAllNotificationsReadAction, markNotificationReadAction } from '@/server/notification-actions';
-import type { Notification, NotificationCategory, NotificationTone, RemoteReadState } from './types';
-
-const KIND_CATEGORY: Record<string, NotificationCategory> = {
-  order: 'orders',
-  cart: 'orders',
-  inventory: 'inventory',
-  payment: 'payment',
-  refund: 'payment',
-  system: 'system',
-  marketing: 'marketing',
-};
-
-const KIND_TONE: Record<string, NotificationTone> = {
-  order: 'info',
-  cart: 'warning',
-  inventory: 'warning',
-  payment: 'error',
-  refund: 'error',
-  system: 'info',
-  marketing: 'info',
-};
+import type { Notification, RemoteReadState } from './types';
+import { categoryForKind, timeAgo, toneForKind } from '@/lib/notifications';
 
 const PREFIX = 'db:';
-
-function timeAgo(iso: string): string {
-  const minutes = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000));
-  if (minutes < 1) return 'now';
-  if (minutes < 60) return `${minutes} min`;
-  if (minutes < 1440) return `${Math.floor(minutes / 60)} h`;
-  return `${Math.floor(minutes / 1440)} d`;
-}
 
 
 export function useStaffAlerts(open: boolean): { items: Notification[]; remote: RemoteReadState } {
@@ -45,8 +18,8 @@ export function useStaffAlerts(open: boolean): { items: Notification[]; remote: 
       if (!live || !result.ok) return;
       setItems(result.data.map((n) => ({
         id: `${PREFIX}${n.id}`,
-        category: KIND_CATEGORY[n.kind] ?? 'system',
-        tone: n.dedupeKey?.startsWith('inventory.out') ? 'error' : (KIND_TONE[n.kind] ?? 'info'),
+        category: categoryForKind(n.kind),
+        tone: toneForKind(n.kind, n.dedupeKey),
         title: n.title,
         body: n.body,
         time: timeAgo(n.createdAt),

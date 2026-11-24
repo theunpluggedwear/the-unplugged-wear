@@ -27,6 +27,7 @@ import {
   ShieldCheck,
   X,
   BadgePercent,
+  Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { SidebarNavGroup, SidebarNavItem, SidebarDock } from './sidebar-nav';
@@ -135,6 +136,8 @@ const NAV_GROUPS: NavGroupDef[] = [
     icon: ShieldCheck,
     items: [
       { href: '/team', label: 'Team', icon: Users, match: ['/team'] },
+      { href: '/support', label: 'Support', icon: Headphones, match: ['/support'] },
+      { href: '/notifications', label: 'Notifications', icon: Bell, match: ['/notifications'] },
     ],
   },
 ];
@@ -168,6 +171,7 @@ const NAV_PERMISSIONS: Readonly<Record<string, string>> = {
   '/team': 'user.manage',
   '/settings': 'settings.manage',
   '/support': 'customer.view',
+  '/notifications': 'product.update',
 };
 
 export default function Sidebar({
