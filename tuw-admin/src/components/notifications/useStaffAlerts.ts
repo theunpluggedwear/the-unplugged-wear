@@ -11,8 +11,11 @@ const PREFIX = 'db:';
 export function useStaffAlerts(open: boolean): { items: Notification[]; remote: RemoteReadState } {
   const [items, setItems] = React.useState<Notification[]>([]);
   const [readIds, setReadIds] = React.useState<ReadonlySet<string>>(new Set());
+  const initialFetchDone = React.useRef(false);
 
   React.useEffect(() => {
+    if (initialFetchDone.current && !open) return;
+    initialFetchDone.current = true;
     let live = true;
     void listNotificationsAction({}).then((result) => {
       if (!live || !result.ok) return;

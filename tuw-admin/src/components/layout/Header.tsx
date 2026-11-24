@@ -31,7 +31,7 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
   const [staff, setStaff] = useState<StaffInfo | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const notifAnim = usePopoverAnimation(showNotifications, () => setShowNotifications(false));
+  const notifAnim = usePopoverAnimation(showNotifications, () => setShowNotifications(false), 150);
   const navGroups = visibleNavGroups(permissions);
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [renderedKey, setRenderedKey] = useState<string | null>(null);
@@ -261,11 +261,10 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
                     className="fixed inset-0 z-40 cursor-default"
                   />
                   <div
-                    className={`notificationPopover ${
-                      notifAnim.phase === 'closing'
-                        ? 'animate-[popoverOut_0.15s_ease-in]'
-                        : 'animate-[popoverIn_0.18s_ease-out]'
-                    }`}
+                    className={cn(
+                      'notificationPopover',
+                      notifAnim.phase === 'closing' ? 'popoverClosing' : 'popoverOpening'
+                    )}
                   >
                     <NotificationPanel
                       repo={notifications}

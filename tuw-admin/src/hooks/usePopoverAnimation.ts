@@ -3,7 +3,7 @@
 import React from 'react';
 
 
-export const POPOVER_EXIT_MS = 180;
+export const POPOVER_EXIT_MS = 150;
 
 type PopoverPhase = 'open' | 'closing' | 'closed';
 

@@ -953,6 +953,18 @@
   animation: popoverOut 0.15s ease-in forwards;
 }
 
+.popoverOpening {
+  animation: popoverIn 0.18s ease-out;
+}
+
+.popoverClosing {
+  animation: popoverOut 0.15s ease-in forwards;
+}
+
+[class*='animate-[popoverOut_0.15s_ease-in]'] {
+  animation-fill-mode: forwards !important;
+}
+
 .megaMenuHead {
   display: flex;
   align-items: center;
