@@ -313,3 +313,12 @@ Every scenario was run against the production build over the Tailscale URL with 
 - [x] Added a guard test covering the 30-day retention constant, prune job registration and cron entry.
 - [x] Browser QA with seven seeded alerts: archive showed 7 rows and `7 unread`; Payment filter showed payment + refund; unread-only kept all 7; marking one read dropped the badge to 6 and the row switched to Read. Deep link selected the requested ticket. No page-level overflow at 360/768/1024/1440 (table scrolls internally below 1024). QA admin, tickets and alerts deleted.
 - [x] Storefront-dependent work (contact form → support ticket, customer bell) remains pending in the tracker with an explicit deferral note; no storefront file was touched. Gates: full typecheck, 98/98 admin tests, admin build, comment ratchet 3011/3016.
+
+### Top navigation with mega-menu (2026-11-24)
+
+- [x] The desktop sidebar is gone. Navigation lives in a centered `TopNav` strip below the header with four triggers — Core, Operations, Merchandise, System — between the brand on the left and search/bell/profile on the right. `main` now spans the full viewport width.
+- [x] Hover or focus a trigger opens a mega-menu panel centered under the strip (`left:50%; transform:translateX(-50%)`, 920px max). Items render in a responsive grid with icons, active-edge treatment and the fulfillment count badge. Hover switches sections; mouse-leave, outside click and Escape close it.
+- [x] The desktop sidebar component survives only as the mobile drawer (≤768px), opened by the existing hamburger and closed on link click or Escape. `TopNav` is hidden on mobile. No navigation is lost at any width.
+- [x] Extracted nav groups, permissions and active-path resolution into `tuw-admin/src/lib/admin-nav.ts`, shared by the top nav and the mobile drawer. Added `/discounts: order.view`, which was previously unguarded and leaked to staff without order access.
+- [x] Browser QA at 1440/1024/768/360: no desktop sidebar, no page overflow; the Operations mega-menu measured x=255/right=1175 in a 1430px viewport (exactly centered); hover switching, click-to-open, Escape and item navigation to `/orders` all worked; active section highlighted Core on `/dashboard`. Found and fixed a click bug where hover had already opened the menu so the click closed it.
+- [x] Three new unit tests cover section inventory, permission filtering and active-path resolution. Gates: full typecheck, 101/101 admin tests, admin build, comment ratchet 3011/3016. QA admin deleted.

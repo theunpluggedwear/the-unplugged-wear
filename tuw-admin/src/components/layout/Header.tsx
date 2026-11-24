@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, Bell, Menu, X } from 'lucide-react';
 import { getCurrentStaffAction } from '@/server/session-actions';
@@ -71,6 +73,12 @@ export default function Header({
           <button type="button" className="mobileMenuBtn" onClick={onToggleMobileMenu} aria-label="Toggle menu">
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
+          <Link href="/dashboard" className="topBrand" aria-label="TUW Admin home">
+            <span className="topBrandMark">
+              <Image src="/logos/tuw-stag-white.png" alt="The Unplugged Wear" width={22} height={22} className="h-[22px] w-auto object-contain" priority />
+            </span>
+            <span className="topBrandText">TUW Admin</span>
+          </Link>
           <h1 className="pageTitle">{pageTitle}</h1>
         </div>
 
