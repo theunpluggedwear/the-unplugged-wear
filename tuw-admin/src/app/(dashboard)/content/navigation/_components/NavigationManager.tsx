@@ -107,17 +107,24 @@ function EditableCell({
   }
 
   const caption = (
-    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--tuw-text-secondary, #5D6772)' }}>
+    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--tuw-text-secondary, #5D6772)', whiteSpace: 'nowrap' }}>
       {fieldLabel}
     </div>
   );
   const helper = hint ? (
-    <div style={{ fontSize: 11, lineHeight: 16, color: 'var(--tuw-text-secondary, #5D6772)' }}>{hint}</div>
+    <div style={{ fontSize: 11, lineHeight: '16px', color: 'var(--tuw-text-secondary, #5D6772)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={hint}>{hint}</div>
   ) : null;
+  const layout = {
+    display: 'grid',
+    gridTemplateRows: 'max-content max-content max-content',
+    alignContent: 'center',
+    rowGap: 3,
+    minWidth: 0,
+  };
 
   if (!editing) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+      <div style={layout}>
         {caption}
         <button
           type="button"
@@ -145,7 +152,7 @@ function EditableCell({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+    <div style={layout}>
       {caption}
       <Input
         id={`cell-${id}`}
@@ -311,8 +318,8 @@ export default function NavigationManager({ items: initial }: { items: MenuItem[
       );
     }
     const canMove = row.kind !== 'shopAll';
-    return (
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+    const chips = (
+      <>
         {row.kind === 'item' && row.capacity && row.capacity.used < caps.columns ? (
           <Button variant="outline" size="sm" icon={<Plus size={14} />} onClick={() => addColumn(row.siblingIndex)}>
             Column
@@ -333,13 +340,23 @@ export default function NavigationManager({ items: initial }: { items: MenuItem[
             Shop all
           </Button>
         ) : null}
-        {canMove ? (
-          <IconButton label={`Move ${KIND_LABEL[row.kind].toLowerCase()} up`} tooltip="Move up" icon={<ArrowUp size={14} />} size="sm" disabled={row.siblingIndex === 0} onClick={() => move(row, -1)} />
+      </>
+    );
+    const hasChips = row.kind === 'item' || row.kind === 'column';
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+        {hasChips ? (
+          <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 6, alignItems: 'center' }}>{chips}</div>
         ) : null}
-        {canMove ? (
-          <IconButton label={`Move ${KIND_LABEL[row.kind].toLowerCase()} down`} tooltip="Move down" icon={<ArrowDown size={14} />} size="sm" disabled={row.siblingIndex === row.siblingCount - 1} onClick={() => move(row, 1)} />
-        ) : null}
-        <IconButton label={`Remove ${KIND_LABEL[row.kind].toLowerCase()} ${row.label || ''}`.trim()} tooltip="Remove" icon={<Trash2 size={14} />} variant="danger" size="sm" onClick={() => setConfirmId(row.id)} />
+        <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 4, alignItems: 'center' }}>
+          {canMove ? (
+            <IconButton label={`Move ${KIND_LABEL[row.kind].toLowerCase()} up`} tooltip="Move up" icon={<ArrowUp size={14} />} size="sm" disabled={row.siblingIndex === 0} onClick={() => move(row, -1)} />
+          ) : null}
+          {canMove ? (
+            <IconButton label={`Move ${KIND_LABEL[row.kind].toLowerCase()} down`} tooltip="Move down" icon={<ArrowDown size={14} />} size="sm" disabled={row.siblingIndex === row.siblingCount - 1} onClick={() => move(row, 1)} />
+          ) : null}
+          <IconButton label={`Remove ${KIND_LABEL[row.kind].toLowerCase()} ${row.label || ''}`.trim()} tooltip="Remove" icon={<Trash2 size={14} />} variant="danger" size="sm" onClick={() => setConfirmId(row.id)} />
+        </div>
       </div>
     );
   }
@@ -399,11 +416,11 @@ export default function NavigationManager({ items: initial }: { items: MenuItem[
           <Table style={{ borderCollapse: 'separate', borderSpacing: '0 8px' }}>
             <TableHeader style={{ background: 'transparent', borderBottom: 'none' }}>
               <TableRow hoverable={false}>
-                <TableHead style={{ width: '28%', background: 'var(--tuw-bg-selected, #F8F5FF)', borderTopLeftRadius: 'var(--radius-nav, 10px)', borderBottomLeftRadius: 'var(--radius-nav, 10px)' }}>Structure</TableHead>
-                <TableHead style={{ width: '27%', background: 'var(--tuw-bg-selected, #F8F5FF)' }}>Name</TableHead>
-                <TableHead style={{ width: '23%', background: 'var(--tuw-bg-selected, #F8F5FF)' }}>Link</TableHead>
-                <TableHead style={{ width: '14%', background: 'var(--tuw-bg-selected, #F8F5FF)' }}>Capacity</TableHead>
-                <TableHead style={{ width: 200, background: 'var(--tuw-bg-selected, #F8F5FF)', borderTopRightRadius: 'var(--radius-nav, 10px)', borderBottomRightRadius: 'var(--radius-nav, 10px)' }}>Actions</TableHead>
+                <TableHead style={{ width: '22%', background: 'var(--tuw-bg-selected, #F8F5FF)', borderTopLeftRadius: 'var(--radius-nav, 10px)', borderBottomLeftRadius: 'var(--radius-nav, 10px)' }}>Structure</TableHead>
+                <TableHead style={{ width: '24%', background: 'var(--tuw-bg-selected, #F8F5FF)' }}>Name</TableHead>
+                <TableHead style={{ width: '19%', background: 'var(--tuw-bg-selected, #F8F5FF)' }}>Link</TableHead>
+                <TableHead style={{ width: '11%', background: 'var(--tuw-bg-selected, #F8F5FF)' }}>Capacity</TableHead>
+                <TableHead style={{ width: 260, background: 'var(--tuw-bg-selected, #F8F5FF)', borderTopRightRadius: 'var(--radius-nav, 10px)', borderBottomRightRadius: 'var(--radius-nav, 10px)' }}>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -418,7 +435,7 @@ export default function NavigationManager({ items: initial }: { items: MenuItem[
                           style={{
                             display: 'inline-block',
                             width: 14,
-                            height: 26,
+                            height: 16,
                             flexShrink: 0,
                             borderLeft: '1px solid var(--color-nav-guide, #DDDDDD)',
                             borderBottom: '1px solid var(--color-nav-guide, #DDDDDD)',
@@ -466,8 +483,8 @@ export default function NavigationManager({ items: initial }: { items: MenuItem[
                         <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--tuw-text-secondary, #5D6772)' }}>
                           {FIELD_TEXT[row.kind].link}
                         </div>
-                        <div style={{ fontSize: 14, color: 'var(--tuw-text-secondary, #5D6772)' }}>A group — no destination</div>
-                        <div style={{ fontSize: 11, color: 'var(--tuw-text-secondary, #5D6772)' }}>{FIELD_TEXT[row.kind].linkHint}</div>
+                        <div style={{ fontSize: 14, color: 'var(--tuw-text-secondary, #5D6772)', whiteSpace: 'nowrap' }}>A group — no destination</div>
+                        <div style={{ fontSize: 11, color: 'var(--tuw-text-secondary, #5D6772)', whiteSpace: 'nowrap' }}>{FIELD_TEXT[row.kind].linkHint}</div>
                       </div>
                     ) : (
                       <EditableCell

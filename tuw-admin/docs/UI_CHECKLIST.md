@@ -255,3 +255,11 @@
 - [x] Legacy `mobile` / `desktop` documents are merged on read by normalised label + href, carrying over filters, features and shop-all, and appending items that exist in only one document. An explicit empty `menu` is respected, so clearing the menu is not undone by the fallback.
 - [x] New pure merge helper with 5 unit tests; admin suite now 90/90. Full typecheck, admin build and comment ratchet (3011/3016) pass.
 - [x] Browser QA: seeded overlapping legacy documents, confirmed one merged list of three items with no duplicates, saved, and verified `navbar.menu` was written while both legacy keys remained. Search, labelled chips and responsive widths re-checked. QA admin and nav rows cleaned afterwards.
+
+### Compact matrix rows (2026-11-24)
+
+- [x] Root cause of the ~253px rows found in the browser: the helper line used a unitless React `lineHeight: 16`, which the browser computes as 16 × the 11px font = 176px. Changed to an explicit `'16px'`.
+- [x] Helper and column captions are now single-line with ellipsis and a `title` tooltip, so narrow columns cannot inflate a row.
+- [x] Actions column widened from 200px to 260px and the other widths rebalanced to 22/24/19/11 percent so the total stays under 100 percent. Chips now occupy one nowrap line (`Column`, `Feature`, `Shop all`) and move/remove a second line.
+- [x] Measured row height in the browser at 360 / 768 / 1024 / 1440: **94px at every width** (was 253px), all three chips on one line, no page-level horizontal overflow.
+- [x] Gates re-run: typecheck, 90/90 admin tests, build, comment ratchet 3011/3016.

@@ -2164,6 +2164,8 @@
   background-color: var(--tuw-bg-surface, #FFFFFF);
   border: 1px solid var(--tuw-border-subtle, #E9E9E9);
   border-radius: var(--radius-nav, 10px);
+  min-height: 56px;
+  vertical-align: middle;
   transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
