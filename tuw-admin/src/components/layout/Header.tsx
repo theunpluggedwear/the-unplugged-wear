@@ -35,6 +35,8 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
   const navGroups = visibleNavGroups(permissions);
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [renderedKey, setRenderedKey] = useState<string | null>(null);
+  const navSuppressedRef = React.useRef<string | null>(null);
+  const navSourceRef = React.useRef<'hover' | 'click' | null>(null);
   const navRef = React.useRef<HTMLDivElement>(null);
   const navAnim = usePopoverAnimation(openKey !== null, () => setRenderedKey(null));
   const activeGroup = getActiveGroupForPath(pathname);
@@ -52,7 +54,17 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
   }, [openKey]);
 
   useEffect(() => {
-    const close = () => setOpenKey(null);
+    setOpenKey(null);
+    setRenderedKey(null);
+    navSourceRef.current = null;
+  }, [pathname]);
+
+  useEffect(() => {
+    const close = (event: PointerEvent) => {
+      if (navRef.current?.contains(event.target as Node)) return;
+      setOpenKey(null);
+      navSourceRef.current = null;
+    };
     document.addEventListener('pointerdown', close);
     return () => document.removeEventListener('pointerdown', close);
   }, []);
@@ -66,6 +78,8 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
       if (e.key === 'Escape') {
         setIsSearchOpen(false);
         setOpenKey(null);
+        navSuppressedRef.current = 'all';
+        navSourceRef.current = null;
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -99,7 +113,11 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
         <div
           className="topBarCenter"
           ref={navRef}
-          onMouseLeave={() => setOpenKey(null)}
+          onMouseLeave={() => {
+            setOpenKey(null);
+            navSuppressedRef.current = null;
+            navSourceRef.current = null;
+          }}
           onMouseEnter={() => navAnim.cancelClose()}
           onPointerDown={(event) => event.stopPropagation()}
         >
@@ -111,13 +129,31 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
                 <button
                   key={group.key}
                   type="button"
-                  className={cn('topNavTrigger', activeGroup === group.key && 'topNavTriggerActive')}
+                  className={cn('topNavTrigger', (isOpen || activeGroup === group.key) && 'topNavTriggerActive')}
                   aria-haspopup="true"
                   aria-expanded={isOpen}
                   aria-controls={`mega-${group.key}`}
-                  onMouseEnter={() => setOpenKey(group.key)}
-                  onFocus={() => setOpenKey(group.key)}
-                  onClick={() => setOpenKey(group.key)}
+                  onMouseEnter={() => {
+                    if (navSuppressedRef.current === group.key || navSuppressedRef.current === 'all') return;
+                    setOpenKey(group.key);
+                    navSourceRef.current = 'hover';
+                  }}
+                  onFocus={() => {
+                    if (navSuppressedRef.current === group.key || navSuppressedRef.current === 'all') return;
+                    setOpenKey(group.key);
+                    navSourceRef.current = 'hover';
+                  }}
+                  onClick={() => {
+                    if (openKey === group.key) {
+                      setOpenKey(null);
+                      navSuppressedRef.current = group.key;
+                      navSourceRef.current = null;
+                    } else {
+                      setOpenKey(group.key);
+                      navSourceRef.current = 'click';
+                      navSuppressedRef.current = null;
+                    }
+                  }}
                 >
                   <GroupIcon size={16} />
                   <span>{group.label}</span>
@@ -148,7 +184,11 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
                       href={item.href}
                       role="menuitem"
                       className={cn('megaMenuItem', active && 'tuw-3d-active')}
-                      onClick={() => setOpenKey(null)}
+                      onClick={() => {
+                        setOpenKey(null);
+                        navSuppressedRef.current = 'all';
+                        navSourceRef.current = null;
+                      }}
                     >
                       <span className="megaMenuItemIcon"><ItemIcon size={17} /></span>
                       <span className="megaMenuItemText">

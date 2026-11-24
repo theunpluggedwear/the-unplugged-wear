@@ -331,3 +331,18 @@ Every scenario was run against the production build over the Tailscale URL with 
 - [x] Removed the page title from the header. Page headings already exist in `<main>` via each page's `PageHeader` — "Welcome back" was confirmed on Dashboard after the change.
 - [x] Mega-menu still centered (x=255/right=1175 in a 1430px viewport) and opens from the merged row. Below 768px the centre zone is hidden and the hamburger drawer still opens and navigates.
 - [x] Gates: full typecheck, 101/101 admin tests, admin build, comment ratchet 3011/3016. QA admin deleted.
+
+### Mega-menu close behaviour — rigorous QA (2026-11-24)
+
+Root causes found: `onClick` could not close a menu hover had already opened; the document click-outside listener also fired for clicks inside the nav, making toggles inconsistent; and there was no close on route change, so a stale panel survived navigation while the highlight still followed the previous page.
+
+Fixes: click now always closes an already-open trigger; a suppressed-hover flag prevents the cursor resting over a trigger from reopening after an intentional close; the click-outside listener ignores events inside the nav; route changes clear both open state and rendered panel immediately; menu-item clicks and Escape close and suppress hover until the pointer leaves; and the open section now carries the active trigger style.
+
+QA matrix results (all assertions on `[role="menu"]` count and `aria-expanded`):
+- [x] Hover opens exactly one panel; moving off the header closes it within ~200ms.
+- [x] Hover then click the same trigger closes it (`menus: 1 → 0`, `aria-expanded true → false`) — the reported defect.
+- [x] Hover Core then hover System switches panels with never more than one open; the open trigger is the highlighted one.
+- [x] Clicking a menu item navigates to `/orders` and leaves `menus: 0` both immediately and after the route settles; no stale panel.
+- [x] Escape closes an open panel; clicking outside the nav closes it.
+- [x] 1440/1024/768/360: center zone visible on desktop, hidden on mobile, header stays 80px, no page overflow.
+- [x] Gates re-run: full typecheck, 101/101 admin tests, admin build, comment ratchet 3011/3016. QA admin and browser tabs cleaned.
