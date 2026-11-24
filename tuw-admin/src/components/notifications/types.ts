@@ -27,14 +27,14 @@ export const NOTIFICATION_CATEGORIES: { value: NotificationCategory | 'all'; lab
 
 export interface RemoteReadState {
   readIds: ReadonlySet<string>;
-  markRead: (id: string) => void;
-  markAllRead: () => void;
+  markRead: (id: string) => Promise<void>;
+  markAllRead: () => Promise<void>;
 }
 
 export interface NotificationRepository {
   all: Notification[];
   unreadCount: number;
   isRead: (id: string) => boolean;
-  markRead: (id: string) => void;
-  markAllRead: () => void;
+  markRead: (id: string) => Promise<void>;
+  markAllRead: () => Promise<void>;
 }

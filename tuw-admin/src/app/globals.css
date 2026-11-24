@@ -879,6 +879,37 @@
   color: var(--tuw-action-primary, #7539FF);
 }
 
+.notificationPopover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  width: 400px;
+  max-width: min(400px, calc(100vw - 32px));
+  z-index: 50;
+}
+
+@media (max-width: 768px) {
+  .notificationPopover {
+    position: fixed;
+    top: 72px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - 88px);
+    overflow-y: auto;
+  }
+  .notificationPopover [role="dialog"] {
+    max-height: calc(100dvh - 88px);
+    overflow-y: auto;
+  }
+  .notificationFilters > [role="tablist"] {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+
 .notificationBadge {
   position: absolute;
   top: -2px;

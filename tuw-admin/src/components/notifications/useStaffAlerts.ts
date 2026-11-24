@@ -2,7 +2,27 @@
 
 import React from 'react';
 import { listNotificationsAction, markAllNotificationsReadAction, markNotificationReadAction } from '@/server/notification-actions';
-import type { Notification, RemoteReadState } from './types';
+import type { Notification, NotificationCategory, NotificationTone, RemoteReadState } from './types';
+
+const KIND_CATEGORY: Record<string, NotificationCategory> = {
+  order: 'orders',
+  cart: 'orders',
+  inventory: 'inventory',
+  payment: 'payment',
+  refund: 'payment',
+  system: 'system',
+  marketing: 'marketing',
+};
+
+const KIND_TONE: Record<string, NotificationTone> = {
+  order: 'info',
+  cart: 'warning',
+  inventory: 'warning',
+  payment: 'error',
+  refund: 'error',
+  system: 'info',
+  marketing: 'info',
+};
 
 const PREFIX = 'db:';
 
@@ -25,8 +45,8 @@ export function useStaffAlerts(open: boolean): { items: Notification[]; remote: 
       if (!live || !result.ok) return;
       setItems(result.data.map((n) => ({
         id: `${PREFIX}${n.id}`,
-        category: 'inventory',
-        tone: n.dedupeKey?.startsWith('inventory.out') ? 'error' : 'warning',
+        category: KIND_CATEGORY[n.kind] ?? 'system',
+        tone: n.dedupeKey?.startsWith('inventory.out') ? 'error' : (KIND_TONE[n.kind] ?? 'info'),
         title: n.title,
         body: n.body,
         time: timeAgo(n.createdAt),
@@ -39,10 +59,15 @@ export function useStaffAlerts(open: boolean): { items: Notification[]; remote: 
 
   const remote: RemoteReadState = {
     readIds,
-    markRead: (id) => {
-      if (id.startsWith(PREFIX)) void markNotificationReadAction({ id: id.slice(PREFIX.length) });
+    markRead: async (id) => {
+      if (!id.startsWith(PREFIX)) return;
+      const result = await markNotificationReadAction({ id: id.slice(PREFIX.length) });
+      if (!result.ok) throw new Error(result.error.message);
     },
-    markAllRead: () => { void markAllNotificationsReadAction({}); },
+    markAllRead: async () => {
+      const result = await markAllNotificationsReadAction({});
+      if (!result.ok) throw new Error(result.error.message);
+    },
   };
   return { items, remote };
 }

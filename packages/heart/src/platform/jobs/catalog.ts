@@ -8,6 +8,7 @@ import { reconcilePendingPayments, retryFailedWebhooks } from '../../modules/pay
 import { reconcileInvoiceDocuments } from '../../modules/invoices/index.ts';
 import { detectAbandonedCarts, maintainAnalyticsPartitions, rollupDaily } from '../../modules/analytics/index.ts';
 import { sendQueuedEmails } from '../../integrations/email/index.ts';
+import { pruneNotifications } from '../../modules/notifications/index.ts';
 import { sweepRateLimits } from '../ratelimit/index.ts';
 
 // Every job the system runs, registered in one place so any trigger (Cron
@@ -87,6 +88,12 @@ export function loadJobs(): void {
     name: 'notifications.sendQueued',
     description: 'Drain queued emails through the active transport.',
     run: async () => ({ processed: await sendQueuedEmails() }),
+  });
+
+  registerJob({
+    name: 'notifications.pruneOld',
+    description: 'Delete notifications older than the retention window (30 days).',
+    run: async () => ({ processed: await pruneNotifications() }),
   });
 
   registerJob({

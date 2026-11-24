@@ -110,12 +110,11 @@ export default function Header({
                     className="fixed inset-0 z-40 cursor-default"
                   />
                   <div
-                    style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', width: '400px', maxWidth: 'calc(100vw - 32px)', zIndex: 50 }}
-                    className={
+                    className={`notificationPopover ${
                       notifAnim.phase === 'closing'
                         ? 'animate-[popoverOut_0.15s_ease-in]'
                         : 'animate-[popoverIn_0.18s_ease-out]'
-                    }
+                    }`}
                   >
                     <NotificationPanel
                       repo={notifications}

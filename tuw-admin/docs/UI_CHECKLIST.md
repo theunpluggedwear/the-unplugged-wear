@@ -294,3 +294,12 @@ Every scenario was run against the production build over the Tailscale URL with 
 - [x] Keyboard: Enter commits, Escape discards and blur-after-Escape does not commit; chevron toggles with Enter and `aria-expanded` flips.
 - [x] Connector geometry unchanged after the patches: chevron centre 318.8, parent stem x=318.8 from 420.8→457.8, child elbow x=318.8 from 457.8 with 10px radius, all trunks at x=318.8.
 - [x] Gates: full typecheck, admin tests **96/96** (3 new sanitizer tests), admin build, comment ratchet 3011/3016.
+
+### Notification bell: mobile layout, read state, retention (2026-11-24)
+
+- [x] Root cause of the mobile glitch: the popover was `absolute; right:0; width:400px; max-width:calc(100vw - 32px)`. With the search button hidden below 680px, its left edge computed to roughly -52px on a 360px screen. A `notificationPopover` class now keeps the desktop behaviour and switches to `position:fixed; top:72px; left:12px; right:12px` below 768px, with viewport-height clamping and a wrapping filter rail.
+- [x] Browser QA with seven seeded notifications (one per `kind`): desktop popover 400px wide at x=868; at 768/390/360 the popover sits at x=12 with right edge inside the viewport, pills wrap to two rows, no page-level overflow, and tapping the scrim closes it.
+- [x] DB `kind` now maps to real categories (`order`/`cart` → Order & Sales, `payment`/`refund` → Payment, etc.) and tones, so the five filter pills are no longer dead controls. Payment shows payment + refund; System shows only system.
+- [x] Clicking a notification awaits the guarded mark-read action before navigating; the badge fell 7 → 6 and `read_at` was set for that row in Postgres. Mark all read cleared the badge and set all seven rows. A failed action now leaves the item unread and shows a `role="alert"` message instead of optimistically lying.
+- [x] Retention: `pruneNotifications()` deletes rows older than 30 days, registered as `notifications.pruneOld` and scheduled daily at 03:15 UTC in `tuw-admin/vercel.json`. Manual cron call with `CRON_SECRET` returned `processed: 1` for a 60-day-old QA row; all seven recent rows survived.
+- [x] Gates: full typecheck, 96/96 admin tests, admin build, comment ratchet 3011/3016. QA admin and seeded notification rows deleted.

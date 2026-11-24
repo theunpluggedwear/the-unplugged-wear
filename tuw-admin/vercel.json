@@ -51,6 +51,10 @@
       "schedule": "30 2 * * *"
     },
     {
+      "path": "/api/cron/notifications.pruneOld",
+      "schedule": "15 3 * * *"
+    },
+    {
       "path": "/api/cron/analytics.maintainPartitions",
       "schedule": "0 3 * * *"
     }

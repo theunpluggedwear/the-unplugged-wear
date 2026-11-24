@@ -29,7 +29,7 @@ const TONE_STYLES: Record<NotificationTone, { wash: string; ink: string; dot: st
 interface NotificationItemProps {
   item: Notification;
   read: boolean;
-  onOpen: (item: Notification) => void;
+  onOpen: (item: Notification) => void | Promise<void>;
 }
 
 
