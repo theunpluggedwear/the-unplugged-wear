@@ -654,6 +654,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 100%;
 }
 
 .topBarRight {
@@ -933,6 +934,23 @@
   border: 1px solid var(--tuw-border-subtle, #E9E9E9);
   border-radius: var(--radius-card, 12px);
   box-shadow: var(--shadow-popover, 0 8px 30px rgba(0, 0, 0, 0.12));
+}
+
+.megaMenu::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 0;
+  right: 0;
+  height: 12px;
+}
+
+.megaMenuOpening {
+  animation: popoverIn 0.18s ease-out;
+}
+
+.megaMenuClosing {
+  animation: popoverOut 0.15s ease-in forwards;
 }
 
 .megaMenuHead {
