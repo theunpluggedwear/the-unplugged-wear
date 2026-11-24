@@ -841,12 +841,16 @@
 }
 
 .topBarRight {
+  position: relative;
+  z-index: 60;
   display: flex;
   align-items: center;
   gap: 20px;
 }
 
 .actionIcons {
+  position: relative;
+  z-index: 50;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1038,6 +1042,8 @@
 }
 
 .notificationBtn {
+  position: relative;
+  z-index: 45;
   width: 40px;
   height: 40px;
   border-radius: 50%;

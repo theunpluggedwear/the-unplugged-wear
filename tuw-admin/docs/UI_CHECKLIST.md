@@ -346,3 +346,13 @@ QA matrix results (all assertions on `[role="menu"]` count and `aria-expanded`):
 - [x] Escape closes an open panel; clicking outside the nav closes it.
 - [x] 1440/1024/768/360: center zone visible on desktop, hidden on mobile, header stays 80px, no page overflow.
 - [x] Gates re-run: full typecheck, 101/101 admin tests, admin build, comment ratchet 3011/3016. QA admin and browser tabs cleaned.
+
+### Popover flicker investigation (2026-11-24)
+
+Two distinct code bugs were found and fixed; no speculative changes were made to notification item handling.
+
+- [x] **Shared animation hook:** `usePopoverAnimation.cancelClose()` unconditionally set phase to `open`, even while the controlling `open` prop was false. Re-entering `.topBarCenter` during the 180ms exit cleared the close timer, but the exit effect (`[open, startExit]`) did not re-run, leaving the panel mounted with `aria-expanded=false`. Added an `openRef` guard and `wasOpen` reset so `cancelClose` is a no-op when the popover is already closing. Verified: hover → click same trigger produces one close with no remount (MutationObserver mount count stayed at 1); hover off then back within 100ms never leaves a stale panel.
+- [x] **Notification bell:** the click-outside scrim (`z-40`) and the bell shared a stacking context, so the bell was not the hit target while the panel was open — clicks fell through to the scrim and toggled unexpectedly. Raised `.notificationBtn` to `z-index: 45`. Verified with `elementFromPoint` that the bell receives the click; open → close → reopen → outside-click all produced the expected single state change.
+- [x] QA note: the browser served a cached CSS chunk after the rebuild; a hard reload with the fresh chunk was required before the z-index fix took effect. This was a QA artifact, not a product bug.
+- [x] A notification with no `href` still keeps the panel open after mark-read (it is read in place); that behaviour was left unchanged because no defect in it was confirmed.
+- [x] Gates: full typecheck, 101/101 admin tests, admin build, comment ratchet 3011/3016. QA admin, seeded alert and browser tabs cleaned.

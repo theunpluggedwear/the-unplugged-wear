@@ -28,6 +28,8 @@ export function usePopoverAnimation(
 ): PopoverAnimation {
   const [phase, setPhase] = React.useState<PopoverPhase>(open ? 'open' : 'closed');
   const phaseRef = React.useRef<PopoverPhase>(open ? 'open' : 'closed');
+  const openRef = React.useRef(open);
+  openRef.current = open;
   const wasOpen = React.useRef(open);
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const onClosedRef = React.useRef(onClosed);
@@ -96,6 +98,8 @@ export function usePopoverAnimation(
     visible: phase !== 'closed',
     requestClose: startExit,
     cancelClose: () => {
+      if (!openRef.current) return;
+      wasOpen.current = true;
       clearTimer();
       setPhaseBoth('open');
     },
