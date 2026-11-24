@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   reactStrictMode: true,
   devIndicators: false,
+  allowedDevOrigins: ['ronil.tail3b8834.ts.net'],
   async redirects() {
     return [
       {
