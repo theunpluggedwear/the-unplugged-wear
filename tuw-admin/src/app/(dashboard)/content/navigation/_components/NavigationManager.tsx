@@ -5,8 +5,6 @@ import type { MenuItem } from '@tuw/heart/modules/content';
 import {
   ArrowDown,
   ArrowUp,
-  ChevronDown,
-  ChevronRight,
   Plus,
   Search,
   Trash2,
@@ -26,6 +24,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TreeGuide,
 } from '@/components/ui';
 import { saveMenuAction } from '@/server/content-actions';
 import {
@@ -35,6 +34,7 @@ import {
   patchAtPath,
   toRows,
   visibleRows,
+  withTreeGuides,
   type MatrixRow,
   type Path,
 } from '@/lib/navigation-matrix';
@@ -216,6 +216,7 @@ export default function NavigationManager({ items: initial }: { items: MenuItem[
   const caps = NAV_CAPS;
   const rows = useMemo(() => toRows(items), [items]);
   const result = useMemo(() => visibleRows(rows, query, collapsed), [rows, query, collapsed]);
+  const guided = useMemo(() => withTreeGuides(result.rows), [result.rows]);
   const isSearching = Boolean(query.trim());
 
   function markDirty() {
@@ -318,25 +319,26 @@ export default function NavigationManager({ items: initial }: { items: MenuItem[
       );
     }
     const canMove = row.kind !== 'shopAll';
+    const chipStyle: React.CSSProperties = { whiteSpace: 'nowrap' };
     const chips = (
       <>
         {row.kind === 'item' && row.capacity && row.capacity.used < caps.columns ? (
-          <Button variant="outline" size="sm" icon={<Plus size={14} />} onClick={() => addColumn(row.siblingIndex)}>
+          <Button variant="outline" size="sm" style={chipStyle} icon={<Plus size={14} />} onClick={() => addColumn(row.siblingIndex)}>
             Column
           </Button>
         ) : null}
         {row.kind === 'column' && row.capacity && row.capacity.used < caps.links ? (
-          <Button variant="outline" size="sm" icon={<Plus size={14} />} onClick={() => addLink(Number(row.path[0]), row.siblingIndex)}>
+          <Button variant="outline" size="sm" style={chipStyle} icon={<Plus size={14} />} onClick={() => addLink(Number(row.path[0]), row.siblingIndex)}>
             Link
           </Button>
         ) : null}
         {row.kind === 'item' && (getAtPath(items, [row.siblingIndex, 'features']) as unknown[] | undefined)?.length !== caps.features ? (
-          <Button variant="outline" size="sm" icon={<Plus size={14} />} onClick={() => addFeature(row.siblingIndex)}>
+          <Button variant="outline" size="sm" style={chipStyle} icon={<Plus size={14} />} onClick={() => addFeature(row.siblingIndex)}>
             Feature
           </Button>
         ) : null}
         {row.kind === 'item' && !getAtPath(items, [row.siblingIndex, 'shopAll']) ? (
-          <Button variant="outline" size="sm" icon={<Plus size={14} />} onClick={() => addShopAll(row.siblingIndex)}>
+          <Button variant="outline" size="sm" style={chipStyle} icon={<Plus size={14} />} onClick={() => addShopAll(row.siblingIndex)}>
             Shop all
           </Button>
         ) : null}
@@ -346,7 +348,7 @@ export default function NavigationManager({ items: initial }: { items: MenuItem[
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
         {hasChips ? (
-          <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 6, alignItems: 'center' }}>{chips}</div>
+          <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 6, alignItems: 'center', minWidth: 0 }}>{chips}</div>
         ) : null}
         <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 4, alignItems: 'center' }}>
           {canMove ? (
@@ -383,7 +385,7 @@ export default function NavigationManager({ items: initial }: { items: MenuItem[
       ) : null}
 
       <ContentCard>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end', marginBottom: 16 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 16 }}>
           <div style={{ flex: '1 1 300px' }}>
             <Input
               id="nav-search"
@@ -424,43 +426,24 @@ export default function NavigationManager({ items: initial }: { items: MenuItem[
               </TableRow>
             </TableHeader>
             <TableBody>
-              {result.rows.map((row) => (
+              {guided.map((row) => (
                 <TableRow key={row.id} className="tuw-nav-matrix-row">
-                  <TableCell style={{ padding: '10px 12px 10px 16px', borderTopLeftRadius: 'var(--radius-nav, 10px)', borderBottomLeftRadius: 'var(--radius-nav, 10px)' }}>
+                  <TableCell style={{ position: 'relative', padding: '10px 12px 10px 16px', borderTopLeftRadius: 'var(--radius-nav, 10px)', borderBottomLeftRadius: 'var(--radius-nav, 10px)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {Array.from({ length: row.depth }, (_, level) => (
-                        <span
-                          key={level}
-                          aria-hidden="true"
-                          style={{
-                            display: 'inline-block',
-                            width: 14,
-                            height: 16,
-                            flexShrink: 0,
-                            borderLeft: '1px solid var(--color-nav-guide, #DDDDDD)',
-                            borderBottom: '1px solid var(--color-nav-guide, #DDDDDD)',
-                            borderBottomLeftRadius: 'var(--radius-nav, 10px)',
-                          }}
-                        />
-                      ))}
-                      {row.hasChildren ? (
-                        <button
-                          type="button"
-                          aria-label={`${collapsed.has(row.id) ? 'Expand' : 'Collapse'} ${row.label || KIND_LABEL[row.kind]}`}
-                          aria-expanded={!collapsed.has(row.id)}
-                          onClick={() => setCollapsed((current) => {
-                            const next = new Set(current);
-                            if (next.has(row.id)) next.delete(row.id);
-                            else next.add(row.id);
-                            return next;
-                          })}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', padding: 2 }}
-                        >
-                          {collapsed.has(row.id) ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
-                        </button>
-                      ) : (
-                        <span style={{ display: 'inline-block', width: 18 }} />
-                      )}
+                      <TreeGuide
+                        depth={row.depth}
+                        ancestorHasNextSibling={row.ancestorHasNextSibling}
+                        hasChildren={row.hasChildren}
+                        hasVisibleChildren={result.rows.some((candidate) => candidate.parentId === row.id)}
+                        expanded={!collapsed.has(row.id)}
+                        label={row.label || KIND_LABEL[row.kind]}
+                        onToggle={() => setCollapsed((current) => {
+                          const next = new Set(current);
+                          if (next.has(row.id)) next.delete(row.id);
+                          else next.add(row.id);
+                          return next;
+                        })}
+                      />
                       <Badge variant={row.kind === 'item' ? 'info' : 'neutral'} size="sm">
                         {KIND_LABEL[row.kind]}
                       </Badge>

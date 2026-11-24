@@ -43,6 +43,11 @@ export interface MatrixRow {
   searchText: string;
 }
 
+export interface GuidedRow extends MatrixRow {
+  ancestorHasNextSibling: boolean[];
+  hasNextSibling: boolean;
+}
+
 export const NAV_CAPS = { items: 20, columns: 6, links: 30, features: 2 };
 
 export function toRows(items: NavItemShape[]): MatrixRow[] {
@@ -177,6 +182,37 @@ export function visibleRows(rows: MatrixRow[], query: string, collapsed: Set<str
     }
   }
   return { rows: rows.filter((row) => keep.has(row.id)), matches };
+}
+
+export function withTreeGuides(rows: MatrixRow[]): GuidedRow[] {
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const chains = rows.map((row) => {
+    const chain: string[] = [];
+    let parentId = row.parentId;
+    while (parentId) {
+      const parent = byId.get(parentId);
+      if (!parent) break;
+      chain.unshift(parent.id);
+      parentId = parent.parentId;
+    }
+    return chain;
+  });
+  const siblingGroups = new Map<string | null, MatrixRow[]>();
+  for (const row of rows) {
+    const group = siblingGroups.get(row.parentId) ?? [];
+    group.push(row);
+    siblingGroups.set(row.parentId, group);
+  }
+  const lastSibling = new Set(
+    [...siblingGroups.values()].map((group) => group[group.length - 1]!.id),
+  );
+
+  return rows.map((row, index) => ({
+    ...row,
+    ancestorHasNextSibling: chains[index]!.map((ancestorId, level) =>
+      chains.slice(index + 1).some((later) => later[level] === ancestorId)),
+    hasNextSibling: !lastSibling.has(row.id),
+  }));
 }
 
 export function getAtPath<T = unknown>(root: T, path: Path): unknown {

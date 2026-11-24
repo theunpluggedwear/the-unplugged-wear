@@ -7,6 +7,7 @@ import {
   patchAtPath,
   toRows,
   visibleRows,
+  withTreeGuides,
 } from '../src/lib/navigation-matrix.ts';
 
 const mobile = [
@@ -80,6 +81,51 @@ test('visibleRows matches labels at every level and honours collapse when not se
   const collapsed = visibleRows(rows, '', new Set(['0']));
   assert.deepEqual(collapsed.rows.map((r) => r.id), ['0', '1']);
   assert.equal(collapsed.matches, rows.length);
+});
+
+test('withTreeGuides keeps ancestor trunks when a middle ancestor has a later sibling', () => {
+  const menu = [{
+    label: 'Shop', href: '/shop',
+    columns: [
+      { title: 'Clothing', links: [{ label: 'Hoodies', href: '/h' }] },
+      { title: 'Help', links: [] },
+    ],
+    features: [{ title: 'Pullover' }],
+  }];
+  const rows = withTreeGuides(toRows(menu));
+  const link = rows.find((row) => row.kind === 'link');
+  assert.equal(link.depth, 2);
+  assert.deepEqual(link.ancestorHasNextSibling, [true, false]);
+  assert.equal(link.hasNextSibling, false);
+});
+
+test('withTreeGuides marks a terminal ancestor and a last sibling at depth one', () => {
+  const menu = [{
+    label: 'Shop', href: '/shop',
+    columns: [{ title: 'Clothing', links: [{ label: 'Hoodies', href: '/h' }] }],
+  }];
+  const rows = withTreeGuides(toRows(menu));
+  const column = rows.find((row) => row.kind === 'column');
+  assert.deepEqual(column.ancestorHasNextSibling, [true]);
+  assert.equal(column.hasNextSibling, false);
+  const link = rows.find((row) => row.kind === 'link');
+  assert.deepEqual(link.ancestorHasNextSibling, [false, false]);
+});
+
+test('withTreeGuides recomputes continuations from visible rows after collapse', () => {
+  const menu = [{
+    label: 'Shop', href: '/shop',
+    columns: [
+      { title: 'Clothing', links: [{ label: 'Hoodies', href: '/h' }] },
+      { title: 'Help', links: [] },
+    ],
+  }];
+  const all = toRows(menu);
+  const collapsed = visibleRows(all, '', new Set(['0.c0']));
+  const rows = withTreeGuides(collapsed.rows);
+  const help = rows.find((row) => row.id === '0.c1');
+  assert.deepEqual(help.ancestorHasNextSibling, [false]);
+  assert.equal(rows.some((row) => row.parentId === '0.c0'), false);
 });
 
 test('patchAtPath is immutable and preserves sibling metadata', () => {

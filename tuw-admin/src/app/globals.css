@@ -2177,3 +2177,43 @@
   background-color: var(--tuw-bg-surface, #FFFFFF);
   box-shadow: var(--shadow-nav-edge, inset 0 -2px 0 #d6d6d6);
 }
+
+.tuw-tree-slot {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  align-self: stretch;
+}
+
+.tuw-tree-line {
+  position: absolute;
+  left: 12px;
+  top: -8px;
+  height: calc(50% + 8px);
+  width: 1px;
+  background-color: var(--color-nav-guide, #DDDDDD);
+}
+
+.tuw-tree-line-through {
+  height: calc(100% + 16px);
+}
+
+.tuw-tree-line-down {
+  top: 50%;
+  height: calc(50% + 8px);
+}
+
+.tuw-tree-branch {
+  position: absolute;
+  left: 12px;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background-color: var(--color-nav-guide, #DDDDDD);
+}
+
+.tuw-tree-slot:has(.tuw-tree-line-through) .tuw-tree-branch,
+.tuw-nav-matrix-row:focus-within .tuw-tree-line,
+.tuw-nav-matrix-row:focus-within .tuw-tree-branch {
+  background-color: var(--color-nav-guide-active, #C4C4C4);
+}

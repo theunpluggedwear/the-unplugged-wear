@@ -263,3 +263,12 @@
 - [x] Actions column widened from 200px to 260px and the other widths rebalanced to 22/24/19/11 percent so the total stays under 100 percent. Chips now occupy one nowrap line (`Column`, `Feature`, `Shop all`) and move/remove a second line.
 - [x] Measured row height in the browser at 360 / 768 / 1024 / 1440: **94px at every width** (was 253px), all three chips on one line, no page-level horizontal overflow.
 - [x] Gates re-run: typecheck, 90/90 admin tests, build, comment ratchet 3011/3016.
+
+### Continuous tree connectors (2026-11-24)
+
+- [x] Replaced the floating 10px `╰` arcs with a dedicated `TreeGuide` primitive that draws crisp stems and elbows (0px radius), using the sidebar's `--color-nav-guide` / `--color-nav-guide-active` tokens. The sidebar's `.navTree` pseudo-element CSS was inspected but not reused: it is gapless, uses `nth-child` range tricks and the very 10px arc being removed, so it cannot serve `<tr>` rows with 8px gaps and search filtering.
+- [x] `withTreeGuides()` computes continuation by checking which later visible rows share each ancestor at each level, so a depth-2 Link under a Column with a following Feature tile gets a pass-through trunk at the ancestor level and a terminal elbow at its own level. Three new unit tests cover middle ancestors, last siblings and recomputation after collapse.
+- [x] Expanded parents draw a downward stem from beneath the chevron to the next row, crossing the 8px card gap; its x aligns exactly with the child's trunk. Collapsing removes descendants, their lines and the parent stem together.
+- [x] Guides render on leaf rows too, not only rows with children; only parents get a chevron.
+- [x] Toolbar uses `alignItems: center` so the row count lines up with the item pill and Collapse/Expand controls; `+ Shop all` is nowrap like `+ Column` and `+ Feature`.
+- [x] Browser QA at 360 / 768 / 1024 / 1440: zero connector arcs, chips on one line, no page-level overflow; measured chevron-to-stem offset 9px (half the icon width). Gates: typecheck, 93/93 admin tests, build, comment ratchet 3011/3016.
