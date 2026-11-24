@@ -13,8 +13,16 @@ export interface TreeGuideProps {
   onToggle: () => void;
 }
 
-const SLOT = 14;
-const SELF_SLOT = 22;
+const vars = {
+  '--tree-step': '20px',
+  '--chevron-size': '20px',
+  '--row-gap': '8px',
+  '--tree-elbow': '14px',
+} as React.CSSProperties;
+
+const treeX = (level: number): React.CSSProperties => ({
+  left: `calc(var(--tree-step) * ${level} + var(--chevron-size) / 2)`,
+});
 
 export default function TreeGuide({
   depth,
@@ -25,35 +33,34 @@ export default function TreeGuide({
   label,
   onToggle,
 }: TreeGuideProps) {
-  const guideWidth = depth * SLOT + SELF_SLOT;
+  const guideWidth = `calc(var(--tree-step) * ${depth} + var(--chevron-size))`;
 
   return (
     <>
       <div
         aria-hidden="true"
         style={{
+          ...vars,
           position: 'absolute',
-          left: 8,
+          left: 16,
           top: 0,
           bottom: 0,
           width: guideWidth,
           pointerEvents: 'none',
           zIndex: 2,
-          display: 'flex',
-          alignItems: 'stretch',
         }}
       >
-        {Array.from({ length: depth }, (_, level) => (
-          <span key={level} className="tuw-tree-slot" style={{ width: SLOT }}>
-            <span className={`tuw-tree-line${ancestorHasNextSibling[level] ? ' tuw-tree-line-through' : ''}`} />
-            <span className="tuw-tree-branch" />
-          </span>
-        ))}
-        <span className="tuw-tree-slot" style={{ width: SELF_SLOT }}>
-          {depth > 0 ? <span className="tuw-tree-line" /> : null}
-          {hasVisibleChildren && expanded ? <span className="tuw-tree-line tuw-tree-line-down" /> : null}
-          {depth > 0 ? <span className="tuw-tree-branch" /> : null}
-        </span>
+        {Array.from({ length: depth }, (_, level) =>
+          ancestorHasNextSibling[level] ? (
+            <span key={level} className="tuw-tree-line tuw-tree-line-through" style={treeX(level)} />
+          ) : null,
+        )}
+        {depth > 0 ? (
+          <span className="tuw-tree-elbow" style={treeX(depth - 1)} />
+        ) : null}
+        {hasVisibleChildren && expanded ? (
+          <span className="tuw-tree-line tuw-tree-line-parent" style={treeX(depth)} />
+        ) : null}
       </div>
 
       {hasChildren ? (
@@ -63,19 +70,31 @@ export default function TreeGuide({
           aria-label={`${expanded ? 'Collapse' : 'Expand'} ${label}`}
           aria-expanded={expanded}
           style={{
-            marginLeft: Math.max(0, guideWidth - 18),
+            ...vars,
+            marginLeft: `calc(var(--tree-step) * ${depth})`,
+            width: 'var(--chevron-size)',
+            height: 'var(--chevron-size)',
+            flexShrink: 0,
             background: 'none',
             border: 'none',
             cursor: 'pointer',
             display: 'inline-flex',
-            padding: 2,
-            flexShrink: 0,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0,
           }}
         >
           {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </button>
       ) : (
-        <span style={{ display: 'inline-block', width: guideWidth + 4, flexShrink: 0 }} />
+        <span
+          style={{
+            ...vars,
+            display: 'inline-block',
+            width: guideWidth,
+            flexShrink: 0,
+          }}
+        />
       )}
     </>
   );

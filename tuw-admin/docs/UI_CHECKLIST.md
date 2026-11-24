@@ -272,3 +272,11 @@
 - [x] Guides render on leaf rows too, not only rows with children; only parents get a chevron.
 - [x] Toolbar uses `alignItems: center` so the row count lines up with the item pill and Collapse/Expand controls; `+ Shop all` is nowrap like `+ Column` and `+ Feature`.
 - [x] Browser QA at 360 / 768 / 1024 / 1440: zero connector arcs, chips on one line, no page-level overflow; measured chevron-to-stem offset 9px (half the icon width). Gates: typecheck, 93/93 admin tests, build, comment ratchet 3011/3016.
+
+### Sidebar-matched connector geometry (2026-11-24)
+
+- [x] Replaced the sharp 90° branch with the sidebar's exact elbow recipe: 1px `--color-nav-guide` strokes, `border-bottom-left-radius: var(--radius-nav)` = 10px, 14px elbow width, active path `--color-nav-guide-active`. The sidebar's `.navTree` rules were left untouched; the visual recipe and tokens are shared, not its gapless `nth-child` geometry.
+- [x] One coordinate system: `--tree-step` 20px, `--chevron-size` 20px, `--row-gap` 8px, `--tree-elbow` 14px, declared inline on the guide elements because the CSS lives under Tailwind's `@theme`. Every stem/elbow uses `left: calc(var(--tree-step) * level + var(--chevron-size) / 2)`; the toggle has a fixed 20px slot, so its centre is exactly the line's x.
+- [x] Parent stem starts at `calc(50% + 10px)` beneath the chevron and ends at `bottom: 0` of the parent row; child elbows start at `-8px` and meet it. Pass-through trunks span the row plus both gaps. Collapsed rows render no descendants and no stems.
+- [x] Browser bounding boxes: with one child (Menu item → Feature tile), chevron centre, parent stem and child elbow are all **x=318.8**, stem bottom **457.8** equals elbow top **457.8**, elbow radius **10px**, zero pass-through lines. With siblings + 3 levels, all level-0 segments are at the same x=318.8 (one continuous line), level-1 at 338.8, no offset duplicate. Collapse → 1 row and zero lines; expand → 5 rows and all lines restored. No page overflow at 360/768/1024/1440.
+- [x] Gates re-run: typecheck, 93/93 admin tests, build, comment ratchet 3011/3016. QA admin and nav rows cleaned afterwards.
