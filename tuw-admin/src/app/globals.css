@@ -632,9 +632,9 @@
   min-height: 80px;
   background-color: var(--tuw-bg-surface, #FFFFFF);
   border-bottom: 1px solid var(--tuw-border-subtle, #E5E7EB);
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   padding: 0 30px;
   position: sticky;
   top: 0;
@@ -646,6 +646,18 @@
   display: flex;
   align-items: center;
   gap: 20px;
+  justify-self: start;
+  min-width: 0;
+}
+
+.topBarCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.topBarRight {
+  justify-self: end;
 }
 
 .mobileMenuBtn {
@@ -850,12 +862,10 @@
 
 .topBrandMark {
   display: inline-flex;
-  width: 32px;
-  height: 32px;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-control, 8px);
-  background-color: var(--tuw-action-primary, #7539FF);
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .topBrandText {
@@ -863,18 +873,6 @@
   font-weight: 700;
   color: var(--color-nav-active-text, #111827);
   white-space: nowrap;
-}
-
-.topNav {
-  position: relative;
-  z-index: 80;
-  display: flex;
-  min-height: 52px;
-  align-items: center;
-  justify-content: center;
-  padding: 0 24px;
-  background-color: var(--tuw-bg-surface, #FFFFFF);
-  border-bottom: 1px solid var(--tuw-border-subtle, #E9E9E9);
 }
 
 .topNavTriggers {
@@ -925,7 +923,7 @@
   left: 50%;
   transform: translateX(-50%);
   width: min(920px, calc(100vw - 48px));
-  z-index: 85;
+  z-index: 95;
   padding: 20px;
   background-color: var(--tuw-bg-surface, #FFFFFF);
   border: 1px solid var(--tuw-border-subtle, #E9E9E9);
@@ -1009,7 +1007,10 @@
 }
 
 @media (max-width: 768px) {
-  .topNav {
+  .topBar {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .topBarCenter {
     display: none;
   }
   .topBrandText {

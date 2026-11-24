@@ -1,11 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
-import TopNav from '@/components/layout/TopNav';
-import { pageTitleFor } from '@/lib/page-titles';
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -14,9 +11,7 @@ interface DashboardShellProps {
   permissions: string[];
 }
 
-export default function DashboardShell({ children, pageTitle, permissions }: DashboardShellProps) {
-  const pathname = usePathname();
-  const title = pageTitle ?? pageTitleFor(pathname);
+export default function DashboardShell({ children, permissions }: DashboardShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -35,11 +30,10 @@ export default function DashboardShell({ children, pageTitle, permissions }: Das
       />
 
       <Header
-        pageTitle={title}
         mobileMenuOpen={mobileMenuOpen}
         onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
+        permissions={permissions}
       />
-      <TopNav permissions={permissions} />
 
       <main
         id="main-content"

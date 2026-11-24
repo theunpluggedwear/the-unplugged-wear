@@ -322,3 +322,12 @@ Every scenario was run against the production build over the Tailscale URL with 
 - [x] Extracted nav groups, permissions and active-path resolution into `tuw-admin/src/lib/admin-nav.ts`, shared by the top nav and the mobile drawer. Added `/discounts: order.view`, which was previously unguarded and leaked to staff without order access.
 - [x] Browser QA at 1440/1024/768/360: no desktop sidebar, no page overflow; the Operations mega-menu measured x=255/right=1175 in a 1430px viewport (exactly centered); hover switching, click-to-open, Escape and item navigation to `/orders` all worked; active section highlighted Core on `/dashboard`. Found and fixed a click bug where hover had already opened the menu so the click closed it.
 - [x] Three new unit tests cover section inventory, permission filtering and active-path resolution. Gates: full typecheck, 101/101 admin tests, admin build, comment ratchet 3011/3016. QA admin deleted.
+
+### Single-row header cleanup (2026-11-24)
+
+- [x] Removed the separate `TopNav` component and its strip. The four triggers and their mega-menu now live inside `Header`, on the same 80px row as the dark brand and the search/bell/avatar actions. `.topBar` is a three-zone grid so the centre zone is exactly centered (measured centreX = headerCentre = 715 at 1440).
+- [x] Replaced the purple logo tile with the existing dark stag asset (`tuw-stag-dark.png`) at 26px; computed background is transparent, no purple square.
+- [x] Removed the profile name/role text. Only the avatar remains, with `title`/`aria-label` preserving the login name and role for hover and screen readers.
+- [x] Removed the page title from the header. Page headings already exist in `<main>` via each page's `PageHeader` — "Welcome back" was confirmed on Dashboard after the change.
+- [x] Mega-menu still centered (x=255/right=1175 in a 1430px viewport) and opens from the merged row. Below 768px the centre zone is hidden and the hamburger drawer still opens and navigates.
+- [x] Gates: full typecheck, 101/101 admin tests, admin build, comment ratchet 3011/3016. QA admin deleted.

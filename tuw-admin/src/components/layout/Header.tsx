@@ -3,17 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Search, Bell, Menu, X } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { Search, Bell, Menu, X, ChevronDown } from 'lucide-react';
 import { getCurrentStaffAction } from '@/server/session-actions';
 import { SearchModal } from '@/components/search';
 import { useNotifications, useStaffAlerts, NotificationPanel } from '@/components/notifications';
 import { usePopoverAnimation } from '@/hooks/usePopoverAnimation';
+import { cn } from '@/lib/cn';
+import { getActiveGroupForPath, visibleNavGroups, type AdminNavGroup } from '@/lib/admin-nav';
 
 interface HeaderProps {
-  pageTitle?: string;
   mobileMenuOpen: boolean;
   onToggleMobileMenu: () => void;
+  permissions: string[];
 }
 
 interface StaffInfo {
@@ -23,16 +25,19 @@ interface StaffInfo {
   permissions: string[];
 }
 
-export default function Header({
-  pageTitle = 'Dashboard',
-  mobileMenuOpen,
-  onToggleMobileMenu,
-}: HeaderProps) {
+export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions }: HeaderProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [staff, setStaff] = useState<StaffInfo | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const notifAnim = usePopoverAnimation(showNotifications, () => setShowNotifications(false));
+  const navGroups = visibleNavGroups(permissions);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [renderedKey, setRenderedKey] = useState<string | null>(null);
+  const navRef = React.useRef<HTMLDivElement>(null);
+  const navAnim = usePopoverAnimation(openKey !== null, () => setRenderedKey(null));
+  const activeGroup = getActiveGroupForPath(pathname);
 
   useEffect(() => {
     let live = true;
@@ -43,6 +48,16 @@ export default function Header({
   }, []);
 
   useEffect(() => {
+    if (openKey) setRenderedKey(openKey);
+  }, [openKey]);
+
+  useEffect(() => {
+    const close = () => setOpenKey(null);
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
@@ -50,6 +65,7 @@ export default function Header({
       }
       if (e.key === 'Escape') {
         setIsSearchOpen(false);
+        setOpenKey(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -65,6 +81,7 @@ export default function Header({
   const notifications = useNotifications(alerts.items, alerts.remote);
   const role = staff?.roles.find((item) => item !== 'customer') ?? 'Staff';
   const displayName = staff?.name ?? 'Staff';
+  const rendered: AdminNavGroup | undefined = navGroups.find((group) => group.key === renderedKey);
 
   return (
     <>
@@ -74,12 +91,76 @@ export default function Header({
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
           <Link href="/dashboard" className="topBrand" aria-label="TUW Admin home">
-            <span className="topBrandMark">
-              <Image src="/logos/tuw-stag-white.png" alt="The Unplugged Wear" width={22} height={22} className="h-[22px] w-auto object-contain" priority />
-            </span>
+            <Image src="/logos/tuw-stag-dark.png" alt="The Unplugged Wear" width={26} height={26} className="topBrandMark" priority />
             <span className="topBrandText">TUW Admin</span>
           </Link>
-          <h1 className="pageTitle">{pageTitle}</h1>
+        </div>
+
+        <div
+          className="topBarCenter"
+          ref={navRef}
+          onMouseLeave={() => setOpenKey(null)}
+          onMouseEnter={() => navAnim.cancelClose()}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <div className="topNavTriggers">
+            {navGroups.map((group) => {
+              const isOpen = openKey === group.key;
+              const GroupIcon = group.icon;
+              return (
+                <button
+                  key={group.key}
+                  type="button"
+                  className={cn('topNavTrigger', activeGroup === group.key && 'topNavTriggerActive')}
+                  aria-haspopup="true"
+                  aria-expanded={isOpen}
+                  aria-controls={`mega-${group.key}`}
+                  onMouseEnter={() => setOpenKey(group.key)}
+                  onFocus={() => setOpenKey(group.key)}
+                  onClick={() => setOpenKey(group.key)}
+                >
+                  <GroupIcon size={16} />
+                  <span>{group.label}</span>
+                  <ChevronDown size={13} className={cn('topNavChevron', isOpen && 'topNavChevronOpen')} />
+                </button>
+              );
+            })}
+          </div>
+
+          {navAnim.visible && rendered ? (
+            <div
+              id={`mega-${rendered.key}`}
+              role="menu"
+              aria-label={`${rendered.label} menu`}
+              className={cn('megaMenu', navAnim.phase === 'closing' ? 'animate-[popoverOut_0.15s_ease-in]' : 'animate-[popoverIn_0.18s_ease-out]')}
+            >
+              <div className="megaMenuHead">
+                <span className="megaMenuTitle">{rendered.label}</span>
+                <span className="megaMenuCount">{rendered.items.length} sections</span>
+              </div>
+              <div className="megaMenuGrid">
+                {rendered.items.map((item) => {
+                  const ItemIcon = item.icon;
+                  const active = item.match.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      role="menuitem"
+                      className={cn('megaMenuItem', active && 'tuw-3d-active')}
+                      onClick={() => setOpenKey(null)}
+                    >
+                      <span className="megaMenuItemIcon"><ItemIcon size={17} /></span>
+                      <span className="megaMenuItemText">
+                        <span className="megaMenuItemLabel">{item.label}</span>
+                        {item.badge ? <span className="megaMenuBadge">{item.badge.text}</span> : null}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="topBarRight">
@@ -137,7 +218,7 @@ export default function Header({
             </div>
           </div>
 
-          <div className="userProfile" title={`Logged in as ${displayName}`}>
+          <div className="userProfile" title={`Logged in as ${displayName} (${role})`} aria-label={`Logged in as ${displayName} (${role})`}>
             <div className="avatarCodeWrapper">
               <svg
                 width="40"
@@ -159,12 +240,6 @@ export default function Header({
                   {displayName.slice(0, 1).toUpperCase()}
                 </text>
               </svg>
-            </div>
-            <div className="userInfo">
-              <span className="userName">{displayName}</span>
-              <span className="userRole" style={{ color: 'var(--tuw-action-primary)', fontWeight: 600 }}>
-                {role}
-              </span>
             </div>
           </div>
         </div>
