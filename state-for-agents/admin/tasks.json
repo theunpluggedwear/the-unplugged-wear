@@ -8,14 +8,14 @@
     "reference": "Figma WmpPcdGcXerVgqNpgr6Q6S + production screenshots"
   },
   "summary": {
-    "total": 471,
-    "done": 435,
+    "total": 472,
+    "done": 436,
     "in_progress": 13,
     "backlog": 23
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "f004de8",
+    "tip": "7c1fc2c",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -8317,6 +8317,26 @@
       "pushed": false,
       "follow_ups": [
         "Wire tuw-website header/nav to navigation_settings.navbar.desktop with NAV_ITEMS fallback when storefront work is approved."
+      ]
+    },
+    {
+      "id": "TL-UI-NAV-SHARED",
+      "title": "One shared store menu for drawer and desktop header",
+      "status": "done",
+      "owner": "agent",
+      "started": "2026-11-24",
+      "finished": "2026-11-24",
+      "log": "Removed the two tabs and the separate mobile/desktop documents from /content/navigation. The storefront already renders one NAV_ITEMS list in both Header and MobileMenu, so the admin now edits one canonical navigation_settings.navbar.menu document in a single table. Feature tiles and shop-all remain editable but are labelled desktop header only. Unified caps 20/6/30/2. Added a pure merge helper that combines legacy mobile and desktop documents by normalised label+href, carrying filters/features/shop-all across and respecting an explicit empty menu; legacy keys are never overwritten. Replaced the four nav actions with adminGetMenu/adminSaveMenu and one guarded saveMenuAction. Browser QA merged seeded overlapping legacy docs into three unique items, saved, and confirmed navbar.menu was written with both legacy keys preserved. Gates: full typecheck, admin tests 90/90, admin build, comment ratchet 3011/3016. Storefront not touched; menu remains a CMS draft until wiring is approved.",
+      "design_match": "yes",
+      "key_decisions": [
+        "One canonical navbar.menu document instead of mobile/desktop copies.",
+        "No tabs; desktop extras are inline rows ignored by the drawer.",
+        "Legacy documents merged on read and never overwritten."
+      ],
+      "verified": true,
+      "pushed": false,
+      "follow_ups": [
+        "Wire the storefront Header and MobileMenu to navbar.menu with NAV_ITEMS fallback when storefront work is approved."
       ]
     }
   ],
