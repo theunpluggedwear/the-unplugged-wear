@@ -287,7 +287,40 @@ export default function NavigationManager({ items: initial }: { items: MenuItem[
       ((current as unknown[] | undefined) ?? []).filter((_, index) => index !== row.siblingIndex));
   }
 
+  function findProblems(): string[] {
+    const problems: string[] = [];
+    items.forEach((item, index) => {
+      const where = item.label.trim() || `Menu item ${index + 1}`;
+      if (!item.label.trim()) problems.push(`${where}: menu name is required`);
+      if (!item.href.trim()) problems.push(`${where}: menu link is required`);
+      (item.columns ?? []).forEach((column, columnIndex) => {
+        const columnWhere = column.title.trim() || `${where} → column ${columnIndex + 1}`;
+        if (!column.title.trim()) problems.push(`${columnWhere}: column heading is required`);
+        column.links.forEach((link, linkIndex) => {
+          const linkWhere = link.label.trim() || `${columnWhere} → link ${linkIndex + 1}`;
+          if (!link.label.trim()) problems.push(`${linkWhere}: link text is required`);
+          if (!link.href.trim()) problems.push(`${linkWhere}: destination is required`);
+        });
+      });
+      (item.features ?? []).forEach((feature, featureIndex) => {
+        if (!feature.title?.trim()) problems.push(`${where} → feature ${featureIndex + 1}: title is required`);
+      });
+      if (item.shopAll) {
+        if (!item.shopAll.label.trim()) problems.push(`${where}: shop-all text is required`);
+        if (!item.shopAll.href.trim()) problems.push(`${where}: shop-all link is required`);
+      }
+    });
+    return problems;
+  }
+
   async function save() {
+    const problems = findProblems();
+    if (problems.length) {
+      const shown = problems.slice(0, 3).join(' · ');
+      const rest = problems.length > 3 ? ` (+${problems.length - 3} more)` : '';
+      setNotice({ tone: 'error', text: `Fix before saving: ${shown}${rest}` });
+      return;
+    }
     setBusy(true);
     setNotice(null);
     try {

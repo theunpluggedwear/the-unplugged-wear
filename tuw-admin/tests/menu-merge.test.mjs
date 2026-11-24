@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mergeLegacyMenu } from '../../packages/heart/src/modules/content/menu-merge.ts';
+import { mergeLegacyMenu, sanitizeMenu } from '../../packages/heart/src/modules/content/menu-merge.ts';
 
 const mobile = [
   {
@@ -48,6 +48,44 @@ test('desktop-only items are appended and opaque fields are kept', () => {
 test('malformed or missing legacy documents produce an empty menu', () => {
   assert.deepEqual(mergeLegacyMenu(undefined, undefined), []);
   assert.deepEqual(mergeLegacyMenu('not-an-array', 42), []);
+});
+
+test('sanitizeMenu keeps valid rows and drops only the invalid one', () => {
+  const result = sanitizeMenu([
+    { label: '', href: '/broken', columns: [] },
+    { label: 'Valid', href: '/valid', columns: [{ title: 'Group', links: [{ label: 'Good', href: '/good' }] }] },
+  ]);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].label, 'Valid');
+  assert.equal(result[0].columns[0].links[0].href, '/good');
+});
+
+test('sanitizeMenu caps fields, drops bad children and preserves opaque metadata', () => {
+  const result = sanitizeMenu([{
+    label: 'Shop', href: '/shop',
+    columns: [
+      { title: 'Group', links: [
+        { label: 'Good', href: '/good', filter: { category: 'hoodies' } },
+        { label: '', href: '/bad' },
+      ] },
+      { title: '', links: [] },
+    ],
+    features: [{ productSlug: 'hoodie', imagePosition: '50% 0%' }, {}],
+    shopAll: { label: 'All', href: '/all', filter: { audience: 'all' } },
+  }]);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].columns.length, 1);
+  assert.equal(result[0].columns[0].links.length, 1);
+  assert.deepEqual(result[0].columns[0].links[0].filter, { category: 'hoodies' });
+  assert.equal(result[0].features.length, 1);
+  assert.equal(result[0].features[0].imagePosition, '50% 0%');
+  assert.deepEqual(result[0].shopAll.filter, { audience: 'all' });
+});
+
+test('sanitizeMenu accepts over-cap data by clamping to the schema limits', () => {
+  const result = sanitizeMenu(Array.from({ length: 25 }, (_, i) => ({ label: `Item ${i}`, href: `/i/${i}`, columns: [] })));
+  assert.equal(result.length, 20);
+  assert.deepEqual(sanitizeMenu('not-an-array'), []);
 });
 
 test('the merged list is capped at twenty items', () => {

@@ -280,3 +280,17 @@
 - [x] Parent stem starts at `calc(50% + 10px)` beneath the chevron and ends at `bottom: 0` of the parent row; child elbows start at `-8px` and meet it. Pass-through trunks span the row plus both gaps. Collapsed rows render no descendants and no stems.
 - [x] Browser bounding boxes: with one child (Menu item → Feature tile), chevron centre, parent stem and child elbow are all **x=318.8**, stem bottom **457.8** equals elbow top **457.8**, elbow radius **10px**, zero pass-through lines. With siblings + 3 levels, all level-0 segments are at the same x=318.8 (one continuous line), level-1 at 338.8, no offset duplicate. Collapse → 1 row and zero lines; expand → 5 rows and all lines restored. No page overflow at 360/768/1024/1440.
 - [x] Gates re-run: typecheck, 93/93 admin tests, build, comment ratchet 3011/3016. QA admin and nav rows cleaned afterwards.
+
+### Adversarial QA pass (2026-11-24)
+
+Every scenario was run against the production build over the Tailscale URL with a temporary QA admin, then the admin and `navbar` were reset.
+
+- [x] **Empty form save (DEFECT FOUND → FIXED):** Add menu item then Save without typing produced a raw Zod message ("String must contain at least 1 character(s)"). Save now validates locally and reports `Fix before saving: Menu item 2: menu name is required · Menu item 2: menu link is required`; inputs remain on screen.
+- [x] **One invalid stored row (DEFECT FOUND → FIXED):** `navbar.menu` with one empty-label item made the whole menu disappear (0 rows). `sanitizeMenu()` now keeps valid rows and drops only invalid ones — the valid item survives.
+- [x] **Over-cap stored data (same DEFECT → FIXED):** 21 items / 7 columns / 31 links / 3 features previously produced 0 rows; now clamps to 20/6/30/2 and renders 189 rows with `1 / 20 items`, no page overflow.
+- [x] Broken `menu` type (string) → graceful empty state, no crash. Long 100/200-char text at 360/768/1024/1440 → 94px rows, zero overflow. Explicit empty menu saved → stays empty after reload. Legacy mobile+desktop merge still yields one deduped item with its feature.
+- [x] Caps live: 20 items → Add disabled with "Limit of 20 items reached". Move a parent with children → subtree follows. Two-step remove cancel/confirm works; removing a feature leaves the others intact.
+- [x] Search: literal special characters, uppercase, href-only, whitespace-only (treated as no search), and ancestor-sticky reveal of a nested link while its parent is collapsed all pass; Collapse/Expand all disabled during search.
+- [x] Keyboard: Enter commits, Escape discards and blur-after-Escape does not commit; chevron toggles with Enter and `aria-expanded` flips.
+- [x] Connector geometry unchanged after the patches: chevron centre 318.8, parent stem x=318.8 from 420.8→457.8, child elbow x=318.8 from 457.8 with 10px radius, all trunks at x=318.8.
+- [x] Gates: full typecheck, admin tests **96/96** (3 new sanitizer tests), admin build, comment ratchet 3011/3016.

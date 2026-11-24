@@ -4,7 +4,7 @@ import { getDb, withTransaction } from '../../platform/db/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
 import { menu } from './schemas.ts';
-import { mergeLegacyMenu, type MenuItem } from './menu-merge.ts';
+import { mergeLegacyMenu, sanitizeMenu, type MenuItem } from './menu-merge.ts';
 
 export type { MenuItem } from './menu-merge.ts';
 
@@ -72,8 +72,7 @@ export async function saveNavigation(navbar: Record<string, unknown>, actorId: s
 export async function getStorefrontMenu(): Promise<MenuItem[]> {
   const navbar = await getNavigation();
   if (navbar.menu !== undefined) {
-    const current = menu.safeParse(navbar.menu);
-    return current.success ? current.data : [];
+    return sanitizeMenu(navbar.menu);
   }
   return mergeLegacyMenu(navbar.mobile, navbar.desktop);
 }
