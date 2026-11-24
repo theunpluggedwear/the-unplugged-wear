@@ -241,7 +241,7 @@
 
 ### Navigation matrix UX pass (2026-11-24)
 
-- [x] Replaced the vague `Label` / `Link / URL` / `Item / column / link` headers with `Structure · Name · Link · Capacity · Actions`. Every row now shows a contextual field name and helper: Menu name / Column heading / Link text / Feature title / Shop-all text, with hints such as "Groups the links beneath it" and "What customers click". A one-line explainer sits above the table on each tab.
+- [x] Replaced the vague `Label` / `Link / URL` / `Item / column / link` headers with `Structure · Name · Link · Capacity · Actions`. Every row now shows a contextual field name and helper: Menu name / Column heading / Link text / Feature title / Shop-all text, with hints such as "Groups the links beneath it" and "What customers click".
 - [x] Column rows now state "A group — no destination" instead of a bare dash, so it is clear why they have no link.
 - [x] Rows are rounded white cards using the sidebar's own tokens: `--radius-nav` 10px, `--tuw-bg-surface`, `--tuw-border-subtle`, `--shadow-nav-edge` and `--color-nav-branch-hover`. Hover applies the nav wash; `:focus-within` applies the sidebar's inset bottom edge. Tree guides are curved elbows (`border-bottom-left-radius: var(--radius-nav)`) like the sidebar's `navTree`. Header corners are rounded too.
 - [x] The three ambiguous `+` icon buttons are now labelled chips (`Column`, `Feature`, `Shop all`) and column rows use a labelled `Link` chip. Move/remove remain icon buttons with `title` tooltips as a secondary cue.

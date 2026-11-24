@@ -478,12 +478,6 @@ export default function NavigationManager({
           </Button>
         </div>
 
-        <div style={{ fontSize: 13, lineHeight: 20, color: 'var(--tuw-text-secondary, #5D6772)', marginBottom: 14 }}>
-          {mode === 'mobile'
-            ? 'Each menu item becomes a top-level link in the phone and tablet drawer. Columns group the links shown inside it.'
-            : 'Each menu item becomes a top tab in the desktop mega-menu. Columns group the links, and feature tiles are the image cards on the right.'}
-        </div>
-
         {items.length === 0 ? (
           <EmptyState
             title={mode === 'mobile' ? 'No mobile menu items' : 'No desktop menu items'}
