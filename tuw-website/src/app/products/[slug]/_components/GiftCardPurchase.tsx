@@ -64,7 +64,7 @@ export default function GiftCardPurchase({ product, validityMonths }: { product:
       </div>
       <div className="space-y-5">
         <p className="text-xs uppercase tracking-widest text-store-muted">Digital gift card</p>
-        <h1 className="text-3xl font-semibold text-store-charcoal">{product.title}</h1>
+        <h1 className="tuw-h1 text-store-charcoal">{product.title}</h1>
         <p className="text-sm text-store-text-secondary">
           A thoughtful gift that never gets printed or shipped. The recipient gets a code by email, ready to use at checkout.
         </p>

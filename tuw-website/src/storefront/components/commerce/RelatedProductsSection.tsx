@@ -62,7 +62,7 @@ export default function RelatedProductsSection({
               {eyebrow}
             </span>
           )}
-          <h2 className="text-2xl font-heading font-medium text-store-charcoal">
+          <h2 className="tuw-h2 text-store-charcoal">
             {title}
           </h2>
         </div>

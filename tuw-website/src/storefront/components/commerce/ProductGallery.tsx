@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Camera, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Camera, ChevronLeft, ChevronRight, Maximize2, Play } from 'lucide-react';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
 import Modal from '@storefront/components/ui/Modal';
 import { isPlaceholderImage } from '@storefront/lib/product';
@@ -16,54 +16,105 @@ export interface ProductGalleryProps {
   title: string;
   videoUrl?: string;
   selectedColorValue?: string;
+  /** Colour names by value, so the gallery can say which colour a photo shows. */
+  colors?: { value: string; name: string }[];
 }
 
+type Slide =
+  | { kind: 'image'; url: string; alt: string; label?: string; color?: string }
+  | { kind: 'video'; url: string; alt: string };
+
+const navButton =
+  'w-9 h-9 rounded-full bg-white/85 backdrop-blur-xs border border-store-card-border flex items-center justify-center text-store-charcoal hover:bg-white transition active:scale-90 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold';
+
+const reducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Desktop: every photo stacked full height down the left while the details
+// panel stays in view on the right; click a photo to enlarge it. Phone: a swipeable strip
+// with tappable dots. Choosing a colour shows that colour's photos first; if
+// it has none of its own, every photo stays and a note says which colour they
+// show. The lightbox steps with the arrow keys.
 export default function ProductGallery({
   images,
   title,
   videoUrl,
   selectedColorValue,
+  colors = [],
 }: ProductGalleryProps) {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const colourKey = selectedColorValue?.toLowerCase() ?? '';
+
+  const { slides, shownColour } = useMemo(() => {
+    const tagged = colourKey ? images.filter((img) => img.color?.toLowerCase() === colourKey) : [];
+    const ordered = tagged.length ? [...tagged, ...images.filter((img) => !img.color)] : images;
+    const list: Slide[] = ordered.map((img) => ({ kind: 'image', ...img }));
+    if (videoUrl) list.push({ kind: 'video', url: videoUrl, alt: `${title} video` });
+    // Every photo is of another colour: say which one, rather than imply it's this one.
+    const otherColour =
+      colourKey && !tagged.length ? images.find((img) => img.color && img.color.toLowerCase() !== colourKey)?.color : undefined;
+    const name = otherColour ? colors.find((c) => c.value.toLowerCase() === otherColour.toLowerCase())?.name ?? otherColour : undefined;
+    return { slides: list, shownColour: name };
+  }, [images, videoUrl, title, colourKey, colors]);
+
+  // The position resets to the first photo whenever the colour changes.
+  const [position, setPosition] = useState({ key: colourKey, index: 0 });
+  const activeIndex = position.key === colourKey ? Math.min(position.index, Math.max(0, slides.length - 1)) : 0;
   const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const total = slides.length;
+  const active = slides[activeIndex];
 
-  // Synchronize gallery active image with selected colorway
+  // Phone strip: scrolled by swiping; the dots and arrows scroll it too.
+  const trackRef = useRef<HTMLDivElement>(null);
+  const scrollTrackTo = useCallback((index: number, smooth = true) => {
+    const track = trackRef.current;
+    if (!track || track.offsetWidth === 0) return; // hidden on desktop
+    track.scrollTo({ left: index * track.offsetWidth, behavior: smooth && !reducedMotion() ? 'smooth' : 'auto' });
+  }, []);
+
+  const goTo = useCallback(
+    (index: number) => {
+      if (total === 0) return;
+      const next = (index + total) % total;
+      setPosition({ key: colourKey, index: next });
+      scrollTrackTo(next);
+    },
+    [total, colourKey, scrollTrackTo]
+  );
+
+  // Desktop stack: a new colour puts its photos first, so bring the top of
+  // the stack back into view if the shopper has scrolled past it.
+  const stackRef = useRef<HTMLUListElement>(null);
+  const firstColour = useRef(colourKey);
   useEffect(() => {
-    if (!selectedColorValue) return;
-    const matchingIndex = images.findIndex(
-      (img) => img.color?.toLowerCase() === selectedColorValue.toLowerCase()
-    );
-    if (matchingIndex !== -1) {
-      setActiveIndex(matchingIndex);
+    scrollTrackTo(0, false);
+    if (firstColour.current === colourKey) return; // not on first render
+    firstColour.current = colourKey;
+    const stack = stackRef.current;
+    if (stack && stack.offsetHeight > 0 && stack.getBoundingClientRect().top < 0) {
+      stack.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' });
     }
-  }, [selectedColorValue, images]);
+  }, [colourKey, scrollTrackTo]);
 
-  const totalSlides = images.length + (videoUrl ? 1 : 0);
-  const isVideoActive = Boolean(videoUrl && activeIndex === images.length);
-  const activeImage = images[activeIndex] || images[0];
-
-  const handleNext = () => {
-    setActiveIndex((prev) => (prev + 1) % totalSlides);
+  const onTrackScroll = () => {
+    const track = trackRef.current;
+    if (!track || track.offsetWidth === 0) return;
+    const index = Math.round(track.scrollLeft / track.offsetWidth);
+    if (index !== activeIndex && index >= 0 && index < total) setPosition({ key: colourKey, index });
   };
 
-  const handlePrev = () => {
-    setActiveIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
-  };
-
-  // Swipe between photos on touch screens.
-  const touchStartX = useRef<number | null>(null);
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null || totalSlides < 2) return;
-    const delta = e.changedTouches[0].clientX - touchStartX.current;
-    if (Math.abs(delta) > 40) (delta < 0 ? handleNext : handlePrev)();
-    touchStartX.current = null;
-  };
+  // Lightbox: left/right arrow keys step through.
+  useEffect(() => {
+    if (!isZoomOpen || total < 2) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowRight') goTo(activeIndex + 1);
+      else if (event.key === 'ArrowLeft') goTo(activeIndex - 1);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isZoomOpen, total, activeIndex, goTo]);
 
   // No photography yet: say so plainly instead of showing a borrowed picture.
-  if (images.length === 0 && !videoUrl) {
+  if (total === 0 || !active) {
     return (
       <div className="w-full aspect-4/5 bg-store-cream border border-store-card-border flex flex-col items-center justify-center gap-3 text-center p-8">
         <Camera size={28} className="text-store-text-secondary" aria-hidden="true" />
@@ -75,250 +126,190 @@ export default function ProductGallery({
     );
   }
 
-  const showsSamplePhoto = !isVideoActive && activeImage && isPlaceholderImage(activeImage.alt);
-  const sampleNote = showsSamplePhoto && (
-    <span className="absolute bottom-0 inset-x-0 bg-store-charcoal/80 text-white text-xs px-4 py-2 pointer-events-none">
-      Sample photo — final product photography coming soon
-    </span>
+  const positionText = `${active.kind === 'video' ? 'Video' : 'Photo'} ${activeIndex + 1} of ${total}`;
+
+  const overlays = (slide: Slide) => (
+    <>
+      {slide.kind === 'image' && slide.label && (
+        <span className="absolute top-4 left-4 text-xs font-mono tracking-wider font-semibold uppercase text-store-charcoal/90 bg-white/90 backdrop-blur-xs px-2.5 py-1 pointer-events-none shadow-2xs border border-store-card-border/60 z-10">
+          {slide.label}
+        </span>
+      )}
+      {slide.kind === 'image' && (isPlaceholderImage(slide.alt) || shownColour) && (
+        <span className="absolute bottom-0 inset-x-0 bg-store-charcoal/80 text-white text-xs px-4 py-2 pointer-events-none">
+          {[
+            shownColour ? `Photo shows ${shownColour}` : null,
+            isPlaceholderImage(slide.alt) ? 'Sample photo — final product photography coming soon' : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </span>
+      )}
+    </>
   );
 
+  const media = (slide: Slide, fit: 'cover' | 'contain', eager?: boolean) =>
+    slide.kind === 'video' ? (
+      <video
+        src={slide.url}
+        controls
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        aria-label={slide.alt}
+        className={`w-full h-full ${fit === 'cover' ? 'object-cover' : 'object-contain'}`}
+      />
+    ) : (
+      <ImageWithFallback
+        src={slide.url}
+        alt={slide.alt}
+        loading={eager ? 'eager' : 'lazy'}
+        className={`w-full h-full ${fit === 'cover' ? 'object-cover' : 'object-contain'}`}
+      />
+    );
+
   return (
-    <div className="w-full">
-      {/* 1. DESKTOP EDITORIAL QUAD GALLERY (Figma Node 354:24651 FINAL PDP) */}
-      <div className="hidden lg:flex flex-col gap-4">
-        {/* Primary Large Hero Photo or Active Color Focus */}
-        <div className="relative aspect-4/5 w-full overflow-hidden bg-store-cream border border-store-card-border group">
-          {isVideoActive ? (
-            <video
-              src={videoUrl}
-              controls
-              autoPlay
-              loop
-              playsInline
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <ImageWithFallback
-              src={activeImage.url}
-              alt={activeImage.alt}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
-            />
-          )}
+    <div className="w-full" aria-roledescription="gallery" aria-label={`${title} photos`}>
+      {/* Spoken when the photo changes, by any route (thumbnail, swipe, arrows). */}
+      <p className="sr-only" aria-live="polite">
+        {total > 1 ? `${positionText}: ${active.alt}` : ''}
+      </p>
 
-          {/* Angle Label matching Figma */}
-          {activeImage.label && (
-            <span className="absolute top-4 left-4 text-[11px] font-mono tracking-wider font-semibold uppercase text-store-charcoal/90 bg-white/90 backdrop-blur-xs px-2.5 py-1 pointer-events-none shadow-2xs border border-store-card-border/60 z-10">
-              {activeImage.label}
-            </span>
-          )}
-
-          {sampleNote}
-
-          {/* Enlarge button */}
-          <button
-            type="button"
-            onClick={() => setIsZoomOpen(true)}
-            aria-label="Enlarge image"
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/80 backdrop-blur-xs border border-store-card-border flex items-center justify-center text-store-charcoal hover:bg-white transition-transform active:scale-95 shadow-xs cursor-pointer opacity-0 group-hover:opacity-100"
+      {/* 1. DESKTOP: every photo stacked full height, scrolled past while the
+          details panel stays in view (editorial layout). Click to enlarge. */}
+      <ul ref={stackRef} className="hidden lg:flex flex-col gap-1 scroll-mt-24" aria-label={`${title} photos`}>
+        {slides.map((slide, idx) => (
+          <li
+            key={`${slide.url}-${idx}`}
+            className="relative w-full h-[calc(100svh-6rem)] min-h-[32rem] max-h-[68rem] overflow-hidden bg-store-cream group"
           >
-            <Maximize2 size={16} />
-          </button>
+            {slide.kind === 'video' ? (
+              media(slide, 'cover', idx === 0)
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setPosition({ key: colourKey, index: idx });
+                  setIsZoomOpen(true);
+                }}
+                aria-label={`Enlarge photo ${idx + 1} of ${total}: ${slide.alt}`}
+                className="block w-full h-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-store-gold"
+              >
+                <ImageWithFallback
+                  src={slide.url}
+                  alt=""
+                  loading={idx === 0 ? 'eager' : 'lazy'}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.015] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                />
+              </button>
+            )}
+            {overlays(slide)}
+            {total > 1 && (
+              <span className="absolute top-4 right-4 text-xs font-medium tuw-tabular-nums text-store-charcoal/80 bg-white/85 backdrop-blur-xs px-2 py-0.5 pointer-events-none" aria-hidden="true">
+                {idx + 1} / {total}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
 
-          {videoUrl && (
-            <button
-              type="button"
-              onClick={() => setActiveIndex(images.length)}
-              className="absolute bottom-4 left-4 px-3.5 py-1.5 rounded-full bg-store-charcoal/90 text-white text-xs font-bold uppercase tracking-wider backdrop-blur-xs flex items-center gap-1.5 hover:bg-store-charcoal transition-colors cursor-pointer"
+      {/* 2. PHONE & TABLET: swipeable strip */}
+      <div className="lg:hidden relative w-full aspect-3/4 bg-store-cream border border-store-card-border overflow-hidden">
+        <div
+          ref={trackRef}
+          onScroll={onTrackScroll}
+          className="flex h-full overflow-x-auto snap-x snap-mandatory overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {slides.map((slide, idx) => (
+            <div
+              key={`${slide.url}-${idx}`}
+              className="relative w-full h-full shrink-0 snap-center snap-always"
+              aria-hidden={idx !== activeIndex}
+              inert={idx !== activeIndex}
             >
-              <span>▶ Watch video</span>
-            </button>
-          )}
+              {media(slide, 'cover', idx === 0)}
+              {overlays(slide)}
+            </div>
+          ))}
         </div>
 
-        {/* 2-Column Grid for Secondary Angles / Lifestyle Details */}
-        {images.length > 1 && (
-          <div className="grid grid-cols-2 gap-4">
-            {images.slice(1).map((img, idx) => {
-              const actualIdx = idx + 1;
-              const isSelected = activeIndex === actualIdx;
-              return (
-                <div
-                  key={actualIdx}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Show ${img.alt}`}
-                  aria-pressed={isSelected}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setActiveIndex(actualIdx);
-                    }
-                  }}
-                  onClick={() => setActiveIndex(actualIdx)}
-                  className={`relative aspect-4/5  overflow-hidden bg-store-cream border transition-all cursor-pointer group ${
-                    isSelected
-                      ? 'border-store-charcoal ring-2 ring-store-charcoal/30'
-                      : 'border-store-card-border hover:border-store-charcoal/50'
-                  }`}
-                >
-                  <ImageWithFallback
-                    src={img.url}
-                    alt={img.alt}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102"
-                  />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveIndex(actualIdx);
-                      setIsZoomOpen(true);
-                    }}
-                    aria-label="Enlarge angle"
-                    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 backdrop-blur-xs border border-store-card-border flex items-center justify-center text-store-charcoal hover:bg-white transition-transform active:scale-95 shadow-xs cursor-pointer opacity-0 group-hover:opacity-100"
-                  >
-                    <Maximize2 size={14} />
-                  </button>
-                  {img.label && (
-                    <span className="absolute top-3 left-3 text-[10px] font-mono tracking-wider font-semibold uppercase text-store-charcoal/90 bg-white/90 backdrop-blur-xs px-2 py-0.5 pointer-events-none shadow-2xs border border-store-card-border/60 z-10">
-                      {img.label}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* 2. MOBILE & TABLET SLIDER VIEWPORT */}
-      <div
-        className="lg:hidden relative aspect-3/4 w-full overflow-hidden bg-store-cream border border-store-card-border touch-pan-y"
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
-        {isVideoActive ? (
-          <video
-            src={videoUrl}
-            controls
-            autoPlay
-            loop
-            playsInline
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <ImageWithFallback
-            src={activeImage.url}
-            alt={activeImage.alt}
-            className="w-full h-full object-cover"
-          />
-        )}
-
-        {/* Angle Label matching Figma */}
-        {activeImage.label && (
-          <span className="absolute top-4 left-4 text-[11px] font-mono tracking-wider font-semibold uppercase text-store-charcoal/90 bg-white/90 backdrop-blur-xs px-2.5 py-1 pointer-events-none shadow-2xs border border-store-card-border/60 z-10">
-            {activeImage.label}
-          </span>
-        )}
-
-        {sampleNote}
-
-        {/* Zoom trigger */}
         <button
           type="button"
           onClick={() => setIsZoomOpen(true)}
-          aria-label="Enlarge image"
-          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/80 backdrop-blur-xs border border-store-card-border flex items-center justify-center text-store-charcoal hover:bg-white transition-transform active:scale-95 shadow-xs cursor-pointer"
+          aria-label={`Enlarge ${active.alt}`}
+          className={`absolute top-4 right-4 ${navButton} w-10! h-10!`}
         >
-          <Maximize2 size={16} />
+          <Maximize2 size={16} aria-hidden="true" />
         </button>
 
-        {/* Prev / Next controls */}
-        {totalSlides > 1 && (
+        {total > 1 && (
           <>
-            <button
-              type="button"
-              onClick={handlePrev}
-              aria-label="Previous image"
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 backdrop-blur-xs border border-store-card-border flex items-center justify-center text-store-charcoal hover:bg-white transition-all active:scale-90 cursor-pointer"
-            >
-              <ChevronLeft size={18} />
+            <button type="button" onClick={() => goTo(activeIndex - 1)} aria-label="Previous photo" className={`absolute left-3 top-1/2 -translate-y-1/2 ${navButton}`}>
+              <ChevronLeft size={18} aria-hidden="true" />
             </button>
-            <button
-              type="button"
-              onClick={handleNext}
-              aria-label="Next image"
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 backdrop-blur-xs border border-store-card-border flex items-center justify-center text-store-charcoal hover:bg-white transition-all active:scale-90 cursor-pointer"
-            >
-              <ChevronRight size={18} />
+            <button type="button" onClick={() => goTo(activeIndex + 1)} aria-label="Next photo" className={`absolute right-3 top-1/2 -translate-y-1/2 ${navButton}`}>
+              <ChevronRight size={18} aria-hidden="true" />
             </button>
-          </>
-        )}
 
-        {/* Mobile Pagination Dots */}
-        {totalSlides > 1 && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
-            {Array.from({ length: totalSlides }).map((_, i) => (
-              <span
-                key={i}
-                className={`h-2 rounded-full transition-all ${
-                  activeIndex === i ? 'bg-store-charcoal w-5' : 'bg-store-charcoal/30 w-2'
-                }`}
-              />
-            ))}
-          </div>
+            {/* Dots: real buttons with a 24px tap area around the visible dot. */}
+            <div
+              className={`absolute left-1/2 -translate-x-1/2 flex items-center ${
+                active.kind === 'image' && (isPlaceholderImage(active.alt) || shownColour) ? 'bottom-10' : 'bottom-2'
+              }`}
+            >
+              {slides.map((slide, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => goTo(i)}
+                  aria-label={`Show ${slide.kind === 'video' ? 'video' : `photo ${i + 1}`} of ${total}`}
+                  aria-current={i === activeIndex ? 'true' : undefined}
+                  className="h-6 min-w-6 px-1 flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold rounded-full"
+                >
+                  <span
+                    className={`block h-2 rounded-full transition-all ${
+                      i === activeIndex ? 'bg-store-charcoal w-5' : 'bg-store-charcoal/30 w-2'
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
-      {/* 3. LIGHTBOX ZOOM MODAL */}
+      {/* 3. LIGHTBOX */}
       <Modal
         isOpen={isZoomOpen}
         onClose={() => setIsZoomOpen(false)}
         maxWidth="max-w-4xl"
         title={title}
-        subtitle={
-          isVideoActive
-            ? 'Product video'
-            : `Image ${activeIndex + 1} of ${images.length} • ${activeImage.alt}`
-        }
+        subtitle={`${positionText} · ${active.alt}${total > 1 ? ' · Use ← → to move' : ''}`}
       >
         <div className="relative aspect-3/4 sm:aspect-4/3 w-full overflow-hidden bg-store-canvas">
-          {isVideoActive ? (
-            <video
-              src={videoUrl}
-              controls
-              autoPlay
-              loop
-              playsInline
-              className="w-full h-full object-contain"
-            />
-          ) : (
-            <ImageWithFallback
-              src={activeImage.url}
-              alt={activeImage.alt}
-              className="w-full h-full object-contain"
-            />
-          )}
+          {media(active, 'contain', true)}
 
-          {totalSlides > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/90 backdrop-blur-xs px-4 py-2 rounded-full border border-store-card-border shadow-xs">
+          {total > 1 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/90 backdrop-blur-xs px-2 py-1 rounded-full border border-store-card-border shadow-xs">
               <button
                 type="button"
-                onClick={handlePrev}
-                aria-label="Previous image"
-                className="p-1 hover:text-store-action-primary cursor-pointer text-store-charcoal"
+                onClick={() => goTo(activeIndex - 1)}
+                aria-label="Previous photo"
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-store-cream cursor-pointer text-store-charcoal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={16} aria-hidden="true" />
               </button>
-              <span className="text-xs font-semibold text-store-charcoal">
-                {activeIndex + 1} / {totalSlides}
+              <span className="text-xs font-semibold text-store-charcoal tuw-tabular-nums">
+                {activeIndex + 1} / {total}
               </span>
               <button
                 type="button"
-                onClick={handleNext}
-                aria-label="Next image"
-                className="p-1 hover:text-store-action-primary cursor-pointer text-store-charcoal"
+                onClick={() => goTo(activeIndex + 1)}
+                aria-label="Next photo"
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-store-cream cursor-pointer text-store-charcoal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={16} aria-hidden="true" />
               </button>
             </div>
           )}
