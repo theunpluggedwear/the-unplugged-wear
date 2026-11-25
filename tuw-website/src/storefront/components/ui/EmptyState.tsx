@@ -31,7 +31,7 @@ export default function EmptyState({
         {icon || <PackageOpen size={28} />}
       </div>
 
-      <h4 className="text-base font-bold text-[#1A1A1A]">{title}</h4>
+      <h4 className="text-base font-bold text-store-charcoal">{title}</h4>
       <p className="text-sm text-[#666] max-w-sm mt-1.5 leading-relaxed">{description}</p>
 
       {actionLabel && (

@@ -35,7 +35,7 @@ export default function StandaloneSizeGuidePage() {
 
         <div className="my-8 flex flex-col sm:flex-row sm:items-end justify-between gap-6">
           <div>
-            <h1 className="text-[clamp(1.75rem,4vw+0.5rem,3rem)] font-extrabold tracking-tight text-[#1A1A1A]">
+            <h1 className="tuw-h1 text-store-charcoal">
               Fit & Sizing Guide
             </h1>
             <p className="text-sm text-[#666] mt-2 max-w-xl">
@@ -75,7 +75,7 @@ export default function StandaloneSizeGuidePage() {
         <div className="bg-white rounded-3xl border border-[#E2DDCF] overflow-x-auto shadow-xs">
           {chart ? (
             <table className="w-full text-left text-sm">
-              <thead className="bg-[#F4F1EA] border-b border-[#E2DDCF] text-xs font-bold text-[#1A1A1A] uppercase tracking-wider">
+              <thead className="bg-[#F4F1EA] border-b border-[#E2DDCF] text-xs font-bold text-store-charcoal uppercase tracking-wider">
                 <tr>
                   <th scope="col" className="p-4">Size</th>
                   {chart.columns.map((c) => <th key={c} scope="col" className="p-4">{c}</th>)}
@@ -84,7 +84,7 @@ export default function StandaloneSizeGuidePage() {
               <tbody className="divide-y divide-[#E2DDCF] font-medium text-[#5A5A5A] text-xs sm:text-sm">
                 {chart.rows.map((row) => (
                   <tr key={row.size} className="hover:bg-[#FAF9F6]">
-                    <th scope="row" className="p-4 font-bold text-[#1A1A1A]">{row.size}</th>
+                    <th scope="row" className="p-4 font-bold text-store-charcoal">{row.size}</th>
                     {chart.columns.map((c) => <td key={c} className="p-4">{format(row.measures[c])}</td>)}
                   </tr>
                 ))}
@@ -98,7 +98,7 @@ export default function StandaloneSizeGuidePage() {
 
         {/* Fit recommendations */}
         <div className="mt-8 p-6 rounded-3xl bg-[#F4F1EA] border border-[#E2DDCF] space-y-3 text-xs text-[#5A5A5A] leading-relaxed">
-          <h2 className="font-bold text-[#1A1A1A] uppercase tracking-wider">
+          <h2 className="tuw-eyebrow text-store-charcoal">
             How to Measure Flat
           </h2>
           <p>
@@ -108,7 +108,7 @@ export default function StandaloneSizeGuidePage() {
             • <strong>Body Length:</strong> Measure from highest point of shoulder next to collar straight down to the lowest edge of hem ribbing.
           </p>
           <p>
-            • <strong>Need sizing advice?</strong> Reach out via our <a href="/contact" className="underline font-semibold text-[#1A1A1A]">Contact Studio</a> page with your height, weight, and preferred fit drape.
+            • <strong>Need sizing advice?</strong> Reach out via our <a href="/contact" className="underline font-semibold text-store-charcoal">Contact Studio</a> page with your height, weight, and preferred fit drape.
           </p>
         </div>
       </main>

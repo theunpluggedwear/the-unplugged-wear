@@ -108,7 +108,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   };
   return (
     <html lang="en" className={outfit.variable}>
-      <body className="font-sans antialiased bg-store-canvas text-store-text-primary min-h-screen">
+      {/* suppressHydrationWarning: browser extensions (e.g. ColorZilla) add attributes to <body> before React loads. Affects this tag only, not its children. */}
+      <body suppressHydrationWarning className="font-sans antialiased bg-store-canvas text-store-text-primary min-h-screen">
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-dark focus:text-white focus:font-semibold focus:text-xs focus:rounded-md focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-secondary-mint"

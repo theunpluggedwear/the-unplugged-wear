@@ -59,7 +59,7 @@ export default function RadioGroup({
               className="mt-0.5 accent-[#1A1A1A] w-4 h-4"
             />
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-[#1A1A1A]">{option.label}</span>
+              <span className="text-sm font-medium text-store-charcoal">{option.label}</span>
               {option.description && (
                 <span className="text-xs text-[#8A8A8A] mt-0.5">{option.description}</span>
               )}

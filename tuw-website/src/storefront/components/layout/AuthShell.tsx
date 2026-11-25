@@ -87,7 +87,7 @@ export default function AuthShell({
 
         <div className="w-full max-w-md mx-auto my-auto py-6 space-y-5">
           <div className="space-y-2">
-            <h1 className="font-heading text-2xl sm:text-3xl font-medium tracking-tight text-store-text-primary leading-tight">
+            <h1 className="tuw-h1 text-store-text-primary">
               {title}
             </h1>
             <p className="font-sans text-sm text-store-text-secondary leading-relaxed">{intro}</p>

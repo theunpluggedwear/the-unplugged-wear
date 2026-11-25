@@ -26,7 +26,7 @@ async function Results({ searchParams }: { searchParams: Params }) {
   if (!term) {
     return (
       <div>
-        <h2 className="text-base font-bold text-[#1A1A1A] mb-6">Explore Active Essentials</h2>
+        <h2 className="tuw-h3 text-store-charcoal mb-6">Explore Active Essentials</h2>
         <ProductGrid products={products.slice(0, 3)} />
       </div>
     );
@@ -41,7 +41,7 @@ async function Results({ searchParams }: { searchParams: Params }) {
   if (!results.length) {
     return (
       <div className="text-center py-16 bg-white rounded-3xl border border-[#E2DDCF] px-8 max-w-xl mx-auto shadow-xs">
-        <h2 className="text-lg font-bold text-[#1A1A1A]">No matches for &ldquo;{term}&rdquo;</h2>
+        <h2 className="tuw-h3 text-store-charcoal">No matches for &ldquo;{term}&rdquo;</h2>
         <p className="text-xs text-[#666] mt-2 leading-relaxed">Check your spelling or browse a category:</p>
         <div className="flex justify-center gap-3 mt-6 flex-wrap">
           {SHOP_LINKS.map((l) => (
@@ -70,7 +70,7 @@ export default function SearchPage({ searchParams }: { searchParams: Params }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           <Breadcrumb items={[{ label: 'Home', href: '/' }, { label: 'Catalog Search' }]} />
           <div className="max-w-2xl my-6">
-            <h1 className="text-[clamp(1.75rem,3vw+0.5rem,2.25rem)] font-extrabold tracking-tight text-[#1A1A1A]">Search Catalog</h1>
+            <h1 className="tuw-h1 text-store-charcoal">Search Catalog</h1>
             <p className="text-sm text-[#666] mt-1">Find pieces by name, type or style.</p>
             <Suspense fallback={<div className="mt-6 h-14 rounded-2xl border border-[#E2DDCF] bg-white" />}>
               <SearchBox />

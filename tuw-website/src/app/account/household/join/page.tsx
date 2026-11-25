@@ -33,7 +33,7 @@ export default function JoinHouseholdPage() {
       <Header />
       <main id="main-content" className="flex-1 max-w-md mx-auto px-4 py-12 sm:py-20 w-full">
         <div className="bg-white rounded-3xl border border-store-border p-8 shadow-xs space-y-5 text-center">
-          <h1 className="text-2xl font-medium tracking-tight text-store-text-primary">Join a household</h1>
+          <h1 className="tuw-h1 text-store-text-primary">Join a household</h1>
           {state === 'done' ? (
             <div className="space-y-3">
               <p className="text-sm text-store-text-secondary">You joined the household. You can now order for its members.</p>

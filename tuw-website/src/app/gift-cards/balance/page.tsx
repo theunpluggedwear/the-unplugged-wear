@@ -27,7 +27,7 @@ export default function GiftCardBalancePage() {
 
   return (
     <main className="max-w-md mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Check gift card balance</h1>
+      <h1 className="tuw-h1 text-store-charcoal">Check gift card balance</h1>
       <input className="w-full border rounded px-3 py-2" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Enter your gift card code" />
       <button className="px-4 py-2 rounded bg-black text-white disabled:opacity-50" disabled={busy || !code.trim()} onClick={check}>Check balance</button>
       {error && <p className="text-red-600">{error}</p>}

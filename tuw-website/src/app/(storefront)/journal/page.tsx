@@ -6,7 +6,7 @@ export default async function JournalPage() {
   return (
       <main className="flex-1 max-w-5xl mx-auto px-4 py-16">
         <p className="text-xs uppercase tracking-widest text-store-muted">Journal</p>
-        <h1 className="mt-2 text-4xl font-semibold text-store-charcoal">Stories from the studio</h1>
+        <h1 className="tuw-h1 mt-2 text-store-charcoal">Stories from the studio</h1>
         <div className="mt-10 grid gap-8 sm:grid-cols-2">
           {rows.map((post) => (
             <Link key={post.id} href={`/journal/${post.slug}`} className="group rounded-2xl border border-store-card-border bg-store-card p-6 hover:border-store-charcoal transition-colors">

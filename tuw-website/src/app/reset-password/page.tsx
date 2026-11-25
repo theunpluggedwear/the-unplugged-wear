@@ -63,7 +63,7 @@ export default function ResetPasswordPage() {
 
         <div className="bg-white rounded-3xl border border-[#E2DDCF] p-8 shadow-xs my-6 space-y-6">
           <div className="space-y-1 text-center">
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#1A1A1A]">
+            <h1 className="tuw-h1 text-store-charcoal">
               Set New Password
             </h1>
             <p className="text-xs text-[#666]">
@@ -83,7 +83,7 @@ export default function ResetPasswordPage() {
               <div className="w-14 h-14 rounded-full bg-[#F0FDF4] text-[#15803D] flex items-center justify-center mx-auto">
                 <CheckCircle2 size={28} />
               </div>
-              <h3 className="text-base font-bold text-[#1A1A1A]">Password Successfully Updated</h3>
+              <h3 className="text-base font-bold text-store-charcoal">Password Successfully Updated</h3>
               <p className="text-xs text-[#666] leading-relaxed">
                 Your credentials have been updated in this simulated session.
               </p>

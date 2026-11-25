@@ -107,7 +107,7 @@ export default function Modal({
           type="button"
           onClick={onClose}
           aria-label="Close dialog"
-          className="absolute right-5 top-5 p-2 rounded-full text-[#8A8A8A] hover:text-[#1A1A1A] hover:bg-[#FAF9F6] transition-colors"
+          className="absolute right-5 top-5 p-2 rounded-full text-[#8A8A8A] hover:text-store-charcoal hover:bg-[#FAF9F6] transition-colors"
         >
           <X size={18} />
         </button>
@@ -115,7 +115,7 @@ export default function Modal({
         {(title || subtitle) && (
           <div className="mb-6 pr-8">
             {title && (
-              <h3 className="text-xl font-bold tracking-tight text-[#1A1A1A]">{title}</h3>
+              <h3 className="text-xl font-bold tracking-tight text-store-charcoal">{title}</h3>
             )}
             {subtitle && (
               <p className="text-sm text-[#666] mt-1 leading-relaxed">{subtitle}</p>
