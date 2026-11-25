@@ -24,6 +24,11 @@ const toItem = (l: CartLine): CartItem => ({
   quantity: l.qty,
   image: l.image ?? '',
   maxQty: l.maxQty,
+  slug: l.slug ?? undefined,
+  productKind: l.productKind,
+  giftRecipientName: l.personalization?.recipientName,
+  giftRecipientEmail: l.personalization?.recipientEmail,
+  giftMessage: l.personalization?.message,
 });
 
 /** The storefront's neutral labels mean "no such axis" to the server. */
@@ -36,6 +41,8 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
+  /** Optimistic changes sent but not yet answered, oldest first. */
+  const pending = useRef<((prev: CartItem[]) => CartItem[])[]>([]);
   const onError = useRef(opts.onError);
   onError.current = opts.onError;
 
@@ -71,10 +78,16 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
   /** Optimistic change now, server call in turn; the server's lines win. */
   const send = useCallback((optimistic: (prev: CartItem[]) => CartItem[], call: () => Promise<Result<CartLine[]>>, failTitle: string) => {
     setCart(optimistic);
+    pending.current.push(optimistic);
+    const settle = () => { pending.current = pending.current.filter((op) => op !== optimistic); };
     const next = queue.current.then(async () => {
-      const result = await call();
-      if (result.ok) setCart(result.data.map(toItem));
-      else {
+      const result = await call().finally(settle);
+      if (result.ok) {
+        // The server's lines win, with changes still waiting in the queue
+        // replayed on top, so an older reply never undoes a newer click.
+        const server = result.data.map(toItem);
+        setCart(pending.current.reduce((lines, op) => op(lines), server));
+      } else {
         onError.current(failTitle, result.error.message);
         await refreshBag();
       }

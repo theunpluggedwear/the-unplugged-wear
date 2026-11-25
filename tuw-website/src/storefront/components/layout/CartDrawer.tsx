@@ -1,13 +1,69 @@
 'use client';
 import { formatRupees } from '@storefront/lib/format';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ShoppingBag, ShieldCheck, Check } from 'lucide-react';
 import { useCartDrawer, useStore } from '@storefront/mocks/store';
 import Drawer from '@storefront/components/ui/Drawer';
 import Button from '@storefront/components/ui/Button';
-import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
+import BagLine from '@storefront/components/commerce/BagLine';
+import BagPromoCode from '@storefront/components/commerce/BagPromoCode';
+import Skeleton from '@storefront/components/ui/Skeleton';
+import type { CartItem } from '@storefront/lib/types';
+
+const LEAVE_MS = 320;
+
+/** Lines that are "the same piece" even if the server swaps a temporary id for a real one. */
+const signature = (line: CartItem) => `${line.productId}|${line.color}|${line.size}|${line.giftRecipientEmail ?? ''}`;
+
+type DisplayedLine = { item: CartItem; key: string; leaving: boolean };
+
+/**
+ * The bag's lines plus, for a moment, the ones just removed, so a removal can
+ * fold away instead of vanishing. Render keys stay stable when an optimistic
+ * line's temporary id is replaced by the server's, so nothing re-animates.
+ */
+function useDisplayedLines(cart: CartItem[]): DisplayedLine[] {
+  const keys = useRef(new Map<string, string>());
+  const previous = useRef<CartItem[]>(cart);
+  const [leaving, setLeaving] = useState<{ item: CartItem; key: string; index: number }[]>([]);
+  const timers = useRef<number[]>([]);
+
+  const ids = new Set(cart.map((line) => line.id));
+  for (const line of cart) {
+    if (keys.current.has(line.id)) continue;
+    const replaced = previous.current.find((old) => !ids.has(old.id) && signature(old) === signature(line));
+    keys.current.set(line.id, (replaced && keys.current.get(replaced.id)) ?? line.id);
+  }
+
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = cart;
+    const currentIds = new Set(cart.map((line) => line.id));
+    const currentSignatures = new Set(cart.map(signature));
+    const gone = before
+      .map((item, index) => ({ item, index, key: keys.current.get(item.id) ?? item.id }))
+      .filter(({ item }) => !currentIds.has(item.id) && !currentSignatures.has(signature(item)));
+    if (gone.length === 0) return;
+    setLeaving((list) => [...list, ...gone]);
+    const goneKeys = new Set(gone.map((g) => g.key));
+    timers.current.push(window.setTimeout(() => {
+      setLeaving((list) => list.filter((entry) => !goneKeys.has(entry.key)));
+      gone.forEach(({ item }) => keys.current.delete(item.id));
+    }, LEAVE_MS));
+  }, [cart]);
+
+  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
+
+  const shown: DisplayedLine[] = cart.map((item) => ({ item, key: keys.current.get(item.id) ?? item.id, leaving: false }));
+  const liveKeys = new Set(shown.map((line) => line.key));
+  for (const entry of leaving) {
+    if (liveKeys.has(entry.key)) continue; // restored (e.g. Undo) before it finished leaving
+    shown.splice(Math.min(entry.index, shown.length), 0, { item: entry.item, key: entry.key, leaving: true });
+  }
+  return shown;
+}
 
 export default function CartDrawer() {
   const isCartDrawerOpen = useCartDrawer();
@@ -17,29 +73,37 @@ export default function CartDrawer() {
     bagError,
     refreshBag,
     setIsCartDrawerOpen,
-    updateQuantity,
-    removeFromCart,
     cartSubtotal,
     shippingFee,
     freeShippingThreshold,
     freeShippingRemaining,
-    promoCode,
     discountAmount,
-    applyPromoCode,
-    removePromoCode,
   } = useStore();
 
-  const [inputCode, setInputCode] = useState('');
-
   const total = cartSubtotal - discountAmount + shippingFee;
-
-  const handleApplyCode = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (inputCode.trim()) {
-      applyPromoCode(inputCode);
-      setInputCode('');
+  const lines = useDisplayedLines(cart);
+  const itemCount = cart.reduce((sum, line) => sum + line.quantity, 0);
+  const showSummary = !bagError && bagReady && cart.length > 0;
+  // Lines the server says can't be bought as they stand; checkout would refuse them.
+  const blockedLines = cart.filter((line) => line.maxQty !== undefined && line.quantity > line.maxQty).length;
+  // Celebrate free delivery only at the moment it unlocks, not on every open.
+  const unlocked = freeShippingRemaining <= 0;
+  const wasUnlocked = useRef(unlocked);
+  const [justUnlocked, setJustUnlocked] = useState(false);
+  useEffect(() => {
+    if (unlocked && !wasUnlocked.current && cart.length > 0) {
+      setJustUnlocked(true);
+      const timer = window.setTimeout(() => setJustUnlocked(false), 1600);
+      wasUnlocked.current = unlocked;
+      return () => window.clearTimeout(timer);
     }
-  };
+    wasUnlocked.current = unlocked;
+  }, [unlocked, cart.length]);
+  const freeShippingProgress = Math.min(
+    100,
+    Math.max(0, ((freeShippingThreshold - freeShippingRemaining) / freeShippingThreshold) * 100),
+  );
+
 
   return (
     <Drawer
@@ -47,8 +111,120 @@ export default function CartDrawer() {
       onClose={() => setIsCartDrawerOpen(false)}
       position="right"
       maxWidth="max-w-md"
-      title={`Shopping Bag (${cart.reduce((a, b) => a + b.quantity, 0)})`}
-      subtitle="Printed to order"
+      title="Your bag"
+      subtitle={
+        <>
+          {showSummary && (
+            <span className="block text-store-charcoal font-medium">
+              {itemCount} {itemCount === 1 ? 'item' : 'items'}
+            </span>
+          )}
+          <span className="block">Printed to order in 2–3 business days</span>
+        </>
+      }
+      bodyClassName="px-6 py-5"
+      footer={showSummary ? (
+        <div className="border-t border-store-card-border bg-white px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] space-y-4">
+          {/* Free delivery progress */}
+          <div aria-live="polite">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-store-charcoal">
+              {unlocked ? (
+                <>
+                  <span
+                    className={`inline-flex w-4 h-4 items-center justify-center rounded-full bg-store-gold text-white ${justUnlocked ? 'tuw-unlock-pop' : ''}`}
+                    aria-hidden="true"
+                  >
+                    <Check size={10} strokeWidth={3} />
+                  </span>
+                  <span>Free delivery unlocked</span>
+                </>
+              ) : (
+                <span>
+                  <span className="font-semibold tuw-tabular-nums">{formatRupees(freeShippingRemaining)}</span> away from free delivery
+                </span>
+              )}
+            </p>
+            <div
+              className="mt-2 h-[3px] w-full rounded-full bg-store-card-border overflow-hidden"
+              role="progressbar"
+              aria-label="Progress towards free delivery"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(freeShippingProgress)}
+            >
+              <div
+                className={`h-full rounded-full transition-[width,background-color] duration-700 ease-out ${unlocked ? 'bg-store-gold' : 'bg-store-charcoal'} ${justUnlocked ? 'tuw-unlock-shine' : ''}`}
+                style={{ width: `${freeShippingProgress}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Promo code */}
+          <BagPromoCode />
+
+          {/* Summary */}
+          <dl className="space-y-1.5 text-sm">
+            <div className="flex justify-between text-store-muted">
+              <dt>Subtotal</dt>
+              <dd className="tuw-tabular-nums">{formatRupees(cartSubtotal)}</dd>
+            </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-store-success">
+                <dt>Discount</dt>
+                <dd className="tuw-tabular-nums">−{formatRupees(discountAmount)}</dd>
+              </div>
+            )}
+            <div className="flex justify-between text-store-muted">
+              <dt>Shipping · Standard</dt>
+              <dd className="tuw-tabular-nums">{shippingFee === 0 ? 'Free' : formatRupees(shippingFee)}</dd>
+            </div>
+            <div className="flex items-end justify-between pt-2.5 mt-1 border-t border-store-card-border">
+              <dt className="text-base font-semibold text-store-charcoal">
+                Total
+                <span className="block text-[11px] font-normal text-store-muted">Inclusive of GST</span>
+              </dt>
+              <dd className="text-lg font-semibold text-store-charcoal tuw-tabular-nums">{formatRupees(total)}</dd>
+            </div>
+          </dl>
+
+          {/* Actions */}
+          <div className="space-y-2.5">
+            {blockedLines > 0 ? (
+              <>
+                <Button variant="dark" size="lg" fullWidth disabled aria-describedby="bag-blocked-note">
+                  Proceed to Checkout
+                </Button>
+                <p id="bag-blocked-note" role="status" className="text-center text-xs text-store-terracotta">
+                  {blockedLines === 1 ? 'One item needs' : `${blockedLines} items need`} your attention above before checkout.
+                </p>
+              </>
+            ) : (
+              <Button
+                variant="dark"
+                size="lg"
+                fullWidth
+                href="/checkout"
+                onClick={() => setIsCartDrawerOpen(false)}
+                icon={<ArrowRight size={16} />}
+                iconPosition="right"
+              >
+                Proceed to Checkout
+              </Button>
+            )}
+            <Link
+              href="/cart"
+              onClick={() => setIsCartDrawerOpen(false)}
+              className="block text-center text-xs font-medium text-store-charcoal underline underline-offset-4 decoration-store-card-border hover:decoration-store-charcoal transition-colors py-1"
+            >
+              View full bag
+            </Link>
+            <p className="flex items-center justify-center gap-1.5 text-xs text-store-muted">
+              <ShieldCheck size={14} className="text-store-success" aria-hidden="true" />
+              <span>Secure checkout — you confirm the payment</span>
+            </p>
+          </div>
+        </div>
+      ) : undefined}
     >
       {bagError ? (
         <div className="flex flex-col items-center justify-center h-full text-center py-16" role="alert">
@@ -58,16 +234,31 @@ export default function CartDrawer() {
           </div>
         </div>
       ) : !bagReady ? (
-        <div className="flex flex-col items-center justify-center h-full text-center py-16" aria-busy="true">
-          <p className="text-sm text-store-text-secondary">Loading your bag…</p>
+        <div aria-busy="true" aria-live="polite">
+          <span className="sr-only">Loading your bag…</span>
+          <div className="divide-y divide-store-card-border -my-5">
+            {[0, 1].map((row) => (
+              <div key={row} className="py-5 flex gap-4" aria-hidden="true">
+                <Skeleton className="w-24 h-28 shrink-0" />
+                <div className="flex-1 flex flex-col gap-2 pt-1">
+                  <div className="flex justify-between gap-6">
+                    <Skeleton className="h-4 w-2/3 rounded" />
+                    <Skeleton className="h-4 w-14 shrink-0 rounded" />
+                  </div>
+                  <Skeleton className="h-3 w-1/3 rounded" />
+                  <Skeleton variant="circle" className="mt-auto w-28 h-10" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : cart.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-center py-16">
-          <div className="w-16 h-16 rounded-full bg-[#F4F1EA] flex items-center justify-center text-[#8A8A8A] mb-4">
+          <div className="w-16 h-16 rounded-full bg-store-cream flex items-center justify-center text-store-muted mb-4">
             <ShoppingBag size={28} />
           </div>
-          <h4 className="text-base font-bold text-[#1A1A1A]">Your bag is empty</h4>
-          <p className="text-xs text-[#8A8A8A] max-w-xs mt-1 leading-relaxed">
+          <h4 className="text-base font-semibold text-store-charcoal">Your bag is empty</h4>
+          <p className="text-sm text-store-muted max-w-xs mt-1 leading-relaxed">
             Discover our hoodies, tees and everyday pieces.
           </p>
           <div className="mt-6">
@@ -82,183 +273,24 @@ export default function CartDrawer() {
           </div>
         </div>
       ) : (
-        <div className="flex flex-col h-full justify-between gap-6">
-          {/* Free Shipping Progress Indicator */}
-          <div className="p-3.5 rounded-xl bg-[#F4F1EA] border border-[#E2DDCF]">
-            <div className="flex items-center justify-between text-xs font-semibold mb-2">
-              <span className="text-[#1A1A1A]">
-                {freeShippingRemaining > 0
-                  ? `Add ${formatRupees(freeShippingRemaining)} for complimentary delivery`
-                  : '✓ Free domestic delivery unlocked'}
-              </span>
-              <span className="text-[#8A8A8A]">{formatRupees(freeShippingThreshold)}</span>
-            </div>
-            <div className="w-full h-1.5 bg-[#E2DDCF] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#1A1A1A] transition-all duration-300"
-                style={{
-                  width: `${Math.min(100, ((cartSubtotal - discountAmount) / freeShippingThreshold) * 100)}%`,
-                }}
-              />
-            </div>
-          </div>
-
+        <div className="flex flex-col gap-5">
           {/* Cart Item List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-[#E2DDCF] -mx-2 px-2">
-            {cart.map((item) => (
-              <div key={item.id} className="py-4 flex gap-4">
-                {/* Item Thumbnail */}
-                <div className="w-20 h-24 rounded-lg overflow-hidden bg-[#F4F1EA] shrink-0 border border-[#E2DDCF]">
-                  <ImageWithFallback
-                    src={item.image}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-
-                {/* Details */}
-                <div className="flex-1 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className="text-sm font-semibold text-[#1A1A1A] leading-tight">
-                        {item.title}
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => removeFromCart(item.id)}
-                        aria-label={`Remove ${item.title}`}
-                        className="text-[#8A8A8A] hover:text-[#EF4444] transition-colors p-1"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-
-                    <div className="text-xs text-[#8A8A8A] mt-1 flex items-center gap-2">
-                      <span>{item.color}</span>
-                      <span>•</span>
-                      <span>Size {item.size}</span>
-                    </div>
-                    {item.selectedRadioOptions && item.selectedRadioOptions.length > 0 && (
-                      <div className="text-xs text-store-muted mt-1 space-y-0.5">
-                        {item.selectedRadioOptions.map((opt) => (
-                          <div key={opt.groupKey} className="flex items-center gap-1">
-                            <span>{opt.groupLabel}:</span>
-                            <span className="font-medium text-store-charcoal">{opt.optionLabel}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Quantity & Price */}
-                  <div className="flex items-center justify-between mt-3">
-                    <div className="flex items-center border border-[#E2DDCF] rounded-md bg-white">
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        aria-label="Decrease quantity"
-                        className="p-1.5 text-[#5A5A5A] hover:text-[#1A1A1A] transition-colors"
-                      >
-                        <Minus size={13} />
-                      </button>
-                      <span className="w-7 text-center text-xs font-semibold text-[#1A1A1A]">
-                        {item.quantity}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        disabled={item.maxQty !== undefined && item.quantity >= item.maxQty}
-                        title={item.maxQty !== undefined && item.quantity >= item.maxQty ? 'No more available' : undefined}
-                        aria-label="Increase quantity"
-                        className="p-1.5 text-[#5A5A5A] hover:text-[#1A1A1A] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <Plus size={13} />
-                      </button>
-                    </div>
-
-                    <div className="text-sm font-bold text-[#1A1A1A]">
-                      {formatRupees((item.priceINR * item.quantity))}
-                    </div>
-                  </div>
+          <div className="divide-y divide-store-card-border -my-5">
+            {lines.map(({ item, key, leaving }, index) => (
+              <div
+                key={key}
+                className={`tuw-bag-row ${leaving ? 'tuw-bag-row-leaving' : 'tuw-bag-row-enter'}`}
+                style={{ animationDelay: `${Math.min(index, 5) * 45}ms` }}
+                inert={leaving}
+                aria-hidden={leaving || undefined}
+              >
+                <div className={leaving ? 'min-h-0 overflow-hidden' : 'min-h-0'}>
+                  <BagLine item={item} onNavigate={() => setIsCartDrawerOpen(false)} />
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Promo Code Input */}
-          <div className="pt-3 border-t border-[#E2DDCF]">
-            {promoCode ? (
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#F0FDF4] border border-[#BBF7D0] text-xs">
-                <span className="text-[#15803D] font-medium">
-                  Code <strong>{promoCode}</strong> applied (-{formatRupees(discountAmount)})
-                </span>
-                <button
-                  type="button"
-                  onClick={removePromoCode}
-                  className="text-xs font-semibold text-[#15803D] hover:underline cursor-pointer"
-                >
-                  Remove
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleApplyCode} className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Promo Code (try UNPLUGGED10)"
-                  value={inputCode}
-                  onChange={(e) => setInputCode(e.target.value)}
-                  className="flex-1 h-9 px-3 rounded-lg border border-[#E2DDCF] text-xs uppercase outline-none focus:border-[#1A1A1A]"
-                />
-                <Button variant="secondary" size="sm" type="submit">
-                  Apply
-                </Button>
-              </form>
-            )}
-          </div>
-
-          {/* Summary & Checkout CTA */}
-          <div className="space-y-2 pt-2 border-t border-[#E2DDCF] text-xs">
-            <div className="flex justify-between text-[#5A5A5A]">
-              <span>Subtotal</span>
-              <span>{formatRupees(cartSubtotal)}</span>
-            </div>
-
-            {discountAmount > 0 && (
-              <div className="flex justify-between text-[#15803D]">
-                <span>Discount</span>
-                <span>-{formatRupees(discountAmount)}</span>
-              </div>
-            )}
-
-            <div className="flex justify-between text-[#5A5A5A]">
-              <span>Estimated Shipping</span>
-              <span>{shippingFee === 0 ? 'FREE' : formatRupees(shippingFee)}</span>
-            </div>
-
-            <div className="flex justify-between text-base font-bold text-[#1A1A1A] pt-2 border-t border-[#E2DDCF]">
-              <span>Total</span>
-              <span>{formatRupees(total)}</span>
-            </div>
-
-            <div className="pt-2">
-              <Button
-                variant="dark"
-                size="lg"
-                fullWidth
-                href="/checkout"
-                onClick={() => setIsCartDrawerOpen(false)}
-                icon={<ArrowRight size={16} />}
-                iconPosition="right"
-              >
-                Proceed to Checkout
-              </Button>
-            </div>
-
-            <div className="flex items-center justify-center gap-1.5 text-xs text-[#8A8A8A] pt-1">
-              <ShieldCheck size={14} className="text-[#10B981]" />
-              <span>Secure checkout — you confirm the payment</span>
-            </div>
-          </div>
         </div>
       )}
     </Drawer>
