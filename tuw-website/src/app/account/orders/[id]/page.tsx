@@ -104,9 +104,9 @@ export default function OrderDetailPage({ params }: PageProps) {
         <Header />
         <main className="flex-1 max-w-lg mx-auto px-4 py-20 text-center">
           <AlertCircle size={28} aria-hidden="true" className="mx-auto text-store-text-secondary" />
-          <h1 className="mt-4 font-heading text-3xl font-medium text-store-charcoal">We couldn’t find that order</h1>
+          <h1 className="tuw-h1 mt-4 text-store-charcoal">We couldn’t find that order</h1>
           <p className="text-sm text-store-text-secondary mt-3">There’s no order “{id}” in this account.</p>
-          <Link href="/account" className="mt-8 inline-flex items-center h-11 px-6 rounded-full bg-[#111111] text-white text-sm font-medium hover:bg-black">
+          <Link href="/account/orders" className="mt-8 inline-flex items-center h-11 px-6 rounded-full bg-[#111111] text-white text-sm font-medium hover:bg-black">
             Back to my orders
           </Link>
         </main>
@@ -136,6 +136,7 @@ export default function OrderDetailPage({ params }: PageProps) {
           items={[
             { label: 'Home', href: '/' },
             { label: 'My account', href: '/account' },
+            { label: 'Orders', href: '/account/orders' },
             { label: order.orderNumber },
           ]}
         />
@@ -143,7 +144,7 @@ export default function OrderDetailPage({ params }: PageProps) {
         {/* Header */}
         <div className="mt-8 flex flex-col md:flex-row md:items-end md:justify-between gap-6 pb-8 border-b border-store-card-border">
           <div>
-            <h1 className="font-heading text-[clamp(2rem,3vw+1rem,2.75rem)] font-medium tracking-tight text-store-charcoal">
+            <h1 className="tuw-h1 text-store-charcoal">
               Order {order.orderNumber}
             </h1>
             <p className="mt-2 text-sm text-store-text-secondary">
@@ -196,7 +197,7 @@ export default function OrderDetailPage({ params }: PageProps) {
               </Link>
             )}
             <Link
-              href="/account"
+              href="/account/orders"
               className="inline-flex items-center gap-2 h-11 px-6 rounded-full border border-store-border text-sm font-medium text-store-charcoal hover:border-store-charcoal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
             >
               <ArrowLeft size={16} aria-hidden="true" />

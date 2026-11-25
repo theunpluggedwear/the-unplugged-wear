@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AuthShell, { AuthField, PasswordToggle } from '@storefront/components/layout/AuthShell';
 import { registerAction } from '@/server/auth-actions';
+import { readNextPath, useNextParam, withNext } from '@storefront/lib/next-path';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD = 8;
@@ -13,6 +14,8 @@ type Field = 'name' | 'email' | 'password' | 'confirm';
 
 export default function RegisterPage() {
   const router = useRouter();
+  // Sign-up returns the shopper where they were headed (checkout, an invite…).
+  const next = useNextParam();
   const refs = {
     name: useRef<HTMLInputElement>(null),
     email: useRef<HTMLInputElement>(null),
@@ -49,7 +52,7 @@ export default function RegisterPage() {
     setIsLoading(true);
     setFormError('');
     const [firstName = '', ...rest] = name.trim().split(/\s+/);
-    void registerAction({ email, password, firstName, lastName: rest.join(' '), next: '/account' }).then((result) => {
+    void registerAction({ email, password, firstName, lastName: rest.join(' '), next: readNextPath() }).then((result) => {
       if (!result.ok) {
         // Keep every typed value; point at the field the server rejected.
         setIsLoading(false);
@@ -163,7 +166,7 @@ export default function RegisterPage() {
 
       <p className="text-sm text-store-text-secondary text-center">
         Already have an account?{' '}
-        <Link href="/login" className="font-semibold text-primary-dark hover:underline">
+        <Link href={withNext('/login', next)} className="font-semibold text-primary-dark hover:underline">
           Log in
         </Link>
       </p>

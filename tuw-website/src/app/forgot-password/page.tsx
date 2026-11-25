@@ -9,8 +9,10 @@ import Input from '@storefront/components/ui/Input';
 import Button from '@storefront/components/ui/Button';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { forgotPasswordAction } from '@/server/auth-actions';
+import { useNextParam, withNext } from '@storefront/lib/next-path';
 
 export default function ForgotPasswordPage() {
+  const next = useNextParam();
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -48,7 +50,7 @@ export default function ForgotPasswordPage() {
 
         <div className="bg-white rounded-3xl border border-[#E2DDCF] p-8 shadow-xs my-6 space-y-6">
           <div className="space-y-1 text-center">
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#1A1A1A]">
+            <h1 className="tuw-h1 text-store-charcoal">
               Reset Your Password
             </h1>
             <p className="text-xs text-[#666]">
@@ -61,18 +63,18 @@ export default function ForgotPasswordPage() {
               <div className="w-14 h-14 rounded-full bg-[#F0FDF4] text-[#15803D] flex items-center justify-center mx-auto">
                 <CheckCircle2 size={28} />
               </div>
-              <h3 className="text-base font-bold text-[#1A1A1A]">Recovery Link Transmitted</h3>
+              <h3 className="text-base font-bold text-store-charcoal">Recovery Link Transmitted</h3>
               <p className="text-xs text-[#666] leading-relaxed">
                 If an account exists for <strong>{email}</strong>, you will receive password reset instructions.
               </p>
               {devLink && (
                 <p role="note" className="text-xs text-[#666] leading-relaxed">
                   Email delivery is not connected yet (development).{' '}
-                  <a href={devLink} className="font-semibold text-[#1A1A1A] underline">Open the reset link</a>
+                  <a href={devLink} className="font-semibold text-store-charcoal underline">Open the reset link</a>
                 </p>
               )}
               <div className="pt-2">
-                <Button variant="secondary" size="sm" href="/login">
+                <Button variant="secondary" size="sm" href={withNext('/login', next)}>
                   Back to log in
                 </Button>
               </div>
@@ -105,8 +107,8 @@ export default function ForgotPasswordPage() {
 
           <div className="pt-4 border-t border-[#E2DDCF] text-center">
             <Link
-              href="/login"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1A1A1A] hover:text-[#7539FF]"
+              href={withNext('/login', next)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-store-charcoal hover:text-[#7539FF]"
             >
               <ArrowLeft size={14} /> Back to Sign In
             </Link>

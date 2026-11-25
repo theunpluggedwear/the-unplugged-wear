@@ -40,7 +40,7 @@ const FOOTER_COLUMNS: FooterColumn[] = [
       { label: 'T-Shirts', href: '/shop?category=tees' },
       { label: 'Joggers & Sweatpants', href: '/shop?category=pants' },
       { label: 'Capsule Collections', href: '/collections' },
-      { label: 'Saved Wishlist', href: '/wishlist' },
+      { label: 'Saved Wishlist', href: '/account/wishlist' },
     ],
   },
   {

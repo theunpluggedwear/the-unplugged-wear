@@ -294,7 +294,8 @@ describe('Demo sign-in and checkout flow', () => {
   test('order amounts stored in rupees are converted to paise before formatting', () => {
     const files = [
       'src/app/checkout/success/page.tsx',
-      'src/app/account/orders/page.tsx',
+      'src/app/account/_components/OrdersSection.tsx',
+      'src/app/account/_components/OverviewSection.tsx',
       'src/app/account/orders/[id]/page.tsx',
     ];
     for (const file of files) {
