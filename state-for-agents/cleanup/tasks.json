@@ -9,9 +9,9 @@
   },
   "summary": {
     "total": 116,
-    "done": 108,
-    "in_progress": 2,
-    "backlog": 6
+    "done": 110,
+    "in_progress": 1,
+    "backlog": 5
   },
   "session": {
     "branch": "urvil-ui",
@@ -2455,7 +2455,7 @@
     {
       "id": "CLN-FSM-01",
       "title": "Canonical status module in heart",
-      "status": "in_progress",
+      "status": "done",
       "owner": "agent",
       "parent": "CLN-FSM",
       "category": "refactor",
@@ -2467,18 +2467,18 @@
       "fix": "Discriminated-union state machine with reducer transitions",
       "reference_verification": false,
       "started": "2026-11-27",
-      "finished": null,
-      "log": "Add packages/heart/src/platform/status with canonical order/payment/fulfilment/return/notification unions, ORDER_TRANSITIONS, RETURN_TRANSITIONS, ORDER_STATUS_RANK, normalizeLegacyFulfillment and paymentStatusForProvider. orders/admin, returns/admin and fulfillment/status now source transitions from it; website Order types re-export canonical unions. Four unit tests pass.",
+      "finished": "2026-11-27",
+      "log": "ee5c21b: canonical status module landed with transitions, rank, legacy fulfillment normalization and provider payment mapping; four unit tests, typecheck and build pass.",
       "design_match": "n/a",
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": []
     },
     {
       "id": "CLN-FSM-02",
       "title": "Rewrite usePopoverAnimation as one reducer FSM",
-      "status": "backlog",
+      "status": "done",
       "owner": "agent",
       "parent": "CLN-FSM",
       "category": "refactor",
@@ -2490,11 +2490,11 @@
       "fix": "Discriminated-union state machine with reducer transitions",
       "reference_verification": false,
       "started": null,
-      "finished": null,
-      "log": "Single reducer state {phase, timerId}, events OPEN/CLOSE/CANCEL/TICK; remove phaseRef, openRef, wasOpen, render-time setPhase and setPhaseBoth. Keep public API stable.",
+      "finished": "2026-11-27",
+      "log": "usePopoverAnimation is now a single reducer FSM (open|closing|closed) with one timer ref; phaseRef, openRef, wasOpen, render-time setPhase and setPhaseBoth removed. Two reducer tests. Browser QA at 1440 confirmed hover/click/Escape mega-menu and notification open/close with no stuck panels.",
       "design_match": "n/a",
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": []
     },

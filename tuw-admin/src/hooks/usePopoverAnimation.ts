@@ -2,10 +2,23 @@
 
 import React from 'react';
 
-
 export const POPOVER_EXIT_MS = 150;
 
 type PopoverPhase = 'open' | 'closing' | 'closed';
+
+interface PopoverState {
+  phase: PopoverPhase;
+}
+
+type PopoverEvent = { type: 'OPEN' } | { type: 'CLOSE' } | { type: 'EXPIRE' };
+
+export function popoverReducer(state: PopoverState, event: PopoverEvent): PopoverState {
+  switch (event.type) {
+    case 'OPEN': return { phase: 'open' };
+    case 'CLOSE': return state.phase === 'closed' ? state : { phase: 'closing' };
+    case 'EXPIRE': return { phase: 'closed' };
+  }
+}
 
 interface PopoverAnimation {
   phase: PopoverPhase;
@@ -14,94 +27,68 @@ interface PopoverAnimation {
   cancelClose: () => void;
 }
 
-
-
-
-
-
 export function usePopoverAnimation(
   open: boolean,
   onClosed?: () => void,
-  
-  
-  exitMs: number = POPOVER_EXIT_MS
+  exitMs: number = POPOVER_EXIT_MS,
 ): PopoverAnimation {
-  const [phase, setPhase] = React.useState<PopoverPhase>(open ? 'open' : 'closed');
-  const phaseRef = React.useRef<PopoverPhase>(open ? 'open' : 'closed');
-  const openRef = React.useRef(open);
-  openRef.current = open;
-  const wasOpen = React.useRef(open);
+  const [state, dispatch] = React.useReducer(popoverReducer, open ? { phase: 'open' } : { phase: 'closed' });
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wasOpen = React.useRef(open);
+  const openRef = React.useRef(open);
   const onClosedRef = React.useRef(onClosed);
+  openRef.current = open;
   onClosedRef.current = onClosed;
 
-  const clearTimer = () => {
+  const clearTimer = React.useCallback(() => {
     if (timer.current !== null) {
       clearTimeout(timer.current);
       timer.current = null;
     }
-  };
-
-  const setPhaseBoth = (next: PopoverPhase) => {
-    phaseRef.current = next;
-    setPhase(next);
-  };
-
-  const finishClose = React.useCallback(() => {
-    timer.current = null;
-    setPhaseBoth('closed');
-    onClosedRef.current?.();
   }, []);
 
+  const finishClose = React.useCallback(() => {
+    clearTimer();
+    dispatch({ type: 'EXPIRE' });
+    onClosedRef.current?.();
+  }, [clearTimer]);
+
   const startExit = React.useCallback(() => {
-    if (phaseRef.current === 'closed' || phaseRef.current === 'closing') return;
-    const reduced =
-      typeof window !== 'undefined' &&
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduced) {
-      setPhaseBoth('closed');
-      onClosedRef.current?.();
+    clearTimer();
+    if (!openRef.current) {
+      finishClose();
       return;
     }
-    setPhaseBoth('closing');
-    clearTimer();
+    const reduced = typeof window !== 'undefined'
+      && typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    dispatch({ type: 'CLOSE' });
+    if (reduced) { finishClose(); return; }
     timer.current = setTimeout(finishClose, exitMs);
-  }, [finishClose, exitMs]);
-
-  
-  if (open && phase !== 'open') {
-    wasOpen.current = true;
-    clearTimer();
-    phaseRef.current = 'open';
-    setPhase('open');
-  }
-
-  React.useEffect(() => clearTimer, []);
+  }, [clearTimer, exitMs, finishClose]);
 
   React.useEffect(() => {
+    clearTimer();
     if (open) {
       wasOpen.current = true;
-      clearTimer();
-      if (phaseRef.current !== 'open') {
-        setPhaseBoth('open');
-      }
+      dispatch({ type: 'OPEN' });
       return;
     }
     if (!wasOpen.current) return;
     wasOpen.current = false;
     startExit();
-  }, [open, startExit]);
+  }, [open, clearTimer, startExit]);
+
+  React.useEffect(() => clearTimer, [clearTimer]);
 
   return {
-    phase,
-    visible: phase !== 'closed',
+    phase: state.phase,
+    visible: state.phase !== 'closed',
     requestClose: startExit,
     cancelClose: () => {
       if (!openRef.current) return;
-      wasOpen.current = true;
       clearTimer();
-      setPhaseBoth('open');
+      dispatch({ type: 'OPEN' });
     },
   };
 }
