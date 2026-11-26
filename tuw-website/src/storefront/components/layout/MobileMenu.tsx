@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { Search, Heart, User, ArrowRight, ShieldCheck, RefreshCw, ChevronDown } from 'lucide-react';
+import { Search, Heart, User, ArrowRight, ShieldCheck, RefreshCw, ChevronDown, LogOut } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Drawer from '@storefront/components/ui/Drawer';
 import type { NavItem } from './navigation';
 import type { Product } from '@storefront/lib/types';
 import { matchesShopFilter } from '@storefront/lib/product';
+import { useSession } from '@storefront/lib/session';
 
 export interface MobileMenuProps {
   isOpen: boolean;
@@ -25,10 +26,45 @@ export interface MobileMenuProps {
 // Module scope so the array is stable across renders.
 const SECONDARY_LINKS: { label: string; href: string; icon: LucideIcon }[] = [
   { label: 'Search Catalog', href: '/search', icon: Search },
-  { label: 'My Account & Orders', href: '/account', icon: User },
-  { label: 'Saved Wishlist', href: '/wishlist', icon: Heart },
+  { label: 'My account', href: '/account', icon: User },
+  { label: 'Saved Wishlist', href: '/account/wishlist', icon: Heart },
   { label: 'Track My Order', href: '/track-order', icon: RefreshCw },
 ];
+
+/** "Log out" for signed-in shoppers; reads the streamed session, so it sits in <Suspense>. */
+function MobileMenuSignOut() {
+  const { session, signOut } = useSession();
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  if (!session) return null;
+  return (
+    <>
+      <button
+        type="button"
+        disabled={busy}
+        aria-busy={busy || undefined}
+        onClick={async () => {
+          setBusy(true);
+          setFailed(false);
+          const ok = await signOut(); // navigates away on success
+          if (!ok) {
+            setBusy(false);
+            setFailed(true);
+          }
+        }}
+        className="flex items-center gap-3 text-sm font-medium text-store-text-secondary hover:text-store-charcoal cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+      >
+        <LogOut size={18} aria-hidden="true" />
+        <span>{busy ? 'Logging out…' : `Log out (${session.name})`}</span>
+      </button>
+      {failed && (
+        <p role="alert" className="text-xs text-store-terracotta">
+          Couldn’t log you out. Please try again.
+        </p>
+      )}
+    </>
+  );
+}
 
 export default function MobileMenu({ isOpen, onClose, items = [], links, products = [], socialLinks = [] }: MobileMenuProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -144,6 +180,9 @@ export default function MobileMenu({ isOpen, onClose, items = [], links, product
               </Link>
             );
           })}
+          <Suspense fallback={null}>
+            <MobileMenuSignOut />
+          </Suspense>
         </div>
 
         {/* Brand note + social profiles */}

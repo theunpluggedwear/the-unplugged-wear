@@ -40,7 +40,7 @@ export default function Switch({
         />
       </button>
 
-      {label && <span className="text-sm font-medium text-[#1A1A1A]">{label}</span>}
+      {label && <span className="text-sm font-medium text-store-charcoal">{label}</span>}
     </label>
   );
 }

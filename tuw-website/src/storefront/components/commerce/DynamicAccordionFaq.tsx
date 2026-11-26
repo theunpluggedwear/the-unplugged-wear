@@ -36,7 +36,7 @@ export default function DynamicAccordionFaq({
               {eyebrow}
             </span>
           )}
-          <h2 className="text-2xl sm:text-3xl font-heading font-medium uppercase tracking-wide text-store-text-primary">
+          <h2 className="tuw-h2 text-store-text-primary">
             {title}
           </h2>
           {description && (

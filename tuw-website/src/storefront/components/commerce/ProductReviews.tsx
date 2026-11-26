@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { MessageSquare } from 'lucide-react';
 import Button from '@storefront/components/ui/Button';
 import Modal from '@storefront/components/ui/Modal';
@@ -31,6 +32,9 @@ export default function ProductReviews({ productId, productTitle = 'this piece' 
   const [formError, setFormError] = useState('');
   const [sent, setSent] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Signing in from here comes back to this product's reviews.
+  const pathname = usePathname();
+  const loginHref = `/login?next=${encodeURIComponent(`${pathname}#reviews`)}`;
 
   const load = React.useCallback(() => {
     void getReviewsAction({ productId }).then((r) => { if (r.ok) setData(r.data); });
@@ -62,9 +66,9 @@ export default function ProductReviews({ productId, productTitle = 'this piece' 
 
   const summary = data?.summary;
   return (
-    <section id="reviews" aria-labelledby="reviews-heading" className="my-16 pt-8 border-t border-store-card-border">
+    <section id="reviews" aria-labelledby="reviews-heading" className="scroll-mt-28 my-16 pt-8 border-t border-store-card-border">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 id="reviews-heading" className="font-heading text-2xl font-medium text-store-charcoal">Reviews</h2>
+        <h2 id="reviews-heading" className="tuw-h2 text-store-charcoal">Reviews</h2>
         {data?.canReview && (
           <Button variant="dark" size="md" onClick={start} icon={<MessageSquare size={16} />}>
             {data.mine ? 'Edit your review' : 'Write a review'}
@@ -81,7 +85,7 @@ export default function ProductReviews({ productId, productTitle = 'this piece' 
           <MessageSquare size={24} className="text-store-text-secondary shrink-0" aria-hidden="true" />
           <p className="text-sm text-store-text-secondary">
             No reviews yet. Reviews come from customers who have received this piece.
-            {data && !data.signedIn && <> Bought it? <Link href="/login" className="underline">Sign in</Link> to review it.</>}
+            {data && !data.signedIn && <> Bought it? <Link href={loginHref} className="underline underline-offset-4 decoration-store-gold hover:decoration-store-charcoal text-store-charcoal">Sign in</Link> to review it.</>}
           </p>
         </div>
       ) : (

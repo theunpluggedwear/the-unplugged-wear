@@ -65,7 +65,7 @@ export default function CartPage() {
         />
 
         <div className="my-6">
-          <h1 className="text-[clamp(1.75rem,3vw+0.5rem,2.25rem)] font-extrabold tracking-tight text-[#1A1A1A]">
+          <h1 className="tuw-h1 text-store-charcoal">
             Your Shopping Bag
           </h1>
           <p className="text-sm text-[#666] mt-1">
@@ -77,7 +77,7 @@ export default function CartPage() {
           <p role="status" className="py-20 text-center text-sm text-[#666]">Loading your bag…</p>
         ) : bagError && cart.length === 0 ? (
           <div role="alert" className="py-20 text-center rounded-3xl bg-white border border-[#E2DDCF] px-8 max-w-2xl mx-auto shadow-xs">
-            <h2 className="text-xl font-bold text-[#1A1A1A]">We couldn’t load your bag</h2>
+            <h2 className="tuw-h3 text-xl text-store-charcoal">We couldn’t load your bag</h2>
             <p className="text-sm text-[#666] mt-2">{bagError}</p>
             <div className="mt-6">
               <Button variant="dark" size="lg" onClick={() => void refreshBag()}>
@@ -90,7 +90,7 @@ export default function CartPage() {
             <div className="w-16 h-16 rounded-full bg-[#F4F1EA] flex items-center justify-center text-[#8A8A8A] mx-auto mb-4">
               <ShoppingBag size={28} />
             </div>
-            <h2 className="text-xl font-bold text-[#1A1A1A]">Your shopping bag is empty</h2>
+            <h2 className="tuw-h3 text-xl text-store-charcoal">Your shopping bag is empty</h2>
             <p className="text-sm text-[#666] max-w-sm mx-auto mt-2 leading-relaxed">
               Explore our hoodies, tees and everyday pieces.
             </p>
@@ -107,7 +107,7 @@ export default function CartPage() {
               {/* Free delivery indicator */}
               <div className="p-4 rounded-2xl bg-white border border-[#E2DDCF] shadow-xs">
                 <div className="flex items-center justify-between text-xs font-semibold mb-2">
-                  <span className="text-[#1A1A1A]">
+                  <span className="text-store-charcoal">
                     {freeShippingRemaining > 0
                       ? `Add ${formatRupees(freeShippingRemaining)} more for complimentary delivery`
                       : '✓ You have unlocked free domestic delivery'}
@@ -139,7 +139,7 @@ export default function CartPage() {
                     <div className="flex-1 flex flex-col justify-between">
                       <div>
                         <div className="flex items-start justify-between gap-4">
-                          <h3 className="text-base sm:text-lg font-bold text-[#1A1A1A] leading-snug">
+                          <h3 className="text-base sm:text-lg font-bold text-store-charcoal leading-snug">
                             {item.title}
                           </h3>
                           <button
@@ -153,9 +153,9 @@ export default function CartPage() {
                         </div>
 
                         <div className="text-xs text-[#8A8A8A] mt-1.5 flex items-center gap-2">
-                          <span>Shade: <strong className="text-[#1A1A1A]">{item.color}</strong></span>
+                          <span>Shade: <strong className="text-store-charcoal">{item.color}</strong></span>
                           <span>•</span>
-                          <span>Size: <strong className="text-[#1A1A1A]">{item.size}</strong></span>
+                          <span>Size: <strong className="text-store-charcoal">{item.size}</strong></span>
                         </div>
                       </div>
 
@@ -166,11 +166,11 @@ export default function CartPage() {
                             type="button"
                             aria-label="Decrease quantity"
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="w-7 h-7 flex items-center justify-center text-[#5A5A5A] hover:text-[#1A1A1A]"
+                            className="w-7 h-7 flex items-center justify-center text-[#5A5A5A] hover:text-store-charcoal"
                           >
                             <Minus size={13} />
                           </button>
-                          <span className="w-7 text-center text-xs font-bold text-[#1A1A1A]">
+                          <span className="w-7 text-center text-xs font-bold text-store-charcoal">
                             {item.quantity}
                           </span>
                           <button
@@ -179,13 +179,13 @@ export default function CartPage() {
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
                         disabled={item.maxQty !== undefined && item.quantity >= item.maxQty}
                         title={item.maxQty !== undefined && item.quantity >= item.maxQty ? 'No more available' : undefined}
-                            className="w-7 h-7 flex items-center justify-center text-[#5A5A5A] hover:text-[#1A1A1A] disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="w-7 h-7 flex items-center justify-center text-[#5A5A5A] hover:text-store-charcoal disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             <Plus size={13} />
                           </button>
                         </div>
 
-                        <div className="text-base font-extrabold text-[#1A1A1A]">
+                        <div className="text-base font-extrabold text-store-charcoal">
                           {formatRupees((item.priceINR * item.quantity))}
                         </div>
                       </div>
@@ -198,7 +198,7 @@ export default function CartPage() {
             {/* Right: Order Summary (4 cols) */}
             <div className="lg:col-span-4 space-y-6">
               <div className="bg-white rounded-3xl border border-[#E2DDCF] p-6 space-y-4 shadow-xs">
-                <h3 className="text-base font-bold text-[#1A1A1A] uppercase tracking-wider pb-3 border-b border-[#E2DDCF]">
+                <h3 className="text-base font-bold text-store-charcoal uppercase tracking-wider pb-3 border-b border-[#E2DDCF]">
                   Order Summary
                 </h3>
 
@@ -237,7 +237,7 @@ export default function CartPage() {
                 <div className="space-y-2.5 text-xs text-[#5A5A5A] pt-2">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <span className="font-semibold text-[#1A1A1A]">{formatRupees(cartSubtotal)}</span>
+                    <span className="font-semibold text-store-charcoal">{formatRupees(cartSubtotal)}</span>
                   </div>
 
                   {discountAmount > 0 && (
@@ -249,12 +249,12 @@ export default function CartPage() {
 
                   <div className="flex justify-between">
                     <span>Domestic Shipping</span>
-                    <span className="font-semibold text-[#1A1A1A]">
+                    <span className="font-semibold text-store-charcoal">
                       {shippingFee === 0 ? 'FREE' : formatRupees(shippingFee)}
                     </span>
                   </div>
 
-                  <div className="flex justify-between text-base font-extrabold text-[#1A1A1A] pt-3 border-t border-[#E2DDCF]">
+                  <div className="flex justify-between text-base font-extrabold text-store-charcoal pt-3 border-t border-[#E2DDCF]">
                     <span>Total Amount</span>
                     <span>{formatRupees(total)}</span>
                   </div>

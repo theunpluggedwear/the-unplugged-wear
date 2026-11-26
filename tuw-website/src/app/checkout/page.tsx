@@ -341,7 +341,7 @@ export default function CheckoutPage() {
       <div className="min-h-screen flex flex-col bg-store-canvas">
         <Header />
         <main className="flex-1 max-w-7xl mx-auto px-4 py-24 text-center" role="alert">
-          <h1 className="text-2xl font-bold font-heading text-store-charcoal">We couldn’t load your bag</h1>
+          <h1 className="tuw-h1 text-store-charcoal">We couldn’t load your bag</h1>
           <p className="text-sm text-store-muted mt-2">{bagError}</p>
           <div className="mt-6">
             <button
@@ -367,7 +367,7 @@ export default function CheckoutPage() {
           <div className="w-16 h-16 rounded-full bg-store-cream flex items-center justify-center text-store-muted mx-auto mb-4">
             <ShoppingBag size={28} />
           </div>
-          <h1 className="text-2xl font-bold font-heading text-store-charcoal">Your Bag is Empty</h1>
+          <h1 className="tuw-h1 text-store-charcoal">Your Bag is Empty</h1>
           <p className="text-sm text-store-muted mt-2">
             Please add items to your shopping bag before proceeding to checkout.
           </p>
@@ -406,7 +406,7 @@ export default function CheckoutPage() {
         {/* ======================================================== */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold font-heading text-store-charcoal tracking-tight">
+            <h1 className="tuw-h1 text-store-charcoal">
               {step === 1 && `Your cart`}
               {step === 2 && `Your details`}
               {step === 3 && `Payment`}

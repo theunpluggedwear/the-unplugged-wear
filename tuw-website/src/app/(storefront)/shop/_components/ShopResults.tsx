@@ -31,7 +31,7 @@ export default async function ShopResults({ searchParams }: { searchParams: Prom
           ]}
         />
         <div className="flex items-baseline gap-3">
-          <h1 className="text-2xl sm:text-3xl font-heading font-medium tracking-tight text-store-charcoal">
+          <h1 className="tuw-h1 text-store-charcoal">
             {shopHeading(query)}
           </h1>
           <span className="text-sm text-store-text-secondary tuw-tabular-nums" aria-live="polite">

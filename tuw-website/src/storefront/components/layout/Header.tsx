@@ -595,7 +595,7 @@ export default function Header() {
 
               {/* 2. Wishlist */}
               <Link
-                href="/wishlist"
+                href="/account/wishlist"
                 aria-label={wishlist.length ? `Wishlist, ${wishlist.length} saved` : 'Wishlist'}
                 className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-store-text-primary hover:text-black hover:bg-black/5 active:scale-95 transition-all cursor-pointer"
               >

@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const SECTION_FILES = [
-  'src/app/page.tsx',
+  'src/app/_components/LegacyHome.tsx',
   'src/storefront/components/commerce/OurPhilosophy.tsx',
   'src/storefront/components/commerce/VirtualFittingRoom.tsx',
   'src/storefront/components/layout/BrandIntro.tsx',
@@ -75,7 +75,7 @@ describe('Homepage typography roles (weight & size only)', () => {
 
   test('homepage eyebrows stay removed and no 10px/600/700 eyebrows return', () => {
     assert.ok(
-      !read('src/app/page.tsx').includes('SS26 • Slow-Living Atelier'),
+      !read('src/app/_components/LegacyHome.tsx').includes('SS26 • Slow-Living Atelier'),
       'hero must not bring back the SS26 kicker above the headline'
     );
 
@@ -94,7 +94,7 @@ describe('Homepage typography roles (weight & size only)', () => {
   });
 
   test('product names and prices keep their agreed sizes and weights', () => {
-    const page = read('src/app/page.tsx');
+    const page = read('src/app/_components/LegacyHome.tsx');
     const card = read('src/storefront/components/commerce/ProductCard.tsx');
     const vfr = read('src/storefront/components/commerce/VirtualFittingRoom.tsx');
 
@@ -124,7 +124,7 @@ describe('Homepage typography roles (weight & size only)', () => {
   });
 
   test('section descriptions keep their agreed sizes at weight 400', () => {
-    const page = read('src/app/page.tsx');
+    const page = read('src/app/_components/LegacyHome.tsx');
     const vfr = read('src/storefront/components/commerce/VirtualFittingRoom.tsx');
 
     const descriptions = [
@@ -151,7 +151,7 @@ describe('Homepage typography roles (weight & size only)', () => {
   });
 
   test('documented exceptions stay intact: hero display, hero subtitle, footer signature', () => {
-    const page = read('src/app/page.tsx');
+    const page = read('src/app/_components/LegacyHome.tsx');
     const footer = read('src/storefront/components/layout/Footer.tsx');
 
     assert.ok(
@@ -197,6 +197,13 @@ describe('Honest authentication', () => {
       assert.ok(!/Sign in with (Google|Apple)/.test(src), 'no simulated Google/Apple sign-in buttons');
       assert.ok(src.includes('noValidate'), 'forms use inline errors instead of browser bubbles');
     }
-    assert.ok(login.includes("next.startsWith('/') && !next.startsWith('//')"), 'login ?next= only allows same-site paths');
+    const nextPath = read('src/storefront/lib/next-path.ts');
+    assert.ok(
+      nextPath.includes("raw.startsWith('/')") && nextPath.includes("raw.startsWith('//')") && nextPath.includes("raw.startsWith('/\\\\')"),
+      '?next= only allows same-site paths (no //host or /\\host)',
+    );
+    for (const src of [login, register]) {
+      assert.ok(src.includes('readNextPath()'), 'login and register send only the sanitised ?next= to the server');
+    }
   });
 });

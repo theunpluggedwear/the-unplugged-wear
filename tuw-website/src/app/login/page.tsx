@@ -6,17 +6,14 @@ import { useRouter } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
 import AuthShell, { AuthField, PasswordToggle } from '@storefront/components/layout/AuthShell';
 import { loginAction } from '@/server/auth-actions';
+import { readNextPath, useNextParam, withNext } from '@storefront/lib/next-path';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Only same-site paths are honoured, so ?next= cannot redirect off the store.
-function safeNextPath(): string {
-  if (typeof window === 'undefined') return '/account';
-  const next = new URLSearchParams(window.location.search).get('next');
-  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/account';
-}
 
 export default function LoginPage() {
+  // Carried to Create account / Forgot password so the return address survives.
+  const next = useNextParam();
   const router = useRouter();
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -41,7 +38,7 @@ export default function LoginPage() {
 
     setIsLoading(true);
     // "Remember me" keeps the session for 30 days; otherwise it ends with the browser.
-    void loginAction({ email, password, remember: rememberMe, next: safeNextPath() }).then((result) => {
+    void loginAction({ email, password, remember: rememberMe, next: readNextPath() }).then((result) => {
       if (!result.ok) {
         // Keep what was typed so it can be corrected.
         setIsLoading(false);
@@ -111,7 +108,7 @@ export default function LoginPage() {
             />
             Remember me
           </label>
-          <Link href="/forgot-password" className="inline-flex items-center min-h-6 text-store-text-secondary hover:text-primary-dark hover:underline">
+          <Link href={withNext('/forgot-password', next)} className="inline-flex items-center min-h-6 text-store-text-secondary hover:text-primary-dark hover:underline">
             Forgot your password?
           </Link>
         </div>
@@ -127,7 +124,7 @@ export default function LoginPage() {
 
       <p className="text-sm text-store-text-secondary text-center">
         New to The Unplugged Wear?{' '}
-        <Link href="/register" className="font-semibold text-primary-dark hover:underline">
+        <Link href={withNext('/register', next)} className="font-semibold text-primary-dark hover:underline">
           Create an account
         </Link>
       </p>

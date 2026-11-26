@@ -48,7 +48,7 @@ export default function Select({
           value={value}
           disabled={disabled}
           onChange={(e) => onChange?.(e.target.value)}
-          className={`w-full h-11 pl-3.5 pr-10 text-sm rounded-lg border bg-white appearance-none outline-none transition-colors duration-150 text-[#1A1A1A] cursor-pointer ${
+          className={`w-full h-11 pl-3.5 pr-10 text-sm rounded-lg border bg-white appearance-none outline-none transition-colors duration-150 text-store-charcoal cursor-pointer ${
             error
               ? 'border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20'
               : 'border-[#E2DDCF] hover:border-[#B5AEA1] focus:border-[#1A1A1A] focus:ring-2 focus:ring-[#1A1A1A]/10'

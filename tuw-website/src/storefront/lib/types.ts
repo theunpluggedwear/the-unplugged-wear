@@ -171,6 +171,9 @@ export type CartItem = {
   image: string;
   /** How many this line may hold right now (from the server; 0 = no longer available). */
   maxQty?: number;
+  /** Product page slug, when the server knows it. */
+  slug?: string;
+  productKind?: 'physical' | 'gift_card';
   giftRecipientName?: string;
   giftRecipientEmail?: string;
   giftMessage?: string;
@@ -238,17 +241,6 @@ export type Order = {
 };
 
 export type DemoScenario = 'normal' | 'loading' | 'empty' | 'error' | 'long_content';
-
-export type ReturnRequest = {
-  id: string;
-  orderNumber: string;
-  itemTitle: string;
-  variant: string;
-  reason: string;
-  condition: string;
-  status: 'Requested' | 'Approved' | 'Pickup Scheduled' | 'Received & Restocked' | 'Rejected';
-  createdAt: string;
-};
 
 export type JournalArticle = {
   id: string;

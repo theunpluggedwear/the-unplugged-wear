@@ -46,7 +46,7 @@ export default function EditorialFeatureSplit({
                 {eyebrow}
               </span>
             )}
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-medium tracking-tight text-store-charcoal leading-tight">
+            <h2 className="tuw-h2 text-store-charcoal">
               {title}
             </h2>
             <p className="text-sm sm:text-base text-store-text-secondary leading-relaxed pt-1">

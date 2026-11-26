@@ -27,14 +27,14 @@ export default function CollectionCard({ collection, className = '' }: Collectio
           <span className="text-xs uppercase font-bold tracking-[0.2em] text-[#C8A96A] block mb-1">
             Capsule • {collection.productCount} Pieces
           </span>
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight">{collection.title}</h2>
+          <h2 className="text-xl sm:text-2xl font-heading font-medium tracking-tight">{collection.title}</h2>
           <p className="text-xs text-[#D1D5DB] mt-1 line-clamp-1">{collection.tagline}</p>
         </div>
       </div>
 
       <div className="p-5 flex items-center justify-between bg-white">
         <p className="text-xs text-[#666] line-clamp-2 max-w-sm">{collection.description}</p>
-        <span className="w-9 h-9 rounded-full bg-[#FAF9F6] border border-[#E2DDCF] flex items-center justify-center text-[#1A1A1A] group-hover:bg-[#1A1A1A] group-hover:text-white transition-colors shrink-0 ml-4">
+        <span className="w-9 h-9 rounded-full bg-[#FAF9F6] border border-[#E2DDCF] flex items-center justify-center text-store-charcoal group-hover:bg-[#1A1A1A] group-hover:text-white transition-colors shrink-0 ml-4">
           <ArrowRight size={16} />
         </span>
       </div>

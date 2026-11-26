@@ -6,6 +6,8 @@ import { ImageOff } from 'lucide-react';
 export interface ImageWithFallbackProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallbackSrc?: string;
   fallbackText?: string;
+  /** Rendered instead of the default "Image not available" box. */
+  fallback?: React.ReactNode;
 }
 
 export default function ImageWithFallback({
@@ -13,6 +15,7 @@ export default function ImageWithFallback({
   alt = '',
   fallbackSrc,
   fallbackText = 'Image not available',
+  fallback,
   className = '',
   ...props
 }: ImageWithFallbackProps) {
@@ -40,6 +43,7 @@ export default function ImageWithFallback({
   }, [src]);
 
   if (error || !src) {
+    if (fallback) return <>{fallback}</>;
     if (fallbackSrc) {
       return (
         <img

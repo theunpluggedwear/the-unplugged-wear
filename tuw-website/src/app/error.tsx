@@ -17,7 +17,7 @@ export default function ErrorPage({
   }, [error]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6] text-[#1A1A1A] px-4 py-16 text-center">
+    <div className="min-h-screen flex items-center justify-center bg-[#FAF9F6] text-store-charcoal px-4 py-16 text-center">
       <div className="max-w-md w-full space-y-6">
         <div className="w-16 h-16 mx-auto rounded-full bg-[#FEF4F4] text-[#C91818] flex items-center justify-center">
           <AlertCircle size={28} />
@@ -27,7 +27,7 @@ export default function ErrorPage({
           <span className="text-xs uppercase tracking-widest text-[#C91818] font-semibold">
             System Notice
           </span>
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#1A1A1A]">
+          <h1 className="tuw-h1 text-store-charcoal">
             Temporary Connection Pause
           </h1>
           <p className="text-sm text-[#5D6772] leading-relaxed">

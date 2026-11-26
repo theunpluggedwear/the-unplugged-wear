@@ -12,7 +12,6 @@ import {
   Product,
   CartItem,
   Order,
-  ReturnRequest,
   Address,
   DemoScenario,
 } from '@storefront/lib/types';
@@ -35,6 +34,8 @@ export interface NavCatalog {
 }
 
 /** Sonner renders toasts directly; this is only the caller-facing shape. */
+export type PromoApplyOptions = { quiet?: boolean; onError?: (message: string) => void };
+
 export type ToastInput = {
   type: 'success' | 'info' | 'warning' | 'error';
   title: string;
@@ -57,10 +58,18 @@ interface StoreContextType {
   // Cart
   cart: CartItem[];
   addToCart: (item: Omit<CartItem, 'id'>) => void;
+  /**
+   * Buy now: make the bag hold exactly this item and quantity, without
+   * opening the drawer. An identical line is set to the quantity instead of
+   * being added to again. Resolves false if the server refused.
+   */
+  buyNow: (item: Omit<CartItem, 'id'>) => Promise<boolean>;
   updateQuantity: (id: string, qty: number) => void;
   /** Change a bag line's colour/size; merges with an identical line if one exists. */
   updateCartItemVariant: (id: string, changes: { color?: string; size?: string; image?: string }) => void;
   removeFromCart: (id: string) => void;
+  /** Move a bag line to the wishlist (signed-in shoppers); the toast offers Undo. */
+  saveForLater: (id: string) => void;
   clearCart: () => void;
   cartCount: number;
   cartSubtotal: number;
@@ -69,7 +78,8 @@ interface StoreContextType {
   freeShippingRemaining: number;
   promoCode: string;
   discountAmount: number;
-  applyPromoCode: (code: string) => Promise<boolean>;
+  /** `quiet` skips the toasts and reports a refusal through `onError` instead (for inline messages). */
+  applyPromoCode: (code: string, opts?: PromoApplyOptions) => Promise<boolean>;
   removePromoCode: () => void;
   /** Stable setter; the open flag lives in its own subscription so opening the
    * drawer does not re-render every useStore consumer. */
@@ -100,9 +110,6 @@ interface StoreContextType {
   getOrderById: (orderId: string) => Order | undefined;
   getOrderByNumber: (orderNumber: string) => Order | undefined;
 
-  // Returns
-  returns: ReturnRequest[];
-  submitReturnRequest: (req: Omit<ReturnRequest, 'id' | 'createdAt' | 'status'>) => void;
 
 
   // Toasts (Sonner is mounted once by the provider)
@@ -162,7 +169,6 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
     ordersRef.current = next;
     setOrders(next);
   }, []);
-  const [returns, setReturns] = useState<ReturnRequest[]>([]);
   const [promoCode, setPromoCode] = useState<string>('');
   const [promoRule, setPromoRule] = useState<DiscountRule | null>(null);
   const [promoMinPaise, setPromoMinPaise] = useState<number | null>(null);
@@ -180,8 +186,8 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
       const savedOrders = localStorage.getItem('tuw_website_v5_orders');
       if (savedOrders) commitOrders(JSON.parse(savedOrders) as Order[]);
 
-      const savedReturns = localStorage.getItem('tuw_website_v5_returns');
-      if (savedReturns) setReturns(JSON.parse(savedReturns));
+      // Return requests live in the database now; drop the old browser copy.
+      localStorage.removeItem('tuw_website_v5_returns');
 
     } catch (e) {
       console.error('Failed to load storefront state from localStorage', e);
@@ -195,11 +201,10 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
     if (!hasLoadedStorage) return;
     try {
       localStorage.setItem('tuw_website_v5_orders', JSON.stringify(orders));
-      localStorage.setItem('tuw_website_v5_returns', JSON.stringify(returns));
     } catch (e) {
       console.error('Failed to save storefront state to localStorage', e);
     }
-  }, [orders, returns, hasLoadedStorage]);
+  }, [orders, hasLoadedStorage]);
 
   const lastToastRef = useRef<{ key: string; time: number } | null>(null);
 
@@ -225,12 +230,54 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
     setIsCartDrawerOpen(true);
   }, [bag.addToCart]);
 
+  const buyNow = useCallback(async (item: Omit<CartItem, 'id'>) => {
+    const twin = cart.find((i) => i.productId === item.productId && i.color === item.color && i.size === item.size);
+    if (!twin) return bag.addToCart(item);
+    if (twin.quantity === item.quantity) return true;
+    return bag.updateQuantity(twin.id, item.quantity);
+  }, [cart, bag.addToCart, bag.updateQuantity]);
+
+  /** Put a removed line back exactly as it was (variant, quantity, gift details). */
+  const restoreLine = useCallback((item: CartItem) => {
+    const { id: _removedId, maxQty: _maxQty, ...line } = item;
+    void bag.addToCart(line);
+  }, [bag.addToCart]);
+
   const removeFromCart = useCallback((id: string) => {
     const item = cart.find((i) => i.id === id);
     void bag.removeLine(id).then((ok) => {
-      if (ok && item) addToast({ type: 'info', title: 'Removed from Bag', description: `${item.title} was removed.` });
+      if (!ok || !item) return;
+      showToast({
+        title: 'Removed from bag',
+        description: item.title,
+        image: item.image || undefined,
+        tone: 'info',
+        action: { label: 'Undo', onClick: () => restoreLine(item) },
+      });
     });
-  }, [cart, bag.removeLine, addToast]);
+  }, [cart, bag.removeLine, restoreLine]);
+
+  const saveForLater = useCallback((id: string) => {
+    const item = cart.find((i) => i.id === id);
+    if (!item) return;
+    if (!bag.signedIn) {
+      const next = typeof window === 'undefined' ? '/' : window.location.pathname;
+      showToast({ title: 'Sign in to save pieces', description: 'Your wishlist is kept with your account.', image: item.image || undefined, tone: 'info', action: { label: 'Sign in', href: `/login?next=${encodeURIComponent(next)}` } });
+      return;
+    }
+    void (async () => {
+      const saved = await bag.setSaved(item.productId, true);
+      if (!saved) return;
+      const removed = await bag.removeLine(id);
+      if (!removed) return;
+      showToast({
+        title: 'Saved for later',
+        description: `${item.title} is in your wishlist.`,
+        image: item.image || undefined,
+        action: { label: 'Undo', onClick: () => restoreLine(item) },
+      });
+    })();
+  }, [cart, bag.signedIn, bag.setSaved, bag.removeLine, restoreLine]);
 
   const totals = useMemo(() => {
     const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -248,16 +295,22 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
   const { cartCount, cartSubtotal, discountAmount, shippingFee, freeShippingRemaining } = totals;
 
   /** Checked on the server against the bag; the order total is decided again at checkout. */
-  const applyPromoCode = useCallback(async (code: string): Promise<boolean> => {
-    const result = await previewDiscountAction({ code });
+  const applyPromoCode = useCallback(async (code: string, opts?: PromoApplyOptions): Promise<boolean> => {
+    let result: Awaited<ReturnType<typeof previewDiscountAction>>;
+    try {
+      result = await previewDiscountAction({ code });
+    } catch {
+      result = { ok: false, error: { message: 'We could not check that code just now. Please try again.' } } as typeof result;
+    }
     if (result.ok) {
       setPromoCode(result.data.code);
       setPromoRule(result.data.rule);
       setPromoMinPaise(result.data.minOrderPaise);
-      addToast({ type: 'success', title: 'Code applied', description: `${result.data.code} takes ${formatPaise(result.data.discountPaise)} off this bag.` });
+      if (!opts?.quiet) addToast({ type: 'success', title: 'Code applied', description: `${result.data.code} takes ${formatPaise(result.data.discountPaise)} off this bag.` });
       return true;
     }
-    addToast({ type: 'error', title: 'Code not applied', description: result.error.message });
+    if (opts?.quiet) opts.onError?.(result.error.message);
+    else addToast({ type: 'error', title: 'Code not applied', description: result.error.message });
     return false;
   }, [addToast]);
 
@@ -285,7 +338,7 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
       if (wasSaved) {
         showToast({ title: 'Removed from wishlist', description: name, image, tone: 'info', action: { label: 'Undo', onClick: () => void bag.setSaved(productId, true) } });
       } else {
-        showToast({ title: 'Saved to wishlist', description: name, image, action: { label: 'View', href: '/wishlist' } });
+        showToast({ title: 'Saved to wishlist', description: name, image, action: { label: 'View', href: '/account/wishlist' } });
       }
     });
   }, [products, bag.signedIn, bag.setSaved, bag.isWishlistSaved]);
@@ -358,21 +411,6 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
   const getOrderByNumber = useCallback((num: string) =>
     orders.find((o) => o.orderNumber.toLowerCase() === num.trim().toLowerCase()), [orders]);
 
-  // Returns
-  const submitReturnRequest = useCallback((req: Omit<ReturnRequest, 'id' | 'createdAt' | 'status'>) => {
-    const newReturn: ReturnRequest = {
-      ...req,
-      id: `ret-${crypto.randomUUID()}`,
-      status: 'Requested',
-      createdAt: localDate(new Date()),
-    };
-    setReturns((prev) => [newReturn, ...prev]);
-    addToast({
-      type: 'success',
-      title: 'Return Requested',
-      description: `RMA request logged for Order ${req.orderNumber}. We will schedule courier pickup.`,
-    });
-  }, [addToast]);
 
   // Addresses live in the real address book now (storefront/lib/account, TL-BE-03).
 
@@ -438,7 +476,6 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
     setProducts(STORE_PRODUCTS);
     // The bag and wishlist are real now (database); reset leaves them alone.
     commitOrders(INITIAL_ORDERS);
-    setReturns([]);
     setPromoCode('');
     setPromoRule(null);
     setPromoMinPaise(null);
@@ -481,9 +518,11 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
     getProductBySlug,
     cart,
     addToCart,
+    buyNow,
     updateQuantity,
     updateCartItemVariant,
     removeFromCart,
+    saveForLater,
     clearCart,
     cartCount,
     cartSubtotal,
@@ -504,18 +543,16 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
     createOrder,
     getOrderById,
     getOrderByNumber,
-    returns,
-    submitReturnRequest,
     addToast,
     resetStoreData,
     refreshBag: bag.refreshBag,
   }), [
     scenario, setScenario, simulatedError, retryConnection, products, nav.hiddenCategories,
-    catalog.sizeCharts, getProductBySlug, cart, addToCart, updateQuantity, updateCartItemVariant,
-    removeFromCart, clearCart, cartCount, cartSubtotal, shippingFee, FREE_SHIPPING_THRESHOLD,
+    catalog.sizeCharts, getProductBySlug, cart, addToCart, buyNow, updateQuantity, updateCartItemVariant,
+    removeFromCart, saveForLater, clearCart, cartCount, cartSubtotal, shippingFee, FREE_SHIPPING_THRESHOLD,
     freeShippingRemaining, promoCode, discountAmount, applyPromoCode, removePromoCode,
     bag.ready, bag.error, wishlist, toggleWishlist, isInWishlist, orders, createOrder,
-    getOrderById, getOrderByNumber, returns, submitReturnRequest, addToast, resetStoreData,
+    getOrderById, getOrderByNumber, addToast, resetStoreData,
     bag.refreshBag,
   ]);
 

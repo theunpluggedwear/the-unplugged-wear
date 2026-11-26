@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
+import WishlistSection from '../../_components/WishlistSection';
 
 // Private page: kept out of search results.
 export const metadata: Metadata = {
@@ -8,6 +8,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function WishlistLayout({ children }: { children: ReactNode }) {
-  return children;
+export default function AccountWishlistPage() {
+  return <WishlistSection />;
 }

@@ -14,7 +14,7 @@ import { ArrowRight, ArrowUp, PackageCheck, Printer, RotateCcw, ShoppingBag, Tru
 const roundDown = (n: number) => (n >= 20 ? `${Math.floor(n / 10) * 10}+` : String(n));
 
 const SECTION = 'scroll-mt-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8';
-const H2 = 'font-heading text-[clamp(1.75rem,3vw+0.75rem,2.75rem)] font-medium tracking-tight text-store-text-primary';
+const H2 = 'tuw-h2 text-store-text-primary';
 
 const STEPS = [
   { icon: ShoppingBag, title: 'You order', body: 'Pick your piece, colour and size. Nothing is printed before this.' },
@@ -171,7 +171,7 @@ export default function AboutPage() {
             <div className="order-2 md:order-1">
               <h2
                 id="our-way-heading"
-                className="font-heading text-[clamp(2.5rem,5vw+0.5rem,4.5rem)] font-medium tracking-tight text-primary-dark leading-[1.02]"
+                className="font-heading text-[clamp(2rem,1rem+2.6vw,3rem)] font-medium tracking-tight text-primary-dark leading-[1.05]"
               >
                 Made slowly.
                 <br />
@@ -343,7 +343,7 @@ export default function AboutPage() {
             <TuwEmblem className="pointer-events-none absolute -right-10 -bottom-10 h-72 w-auto text-white/5" />
             <h2
               id="closing-heading"
-              className="relative font-heading text-[clamp(2.25rem,4vw+0.75rem,4rem)] font-medium tracking-tight text-white leading-[1.05]"
+              className="relative font-heading text-[clamp(2rem,1rem+2.6vw,3rem)] font-medium tracking-tight text-white leading-[1.05]"
             >
               Fewer things.
               <br />

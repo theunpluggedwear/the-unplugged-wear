@@ -253,7 +253,7 @@ export const DEFAULT_CHECKLIST: ChecklistItem[] = [
     "id": "9-wishlist",
     "area": "Discovery",
     "name": "Saved Garments",
-    "route": "/wishlist",
+    "route": "/account/wishlist",
     "purpose": "Customer wishlist with real-time counter in header and one-click add to cart.",
     "status": "pending"
   },

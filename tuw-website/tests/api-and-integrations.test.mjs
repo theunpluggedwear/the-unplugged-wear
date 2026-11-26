@@ -10,7 +10,11 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 describe('Server Route & Asset Coverage Invariants', () => {
   const requiredRoutes = [
     'src/app/checkout/success/page.tsx',
-    'src/app/account/orders/page.tsx',
+    'src/app/account/(sections)/page.tsx',
+    'src/app/account/(sections)/orders/page.tsx',
+    'src/app/account/(sections)/addresses/page.tsx',
+    'src/app/account/(sections)/returns/page.tsx',
+    'src/app/account/(sections)/profile/page.tsx',
     'src/app/account/orders/[id]/page.tsx',
     'src/app/about/page.tsx',
     'src/app/(storefront)/journal/page.tsx',
