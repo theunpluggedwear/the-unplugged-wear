@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useReducer, useState } from 'react';
 import Link from 'next/link';
 import Header from '@storefront/components/layout/Header';
 import Footer from '@storefront/components/layout/Footer';
@@ -10,30 +10,31 @@ import Button from '@storefront/components/ui/Button';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { forgotPasswordAction } from '@/server/auth-actions';
 import { useNextParam, withNext } from '@storefront/lib/next-path';
+import { asyncReducer, initialAsync } from '@storefront/lib/async-state';
 
 export default function ForgotPasswordPage() {
   const next = useNextParam();
   const [email, setEmail] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [devLink, setDevLink] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [request, dispatchRequest] = useReducer(asyncReducer<string | null>, initialAsync);
+  const submitted = request.kind === 'success';
+  const devLink = submitted ? request.data : null;
+  const error = request.kind === 'error' ? request.message : null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !email.includes('@')) return;
 
-    setIsSubmitting(true);
-    setError(null);
-    void forgotPasswordAction({ email }).then((result) => {
-      setIsSubmitting(false);
+    dispatchRequest({ type: 'START' });
+    try {
+      const result = await forgotPasswordAction({ email });
       if (!result.ok) {
-        setError(result.error.message); // email stays typed
+        dispatchRequest({ type: 'FAIL', message: result.error.message });
         return;
       }
-      setDevLink(result.data.devLink);
-      setSubmitted(true);
-    });
+      dispatchRequest({ type: 'SUCCESS', data: result.data.devLink });
+    } catch (cause) {
+      dispatchRequest({ type: 'FAIL', message: cause instanceof Error ? cause.message : 'Could not send the recovery link.' });
+    }
   };
 
   return (
@@ -98,7 +99,7 @@ export default function ForgotPasswordPage() {
                 size="lg"
                 fullWidth
                 type="submit"
-                isLoading={isSubmitting}
+                isLoading={request.kind === 'loading'}
               >
                 Send Recovery Instructions
               </Button>

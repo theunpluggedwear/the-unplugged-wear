@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useReducer, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Header from '@storefront/components/layout/Header';
@@ -10,43 +10,45 @@ import Input from '@storefront/components/ui/Input';
 import Button from '@storefront/components/ui/Button';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { resetPasswordAction } from '@/server/auth-actions';
+import { asyncReducer, initialAsync } from '@storefront/lib/async-state';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [request, dispatchRequest] = useReducer(asyncReducer<string | null>, initialAsync);
+  const success = request.kind === 'success';
+  const error = request.kind === 'error' ? request.message : null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 8) {
-      setError('Password must contain at least 8 characters.');
+      dispatchRequest({ type: 'FAIL', message: 'Password must contain at least 8 characters.' });
       return;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      dispatchRequest({ type: 'FAIL', message: 'Passwords do not match.' });
       return;
     }
 
     const token = new URLSearchParams(window.location.search).get('token');
     if (!token) {
-      setError('Open the reset link from your email to set a new password.');
+      dispatchRequest({ type: 'FAIL', message: 'Open the reset link from your email to set a new password.' });
       return;
     }
-    setError(null);
-    setIsSubmitting(true);
-    void resetPasswordAction({ token, password }).then((result) => {
-      setIsSubmitting(false);
+    dispatchRequest({ type: 'START' });
+    try {
+      const result = await resetPasswordAction({ token, password });
       if (!result.ok) {
-        setError(result.error.message); // typed passwords are kept
+        dispatchRequest({ type: 'FAIL', message: result.error.message });
         return;
       }
       setPassword('');
       setConfirmPassword('');
-      setSuccess(true);
-    });
+      dispatchRequest({ type: 'SUCCESS', data: null });
+    } catch (cause) {
+      dispatchRequest({ type: 'FAIL', message: cause instanceof Error ? cause.message : 'Could not reset the password.' });
+    }
   };
 
   return (
@@ -116,7 +118,7 @@ export default function ResetPasswordPage() {
                 size="lg"
                 fullWidth
                 type="submit"
-                isLoading={isSubmitting}
+                isLoading={request.kind === 'loading'}
               >
                 Update Password
               </Button>

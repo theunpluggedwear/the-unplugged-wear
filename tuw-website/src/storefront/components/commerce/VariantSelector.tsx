@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useReducer, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Check, Minus, Plus, ShoppingBag } from 'lucide-react';
@@ -14,6 +14,7 @@ import VariantPillSelector from './VariantPillSelector';
 import RadioOptionSelector from './RadioOptionSelector';
 import NotifyMe from './NotifyMe';
 import { useLiveSizes } from '@storefront/lib/live-stock';
+import { purchaseReducer } from '@storefront/lib/purchase-machine';
 import {
   sizePriceINR,
   priceLabel,
@@ -84,9 +85,9 @@ export default function VariantSelector({
   const [requestedQty, setRequestedQty] = useState(1);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [buying, setBuying] = useState(false);
-  // "Added" confirmation on the button for a moment after each add.
-  const [added, setAdded] = useState(false);
+  const [purchase, dispatchPurchase] = useReducer(purchaseReducer, { kind: 'idle' });
+  const buying = purchase.kind === 'buying';
+  const added = purchase.kind === 'added';
   const addedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (addedTimer.current) clearTimeout(addedTimer.current); }, []);
   const sizeGroupRef = useRef<HTMLDivElement>(null);
@@ -194,9 +195,9 @@ export default function VariantSelector({
   const handleAddToCart = () => {
     if (!ready()) return;
     addToCart(lineItem());
-    setAdded(true);
+    dispatchPurchase({ type: 'ADD' });
     if (addedTimer.current) clearTimeout(addedTimer.current);
-    addedTimer.current = setTimeout(() => setAdded(false), 1800);
+    addedTimer.current = setTimeout(() => dispatchPurchase({ type: 'RESET' }), 1800);
   };
 
   /** Take the shopper to the size buttons without an error (phone bar). */
@@ -230,10 +231,10 @@ export default function VariantSelector({
   // an identical bag line is set to this quantity rather than added to again.
   const handleBuyNow = async () => {
     if (buying || !ready()) return;
-    setBuying(true);
+    dispatchPurchase({ type: 'BUY' });
     const ok = await buyNow(lineItem()).catch(() => false);
     if (ok) router.push('/checkout');
-    else setBuying(false); // the bag already showed why
+    else dispatchPurchase({ type: 'RESET' }); // the bag already showed why
   };
 
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useReducer, useState } from 'react';
 import { useSiteSettings } from '@storefront/lib/site-settings';
 import Link from 'next/link';
 import Header from '@storefront/components/layout/Header';
@@ -13,6 +13,7 @@ import { myOrdersAction } from '@/server/order-actions';
 import type { OrderView } from '@tuw/heart/modules/orders';
 import { useSession } from '@storefront/lib/session';
 import { site } from '@storefront/lib/site';
+import { asyncReducer, initialAsync } from '@storefront/lib/async-state';
 import { ArrowRight, Check, Clock, Info, Mail, MapPin } from 'lucide-react';
 
 
@@ -50,10 +51,10 @@ export default function ContactPage() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [topic, setTopic] = useState<Topic>('order');
   const [message, setMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [request, dispatchRequest] = useReducer(asyncReducer<string | null>, initialAsync);
+  const submitted = request.kind === 'success';
+  const submitError = request.kind === 'error' ? request.message : null;
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Signed-in shoppers don't retype their details (only fills empty fields).
   useEffect(() => {
@@ -87,8 +88,7 @@ export default function ContactPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    setSubmitError(null);
-    setIsSubmitting(true);
+    dispatchRequest({ type: 'START' });
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
@@ -106,14 +106,12 @@ export default function ContactPage() {
       });
       const result = await response.json();
       if (!response.ok || !result.success) {
-        setSubmitError(result.error ?? 'Could not save your message. Please try again.');
+        dispatchRequest({ type: 'FAIL', message: result.error ?? 'Could not save your message. Please try again.' });
         return;
       }
-      setSubmitted(true);
+      dispatchRequest({ type: 'SUCCESS', data: null });
     } catch {
-      setSubmitError('Could not save your message. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+      dispatchRequest({ type: 'FAIL', message: 'Could not save your message. Please try again.' });
     }
   };
 
@@ -168,7 +166,7 @@ export default function ContactPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setSubmitted(false);
+                    dispatchRequest({ type: 'RESET' });
                     setMessage('');
                     setOrderRef('');
                   }}
@@ -273,10 +271,10 @@ export default function ContactPage() {
 
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={request.kind === 'loading'}
                   className="w-full h-12 rounded-full bg-[#111111] text-white text-sm font-medium hover:bg-black transition-colors cursor-pointer disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold focus-visible:ring-offset-2"
                 >
-                  {isSubmitting ? 'Sending…' : 'Send message'}
+                  {request.kind === 'loading' ? 'Sending…' : 'Send message'}
                 </button>
               </form>
             )}

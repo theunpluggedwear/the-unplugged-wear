@@ -9,9 +9,9 @@
   },
   "summary": {
     "total": 116,
-    "done": 111,
+    "done": 112,
     "in_progress": 1,
-    "backlog": 4
+    "backlog": 3
   },
   "session": {
     "branch": "urvil-ui",
@@ -2524,7 +2524,7 @@
     {
       "id": "CLN-FSM-04",
       "title": "Async request machines in auth, contact, VariantSelector, BrandIntro",
-      "status": "backlog",
+      "status": "done",
       "owner": "agent",
       "parent": "CLN-FSM",
       "category": "refactor",
@@ -2536,11 +2536,11 @@
       "fix": "Discriminated-union state machine with reducer transitions",
       "reference_verification": false,
       "started": null,
-      "finished": null,
-      "log": "Discriminated AsyncState for forgot-password/reset-password/contact/NotifyMe; purchase machine for VariantSelector; linear phase machine for BrandIntro with one overflow cleanup.",
+      "finished": "2026-11-27",
+      "log": "Added shared asyncReducer (idle|loading|success|error) and applied it to forgot-password, reset-password, contact and NotifyMe with try/catch so a rejection can never leave a spinner. VariantSelector now uses a purchase machine (idle|added|buying|error) with one timer; BrandIntro is a linear six-phase machine with derived flags and a single scroll-overflow cleanup. Four new unit tests; 110/110 admin tests, typecheck and comment ratchet pass. Local browser QA covered forgot-password success, contact submission, add-to-bag feedback and Buy now redirect.",
       "design_match": "n/a",
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": []
     },
