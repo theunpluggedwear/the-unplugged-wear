@@ -11,6 +11,7 @@ import { useNotifications, useStaffAlerts, NotificationPanel } from '@/component
 import { usePopoverAnimation } from '@/hooks/usePopoverAnimation';
 import { cn } from '@/lib/cn';
 import { getActiveGroupForPath, visibleNavGroups, type AdminNavGroup } from '@/lib/admin-nav';
+import { navMenuReducer, initialNavMenu } from '@/lib/nav-menu-machine';
 
 interface HeaderProps {
   mobileMenuOpen: boolean;
@@ -33,14 +34,12 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
   const [showNotifications, setShowNotifications] = useState(false);
   const notifAnim = usePopoverAnimation(showNotifications, () => setShowNotifications(false), 150);
   const navGroups = visibleNavGroups(permissions);
-  const [openKey, setOpenKey] = useState<string | null>(null);
-  const [renderedKey, setRenderedKey] = useState<string | null>(null);
-  const navSuppressedRef = React.useRef<string | null>(null);
-  const navSourceRef = React.useRef<'hover' | 'click' | null>(null);
+  const [navMenu, dispatchNav] = React.useReducer(navMenuReducer, initialNavMenu);
   const navRef = React.useRef<HTMLDivElement>(null);
   const leaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const navAnim = usePopoverAnimation(openKey !== null, () => setRenderedKey(null), 150);
+  const navAnim = usePopoverAnimation(navMenu.kind === 'open', () => dispatchNav({ type: 'FINALIZE' }), 150);
   const activeGroup = getActiveGroupForPath(pathname);
+  const renderedKey = navMenu.kind === 'closed' ? null : navMenu.key;
 
   const clearLeaveTimer = React.useCallback(() => {
     if (leaveTimerRef.current !== null) {
@@ -50,19 +49,12 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
   }, []);
 
   const scheduleClose = React.useCallback(() => {
-    clearLeaveTimer();
-    leaveTimerRef.current = setTimeout(() => {
-      setOpenKey(null);
-      navSuppressedRef.current = null;
-      navSourceRef.current = null;
-    }, 120);
-  }, [clearLeaveTimer]);
+    dispatchNav({ type: 'POINTER_LEAVE' });
+  }, []);
 
   const handleGroupEnter = React.useCallback((groupKey: string) => {
     clearLeaveTimer();
-    if (navSuppressedRef.current === groupKey || navSuppressedRef.current === 'all') return;
-    setOpenKey(groupKey);
-    navSourceRef.current = 'hover';
+    dispatchNav({ type: 'ENTER_GROUP', key: groupKey });
   }, [clearLeaveTimer]);
 
   useEffect(() => {
@@ -74,14 +66,15 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
   }, []);
 
   useEffect(() => {
-    if (openKey) setRenderedKey(openKey);
-  }, [openKey]);
+    if (navMenu.kind !== 'open') return;
+    if (!navMenu.pendingClose) return;
+    const timer = setTimeout(() => dispatchNav({ type: 'CLOSE_REQUEST' }), 120);
+    return () => clearTimeout(timer);
+  }, [navMenu.kind, navMenu.kind === 'open' && navMenu.pendingClose]);
 
   useEffect(() => {
     clearLeaveTimer();
-    setOpenKey(null);
-    setRenderedKey(null);
-    navSourceRef.current = null;
+    dispatchNav({ type: 'NAVIGATE' });
   }, [pathname, clearLeaveTimer]);
 
   useEffect(() => {
@@ -92,8 +85,7 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
     const close = (event: PointerEvent) => {
       if (navRef.current?.contains(event.target as Node)) return;
       clearLeaveTimer();
-      setOpenKey(null);
-      navSourceRef.current = null;
+      dispatchNav({ type: 'CLOSE_REQUEST' });
     };
     document.addEventListener('pointerdown', close);
     return () => document.removeEventListener('pointerdown', close);
@@ -108,9 +100,7 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
       if (e.key === 'Escape') {
         clearLeaveTimer();
         setIsSearchOpen(false);
-        setOpenKey(null);
-        navSuppressedRef.current = 'all';
-        navSourceRef.current = null;
+        dispatchNav({ type: 'ESCAPE' });
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -145,12 +135,15 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
           className="topBarCenter"
           ref={navRef}
           onMouseLeave={scheduleClose}
-          onMouseEnter={clearLeaveTimer}
+          onMouseEnter={() => {
+            clearLeaveTimer();
+            dispatchNav({ type: 'CANCEL_CLOSE' });
+          }}
           onPointerDown={(event) => event.stopPropagation()}
         >
           <div className="topNavTriggers">
             {navGroups.map((group) => {
-              const isOpen = openKey === group.key;
+              const isOpen = (navMenu.kind === 'open' || navMenu.kind === 'closing') && navMenu.key === group.key;
               const GroupIcon = group.icon;
               return (
                 <button
@@ -164,15 +157,7 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
                   onFocus={() => handleGroupEnter(group.key)}
                   onClick={() => {
                     clearLeaveTimer();
-                    if (openKey === group.key) {
-                      setOpenKey(null);
-                      navSuppressedRef.current = group.key;
-                      navSourceRef.current = null;
-                    } else {
-                      setOpenKey(group.key);
-                      navSourceRef.current = 'click';
-                      navSuppressedRef.current = null;
-                    }
+                    dispatchNav({ type: 'CLICK_TRIGGER', key: group.key });
                   }}
                 >
                   <GroupIcon size={16} />
@@ -207,9 +192,7 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
                       className={cn('megaMenuItem', active && 'tuw-3d-active')}
                       onClick={() => {
                         clearLeaveTimer();
-                        setOpenKey(null);
-                        navSuppressedRef.current = 'all';
-                        navSourceRef.current = null;
+                        dispatchNav({ type: 'NAVIGATE' });
                       }}
                     >
                       <span className="megaMenuItemIcon"><ItemIcon size={17} /></span>

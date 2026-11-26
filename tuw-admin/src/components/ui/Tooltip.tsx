@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useId, useRef, useState } from 'react';
+import React, { useId, useRef, useReducer } from 'react';
 import { createPortal } from 'react-dom';
 import { usePopoverAnimation } from '@/hooks/usePopoverAnimation';
+import { tooltipReducer, initialTooltip } from '@/lib/tooltip-machine';
 import { computeTooltipPosition } from '@/lib/tooltipPosition';
 import type { TooltipPosition, TooltipSide } from '@/lib/tooltipPosition';
 
@@ -35,11 +36,9 @@ export default function Tooltip({
   const wrapRef = useRef<HTMLSpanElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const showTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [open, setOpen] = useState(false);
-  const [pinned, setPinned] = useState(false);
-  const [focused, setFocused] = useState(false);
-  const [placement, setPlacement] = useState<TooltipPosition | null>(null);
-  const anim = usePopoverAnimation(open, undefined, 140);
+  const [tooltip, dispatchTooltip] = useReducer(tooltipReducer, initialTooltip);
+  const placement = tooltip.kind === 'visible' ? tooltip.placement : null;
+  const anim = usePopoverAnimation(tooltip.kind === 'visible', undefined, 140);
 
   const clearShowTimer = () => {
     if (showTimer.current !== null) {
@@ -48,21 +47,21 @@ export default function Tooltip({
     }
   };
 
-  const openNow = () => {
+  const openNow = (reason: 'hover' | 'focus' | 'pin') => {
     clearShowTimer();
-    setOpen(true);
+    dispatchTooltip({ type: 'OPEN', reason });
   };
 
   const closeNow = () => {
     clearShowTimer();
-    setOpen(false);
+    dispatchTooltip({ type: 'HIDE' });
   };
 
   const scheduleOpen = () => {
     clearShowTimer();
     showTimer.current = setTimeout(() => {
       showTimer.current = null;
-      setOpen(true);
+      dispatchTooltip({ type: 'OPEN', reason: 'hover' });
     }, delay);
   };
 
@@ -70,10 +69,7 @@ export default function Tooltip({
 
   
   React.useEffect(() => {
-    if (!anim.visible) {
-      setPlacement(null);
-      return;
-    }
+    if (!anim.visible) return;
     if (typeof window === 'undefined') return;
 
     const measure = () => {
@@ -82,8 +78,7 @@ export default function Tooltip({
       if (!triggerEl || !tooltipEl) return;
       const triggerRect = triggerEl.getBoundingClientRect();
       const tooltipRect = tooltipEl.getBoundingClientRect();
-      setPlacement(
-        computeTooltipPosition({
+      const nextPlacement = computeTooltipPosition({
           trigger: {
             top: triggerRect.top,
             bottom: triggerRect.bottom,
@@ -94,8 +89,8 @@ export default function Tooltip({
           tooltip: { width: tooltipRect.width, height: tooltipRect.height },
           viewport: { width: window.innerWidth, height: window.innerHeight },
           preferred: position,
-        })
-      );
+        });
+      dispatchTooltip({ type: 'PLACE', placement: nextPlacement });
     };
 
     measure();
@@ -106,8 +101,7 @@ export default function Tooltip({
     if (!anim.visible) return;
 
     const dismiss = () => {
-      setPinned(false);
-      setOpen(false);
+      dispatchTooltip({ type: 'HIDE' });
     };
     const handleScroll = () => dismiss();
     const handleResize = () => dismiss();
@@ -136,12 +130,11 @@ export default function Tooltip({
   };
 
   const handlePointerLeave = () => {
-    if (!pinned && !focused) closeNow();
+    dispatchTooltip({ type: 'POINTER_LEAVE' });
   };
 
   const handleFocus = () => {
-    setFocused(true);
-    openNow();
+    openNow('focus');
   };
 
   const handleBlur = (event: React.FocusEvent<HTMLSpanElement>) => {
@@ -151,18 +144,11 @@ export default function Tooltip({
     ) {
       return;
     }
-    setFocused(false);
-    if (!pinned) closeNow();
+    dispatchTooltip({ type: 'BLUR' });
   };
 
   const handleClick = () => {
-    if (pinned) {
-      setPinned(false);
-      closeNow();
-    } else {
-      setPinned(true);
-      openNow();
-    }
+    dispatchTooltip({ type: 'CLICK' });
   };
 
   const handlePointerUp = (event: React.PointerEvent<HTMLSpanElement>) => {

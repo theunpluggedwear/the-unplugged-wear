@@ -9,9 +9,9 @@
   },
   "summary": {
     "total": 116,
-    "done": 110,
+    "done": 111,
     "in_progress": 1,
-    "backlog": 5
+    "backlog": 4
   },
   "session": {
     "branch": "urvil-ui",
@@ -2501,7 +2501,7 @@
     {
       "id": "CLN-FSM-03",
       "title": "Explicit nav-menu and tooltip machines in admin Header/Tooltip",
-      "status": "backlog",
+      "status": "done",
       "owner": "agent",
       "parent": "CLN-FSM",
       "category": "refactor",
@@ -2513,11 +2513,11 @@
       "fix": "Discriminated-union state machine with reducer transitions",
       "reference_verification": false,
       "started": null,
-      "finished": null,
-      "log": "Header navMenu union with ENTER_GROUP/CLICK_TRIGGER/POINTER_LEAVE/CANCEL_CLOSE/NAVIGATE/ESCAPE; derive renderedKey from state. Tooltip union hidden|scheduled|visible(reason,placement).",
+      "finished": "2026-11-27",
+      "log": "Header nav state is now a reducer with closed|open(pendingClose)|closing states; renderedKey derived from state, suppression and leave-timer intent inside the machine. Tooltip uses hidden|scheduled|visible(reason,placement) instead of four booleans. Four reducer tests; 110/110 admin tests, typecheck and comment ratchet pass. Local browser QA confirmed hover, click-to-close, section switching, Escape and notification panel open/close; tooltip hover opened and Escape dismissed it.",
       "design_match": "n/a",
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": []
     },
