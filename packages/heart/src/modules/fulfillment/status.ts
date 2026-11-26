@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import type { Transaction } from '../../platform/db/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import type { FulfillmentStatus } from '../../integrations/fulfillment/index.ts';
+import { ORDER_STATUS_RANK } from '../../platform/status/index.ts';
 
 // The order axis only ever moves forward, and it never hides a failure: a
 // cancelled/failed provider order drags the order with it, but "delivered" is
@@ -10,10 +11,7 @@ import type { FulfillmentStatus } from '../../integrations/fulfillment/index.ts'
 
 export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'failed' | 'refunded';
 
-const RANK: Record<OrderStatus, number> = {
-  pending: 0, confirmed: 1, processing: 2, shipped: 3, delivered: 4,
-  cancelled: 5, failed: 5, refunded: 6,
-};
+const RANK: Record<OrderStatus, number> = ORDER_STATUS_RANK;
 
 /** Which order status a provider state implies (null = leave the order alone). */
 export function orderStatusFor(status: FulfillmentStatus): OrderStatus | null {

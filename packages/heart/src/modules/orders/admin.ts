@@ -6,6 +6,7 @@ import { uuidv7 } from '../../platform/ids/index.ts';
 import { getPaymentGateway } from '../../integrations/payments/index.ts';
 import { afterCancel } from './checkout.ts';
 import type { OrderStatus } from './read.ts';
+import { ORDER_TRANSITIONS } from '../../platform/status/index.ts';
 
 // Staff side of orders (DOC/backend/06). Lists are filtered and paged in SQL,
 // so the screen stays fast however many orders there are. A status change is
@@ -15,16 +16,7 @@ import type { OrderStatus } from './read.ts';
 export type AdminOrderTab = 'all' | 'unfulfilled' | 'unpaid' | 'cancelled' | 'finished';
 
 /** Who may move an order where. Refunds and fulfilment sync drive the rest. */
-export const NEXT_STATUS: Record<OrderStatus, OrderStatus[]> = {
-  pending: ['confirmed', 'cancelled'],
-  confirmed: ['processing', 'cancelled'],
-  processing: ['shipped', 'cancelled'],
-  shipped: ['delivered'],
-  delivered: [],
-  cancelled: [],
-  failed: ['confirmed', 'cancelled'],
-  refunded: [],
-};
+export const NEXT_STATUS: Record<OrderStatus, OrderStatus[]> = ORDER_TRANSITIONS as Record<OrderStatus, OrderStatus[]>;
 
 export interface AdminOrderRow {
   orderNumber: string;

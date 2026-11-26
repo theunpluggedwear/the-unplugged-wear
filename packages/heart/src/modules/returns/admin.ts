@@ -13,6 +13,7 @@ import { nextOrderNumber } from '../orders/index.ts';
 import { createRefund, type RefundMethod } from '../payments/index.ts';
 import { notifyStaff } from '../notifications/index.ts';
 import type { Disposition, ReturnStatus } from './schemas.ts';
+import { RETURN_TRANSITIONS } from '../../platform/status/index.ts';
 
 // Staff side of returns (DOC/backend/06, 13). Approving an exchange creates
 // the follow-up order and charges (or refunds) the price difference; approving
@@ -20,18 +21,7 @@ import type { Disposition, ReturnStatus } from './schemas.ts';
 // warehouse marks a line restocked.
 
 /** Who may move a request where. Refunds do not move the pipeline. */
-export const NEXT_RETURN_STATUS: Record<ReturnStatus, ReturnStatus[]> = {
-  requested: ['approved', 'rejected', 'cancelled'],
-  approved: ['pickup_scheduled', 'in_transit', 'completed', 'cancelled'],
-  pickup_scheduled: ['in_transit', 'cancelled'],
-  in_transit: ['received', 'cancelled'],
-  received: ['inspected', 'completed'],
-  inspected: ['completed', 'disputed'],
-  disputed: ['completed'],
-  completed: [],
-  rejected: [],
-  cancelled: [],
-};
+export const NEXT_RETURN_STATUS: Record<ReturnStatus, ReturnStatus[]> = RETURN_TRANSITIONS as Record<ReturnStatus, ReturnStatus[]>;
 
 const paise = (v: string | number | null) => (v === null ? 0 : Math.round(Number(v) * 100));
 const like = (q?: string) => (q?.trim() ? `%${q.trim().replace(/[\\%_]/g, (c) => `\\${c}`)}%` : null);

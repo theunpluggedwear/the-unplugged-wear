@@ -201,7 +201,10 @@ export type Address = {
   isDefault?: boolean;
 };
 
-export type PaymentStatus = 'paid' | 'pending' | 'failed' | 'refunded';
+import type { OrderPaymentStatus, FulfillmentStatus as CanonicalFulfillmentStatus, OrderStatus } from '@tuw/heart/platform/status';
+
+export type PaymentStatus = OrderPaymentStatus;
+export type { CanonicalFulfillmentStatus, OrderStatus };
 export type FulfillmentStatus = 'queued' | 'printing' | 'shipped' | 'delivered' | 'submission_failed' | 'cancelled';
 
 export type Order = {
@@ -210,7 +213,7 @@ export type Order = {
   date: string;
   status: 'Confirmed' | 'Printing' | 'Shipped' | 'Delivered' | 'Returned' | 'Failed' | 'Refunded' | 'Cancelled';
   /** The database status (SQL vocabulary), when the order came from the database. */
-  sqlStatus?: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'failed' | 'refunded';
+  sqlStatus?: OrderStatus;
   /** End of the free-cancel window (ISO). */
   cancellableUntil?: string;
   /** True while the account that placed it may still cancel. */
