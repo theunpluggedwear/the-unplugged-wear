@@ -3,6 +3,10 @@ import { sql } from 'drizzle-orm';
 import { getDb, withTransaction } from '../../platform/db/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
+import { notifyStaff } from '../notifications/index.ts';
+import { validateCreateTicketInput, type CreateTicketInput } from './validate.ts';
+
+export type { CreateTicketInput } from './validate.ts';
 
 export interface SupportTicketRow {
   id: string;
@@ -14,6 +18,34 @@ export interface SupportTicketRow {
   source: 'contact_form' | 'account' | 'order' | 'admin';
   updatedAt: string;
   messages: Array<{ id: string; sender: 'customer' | 'staff'; body: string; createdAt: string }>;
+}
+
+export async function createTicket(input: CreateTicketInput): Promise<{ id: string }> {
+  const errors = validateCreateTicketInput(input);
+  if (errors.length) {
+    throw new AppError('VALIDATION_FAILED', `Invalid contact fields: ${errors.join(', ')}.`);
+  }
+  const id = uuidv7();
+  const name = input.name.trim();
+  const email = input.email.trim().toLowerCase();
+  const subject = input.subject.trim().slice(0, 255);
+  const body = input.message.trim().slice(0, 5000);
+  await withTransaction(async (tx) => {
+    await tx.execute(sql`
+      INSERT INTO support_tickets (id, user_id, source, guest_name, guest_email, subject, priority, status)
+      VALUES (${id}::uuid, ${input.userId ?? null}::uuid, 'contact_form', ${name}, ${email}, ${subject}, 'medium', 'open')`);
+    await tx.execute(sql`
+      INSERT INTO support_messages (id, ticket_id, sender, body)
+      VALUES (${uuidv7()}::uuid, ${id}::uuid, 'customer', ${body})`);
+    await notifyStaff(tx, 'customer.view', [{
+      kind: 'system',
+      title: `New support ticket — ${subject}`,
+      body: `${name} · ${email}`,
+      link: `/support?ticket=${id}`,
+      dedupeKey: `support.ticket:${id}`,
+    }]);
+  });
+  return { id };
 }
 
 export async function listTickets(status?: SupportTicketRow['status']): Promise<SupportTicketRow[]> {

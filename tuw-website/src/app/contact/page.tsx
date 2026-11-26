@@ -48,6 +48,7 @@ export default function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Signed-in shoppers don't retype their details (only fills empty fields).
   useEffect(() => {
@@ -65,14 +66,37 @@ export default function ContactPage() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+    setSubmitError(null);
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          subject: TOPICS.find((entry) => entry.value === topic)?.label ?? 'General inquiry',
+          message,
+          orderRef,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        setSubmitError(result.error ?? 'Could not save your message. Please try again.');
+        return;
+      }
       setSubmitted(true);
-    }, 600);
+    } catch {
+      setSubmitError('Could not save your message. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -120,9 +144,9 @@ export default function ContactPage() {
                 </span>
                 <h2 className="font-heading text-2xl font-medium text-store-charcoal">Thanks, {name.split(' ')[0]}</h2>
                 <p className="text-sm text-store-text-secondary max-w-md mx-auto leading-relaxed">
-                  We’d reply to <strong className="font-medium text-store-charcoal">{email}</strong> within one business day.
+                  Your message is in our support inbox. Our team can reply to <strong className="font-medium text-store-charcoal">{email}</strong> there.
                 </p>
-                <p className="text-xs text-store-text-secondary">Demo form — no message was actually sent.</p>
+                <p className="text-xs text-store-text-secondary">No automated reply or email is sent from this form.</p>
                 <button
                   type="button"
                   onClick={() => {
@@ -194,9 +218,13 @@ export default function ContactPage() {
                   required
                 />
 
+                {submitError ? (
+                  <p role="alert" className="text-sm text-[#EF4444] font-medium">{submitError}</p>
+                ) : null}
+
                 <p className="flex items-start gap-2 text-xs text-store-text-secondary">
                   <Info size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
-                  Demo form — nothing is sent yet. Live messages arrive once the store launches.
+                  Saved to our support inbox — no automated reply or email is sent.
                 </p>
 
                 <button

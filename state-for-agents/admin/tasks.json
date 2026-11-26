@@ -9,9 +9,9 @@
   },
   "summary": {
     "total": 475,
-    "done": 439,
+    "done": 440,
     "in_progress": 10,
-    "backlog": 26
+    "backlog": 25
   },
   "session": {
     "branch": "feat/dharmil-admin",
@@ -7347,15 +7347,15 @@
     {
       "id": "TL-BE-14.01",
       "title": "Contact form (support.create, guest fields) + admin /support inbox and replies",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-BE-14",
       "started": null,
-      "finished": null,
-      "log": "Not started. PARTIAL: Admin /support inbox and replies live; contact route is still a demo outbox, not support.create PENDING (2026-11-24): remaining scope needs storefront changes, which the owner deferred. Admin-side pieces are complete and verified; reopen when storefront scope is approved.",
+      "finished": "2026-11-27",
+      "log": "Contact form now creates real support tickets: heart createTicket inserts a contact_form ticket plus its first customer message in one transaction and notifies customer.view staff with a deep link; the storefront POST requires an Idempotency-Key and preserves input on failure. Local browser QA confirmed the ticket, notification and preselected admin thread. Three validation tests; 104/104 admin tests, both builds and comment ratchet pass.",
       "design_match": null,
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": [],
       "storefront_tasks": [

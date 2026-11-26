@@ -356,3 +356,9 @@ Two distinct code bugs were found and fixed; no speculative changes were made to
 - [x] QA note: the browser served a cached CSS chunk after the rebuild; a hard reload with the fresh chunk was required before the z-index fix took effect. This was a QA artifact, not a product bug.
 - [x] A notification with no `href` still keeps the panel open after mark-read (it is read in place); that behaviour was left unchanged because no defect in it was confirmed.
 - [x] Gates: full typecheck, 101/101 admin tests, admin build, comment ratchet 3011/3016. QA admin, seeded alert and browser tabs cleaned.
+
+### Support inbox receives real contact tickets (2026-11-27)
+
+- [x] Added heart `createTicket` with a pure validator; it inserts a `contact_form` ticket and its first customer message in one transaction and rings staff with `customer.view` and a deep link to the thread.
+- [x] The storefront contact form now creates tickets instead of writing a demo outbox row. Local browser QA confirmed a submitted message appeared in `/support`, preselected via `?ticket=<id>`, with the order reference preserved in the thread.
+- [x] Admin suite 104/104 with three new validation tests; both production builds and the comment ratchet pass. QA tickets, notifications and admin were removed afterwards.

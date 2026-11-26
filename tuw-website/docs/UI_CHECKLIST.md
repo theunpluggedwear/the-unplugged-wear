@@ -85,3 +85,12 @@
 - [x] End-to-end browser QA: created a menu in admin (CMS Men → Clothing → Hoodies CMS), saved it, and confirmed the storefront at 8446 rendered "CMS Men" and "Hoodies CMS" in the desktop mega-menu after revalidation. No page overflow was introduced by the nav.
 - [x] Admin save copy now states the storefront shows the menu after the cache refresh instead of claiming it still uses the built-in menu.
 - [x] Gates: full typecheck, website build, new mapper tests 3/3, comment ratchet pass. The storefront test suite still has four pre-existing failures (two missing Qikink files, a broken catalog test path, a homepage pause-control assertion) unrelated to this change.
+
+## Contact form → support ticket (2026-11-27)
+
+- [x] `POST /api/contact` no longer uses the demo email outbox. It validates the payload, throttles by IP and email, requires an `Idempotency-Key`, calls heart `createTicket`, and replays stored responses for a retried key.
+- [x] Heart `createTicket` writes a `contact_form` support ticket plus its first customer message in one transaction and notifies staff with `customer.view`, deep-linking to `/support?ticket=<id>`.
+- [x] The contact page now POSTs to the real endpoint with a generated idempotency key, keeps all entered values when the request fails, shows a `role="alert"` error, and replaced demo success copy with an honest "saved to our support inbox" message. No automated reply or email is claimed.
+- [x] Three unit tests cover ticket input validation (valid, missing/malformed, overlong). Admin suite is 104/104.
+- [x] Local browser QA (no Tailnet): submitted the form at `http://127.0.0.1:3007/contact`; success block appeared, Postgres held the ticket with `source='contact_form'`, the order reference in the first message, and a staff notification; admin `/support?ticket=<id>` preselected the thread. Replaying the same idempotency key returned the same ticket without creating a duplicate.
+- [x] Gates: full typecheck, both production builds, 104/104 admin tests, comment ratchet pass. Static pages (`/about`, `/about/sustainability`, `/policies/*`) were deliberately left unchanged.
