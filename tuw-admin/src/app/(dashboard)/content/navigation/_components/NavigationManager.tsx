@@ -334,7 +334,7 @@ export default function NavigationManager({ items: initial }: { items: MenuItem[
         : ` Storefront refresh failed: ${saved.data.storefront.reason}`;
       setNotice({
         tone: saved.data.storefront.ok ? 'success' : 'error',
-        text: 'Menu saved as a draft — the storefront still uses its built-in menu.' + refreshNote,
+        text: 'Menu saved. The storefront shows it after the cache refresh.' + refreshNote,
       });
       setDirty(false);
     } finally {

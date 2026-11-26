@@ -22,6 +22,7 @@ import { formatPaise } from '@storefront/lib/format';
 import type { DiscountRule } from '@tuw/heart/modules/orders';
 import type { SizeChartData } from '@storefront/lib/types';
 import type { Navigation } from '@/server/nav';
+import type { NavItem } from '@storefront/components/layout/navigation';
 
 /**
  * What crosses the Server → Client boundary. The shop and PDP read the full
@@ -52,6 +53,7 @@ interface StoreContextType {
   // Products (nav-sized projection from the root layout — TL-BE-05)
   products: Product[];
   hiddenCategories: string[];
+  menuItems: NavItem[];
   sizeCharts: SizeChartData[];
   getProductBySlug: (slug: string) => Product | undefined;
 
@@ -514,6 +516,7 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
     retryConnection,
     products,
     hiddenCategories: nav.hiddenCategories,
+    menuItems: nav.menuItems,
     sizeCharts: catalog.sizeCharts,
     getProductBySlug,
     cart,
@@ -547,7 +550,7 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
     resetStoreData,
     refreshBag: bag.refreshBag,
   }), [
-    scenario, setScenario, simulatedError, retryConnection, products, nav.hiddenCategories,
+    scenario, setScenario, simulatedError, retryConnection, products, nav.hiddenCategories, nav.menuItems,
     catalog.sizeCharts, getProductBySlug, cart, addToCart, buyNow, updateQuantity, updateCartItemVariant,
     removeFromCart, saveForLater, clearCart, cartCount, cartSubtotal, shippingFee, FREE_SHIPPING_THRESHOLD,
     freeShippingRemaining, promoCode, discountAmount, applyPromoCode, removePromoCode,

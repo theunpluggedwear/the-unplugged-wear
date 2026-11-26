@@ -76,3 +76,12 @@
 - [x] The storefront no longer contains a Qikink client or a fulfilment API route: submission and status polling live in the admin app against the real provider (no cross-app imports).
 - [x] `npx tsc --noEmit` and `npx next build` pass (`DATABASE_URL` must be exported for the build).
 - [ ] Browser pass of the tracking page with a shipped parcel at 360/768/1024/1440. User verification pending — the demo database has no delivered parcel with scans yet.
+
+## Store navigation from the CMS (2026-11-27)
+
+- [x] `getNavigation()` now reads the shared `getStorefrontMenu()` from `@tuw/heart/modules/content` and maps it into the storefront `NavItem` shape, falling back to `NAV_ITEMS` when no CMS menu has been saved. The cached read is tagged with `NAV_TAG`, `PRODUCTS_TAG` and `CMS_TAGS.nav`, and `cms:nav` was added to the revalidate route's immediate set so an admin save refreshes it at once.
+- [x] `nav-from-cms.ts` whitelists `ShopFilter` keys and preserves the stored href, features and shop-all link; malformed filters are dropped rather than trusted. Three unit tests cover filter coercion, full mapping and empty collections.
+- [x] `StoreProvider` exposes `menuItems`; the desktop mega-menu and mobile drawer both consume it through `Header`, so one CMS document drives both.
+- [x] End-to-end browser QA: created a menu in admin (CMS Men → Clothing → Hoodies CMS), saved it, and confirmed the storefront at 8446 rendered "CMS Men" and "Hoodies CMS" in the desktop mega-menu after revalidation. No page overflow was introduced by the nav.
+- [x] Admin save copy now states the storefront shows the menu after the cache refresh instead of claiming it still uses the built-in menu.
+- [x] Gates: full typecheck, website build, new mapper tests 3/3, comment ratchet pass. The storefront test suite still has four pre-existing failures (two missing Qikink files, a broken catalog test path, a homepage pause-control assertion) unrelated to this change.

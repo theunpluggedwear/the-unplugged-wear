@@ -25,7 +25,7 @@ const TAGS = [
   ...Object.values(CMS_TAGS),
 ];
 const ALLOWED: ReadonlySet<string> = new Set(TAGS);
-const IMMEDIATE: ReadonlySet<string> = new Set([SETTINGS_TAG, PRODUCTS_TAG]);
+const IMMEDIATE: ReadonlySet<string> = new Set([SETTINGS_TAG, PRODUCTS_TAG, CMS_TAGS.nav]);
 
 export const POST = guards.route(
   {

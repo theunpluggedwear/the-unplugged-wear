@@ -8355,9 +8355,7 @@
       ],
       "verified": true,
       "pushed": false,
-      "follow_ups": [
-        "Full /notifications page and contact-to-ticket wiring remain under TL-BE-14."
-      ]
+      "follow_ups": ["Contact-to-ticket and the customer notification bell remain pending; the admin notification archive and bell hardening are done."]
     },
     {
       "id": "TL-BE-14.06",

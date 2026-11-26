@@ -2412,10 +2412,8 @@
         "Navigation comes from a dedicated cached category read (getStorefrontNavigation -> getNavigation) tagged nav + products, so the revalidate route can target the menu and admin category saves still expire it.",
         "show_in_navbar is exposed as navbarCategories but has no consumer yet; it stays reserved for the CMS editor."
       ],
-      "follow_ups": [
-        "Wire show_in_navbar into the CMS navigation editor (TL-BE-13.06) once menu structure is editable."
-      ],
-      "log": "Header and mobile menu hide links to categories staff switched off, now from a dedicated cached category read tagged nav + products. Commit bd9de89. Verified: pnpm typecheck, pnpm test (two pre-existing homepage-typography failures, reproduced on a clean tree), tuw-website build with DATABASE_URL, live query returned 8 categories."
+      "follow_ups": ["Contact-to-ticket and the customer notification bell remain pending with TL-BE-14."],
+      "log": "Header and mobile menu hide links to categories staff switched off, from a cached category read tagged nav + products. Commit bd9de89. Updated 2026-11-27: getNavigation() now reads the shared navbar.menu document via getStorefrontMenu(), maps it with nav-from-cms.ts and falls back to NAV_ITEMS; cms:nav is immediate in the revalidate route. End-to-end QA confirmed an admin-saved menu appeared in the storefront desktop mega-menu."
     },
     {
       "id": "TL-WEB-BE-13",

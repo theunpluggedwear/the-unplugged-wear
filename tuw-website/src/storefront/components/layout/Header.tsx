@@ -19,7 +19,7 @@ import CartDrawer from './CartDrawer';
 import TuwEmblem from './TuwEmblem';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
 import type { Product } from '@storefront/lib/types';
-import { NAV_ITEMS, type NavItem, type NavLink } from './navigation';
+import { type NavItem, type NavLink } from './navigation';
 import { suggestAction } from '@/server/catalog-actions';
 import { matchesShopFilter } from '@storefront/lib/product';
 import { site } from '@storefront/lib/site';
@@ -358,16 +358,15 @@ const SOCIAL_LINKS = [
 
 export default function Header() {
   const pathname = usePathname();
-  const { cartCount, wishlist, setIsCartDrawerOpen, products, hiddenCategories } = useStore();
-  // Categories staff switched off in the admin drop out of the menu.
+  const { cartCount, wishlist, setIsCartDrawerOpen, products, hiddenCategories, menuItems } = useStore();
   const navItems = React.useMemo(() => {
-    if (!hiddenCategories.length) return NAV_ITEMS;
+    if (!hiddenCategories.length) return menuItems;
     const hidden = new Set<string>(hiddenCategories);
-    return NAV_ITEMS.map((item) => ({
+    return menuItems.map((item) => ({
       ...item,
       columns: item.columns?.map((column) => ({ ...column, links: column.links.filter((link) => !link.filter?.category || !hidden.has(link.filter.category)) })),
     }));
-  }, [hiddenCategories]);
+  }, [hiddenCategories, menuItems]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchVal, setSearchVal] = useState('');
