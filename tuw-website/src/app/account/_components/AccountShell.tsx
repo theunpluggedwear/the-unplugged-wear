@@ -57,7 +57,7 @@ export default function AccountShell({ children }: { children: React.ReactNode }
   const isActiveSection = (href: string) =>
     href === '/account' ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
   const current = ACCOUNT_SECTIONS.find(({ href }) => isActiveSection(href));
-  const { wishlist, resetStoreData } = useStore();
+  const { wishlist } = useStore();
   const { session, signOut } = useSession();
   const myOrders = useMyOrders();
   const account = useAccount();
@@ -154,19 +154,6 @@ export default function AccountShell({ children }: { children: React.ReactNode }
             </div>
           </div>
 
-          {/* Demo controls, kept apart from the customer actions */}
-          <aside className="mt-16 pt-6 border-t border-dashed border-store-card-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <p className="text-xs text-store-text-secondary">
-              Demo store: your orders, returns, profile and addresses are saved to your account. Resetting clears only the demo data kept in this browser.
-            </p>
-            <button
-              type="button"
-              onClick={resetStoreData}
-              className="self-start sm:self-auto text-xs font-medium text-store-charcoal underline underline-offset-4 decoration-store-card-border hover:decoration-store-charcoal cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
-            >
-              Reset demo data
-            </button>
-          </aside>
         </main>
 
         <Footer />

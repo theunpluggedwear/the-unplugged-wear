@@ -10,8 +10,8 @@
   },
   "_demo": "Figma source of truth established. First track TL-WEB-001 closed.",
   "summary": {
-    "total": 122,
-    "done": 116,
+    "total": 123,
+    "done": 117,
     "in_progress": 0,
     "backlog": 6
   },
@@ -3234,6 +3234,25 @@
       "follow_ups": [],
       "category": "qa",
       "severity": "high"
+    },
+    {
+      "id": "TL-WEB-BE-38.01",
+      "title": "Remove dead demo store state and the Reset Demo control",
+      "category": "backend",
+      "status": "done",
+      "owner": "agent",
+      "parent": "TL-WEB-BE-38",
+      "started": "2026-11-27",
+      "finished": "2026-11-27",
+      "verified": true,
+      "design_match": null,
+      "pushed": false,
+      "log": "Removed dead demo state from StoreProvider (scenario simulation, simulatedError/retryConnection, localStorage orders, createOrder/getOrderById/getOrderByNumber, resetStoreData) and deleted the Reset Demo button and misleading copy from AccountShell. AnnouncementBar no longer renders the unreachable simulated-error banner. Kept the provider for catalog/nav/size-chart/bag/wishlist/promo/toast data. Local end-to-end and stress QA at 360/768/1024/1440 covered eight routes, 12 cart-drawer toggles, five add-to-bag submissions, five invalid promo attempts and 12 rapid navigations with no console errors. Typecheck, website build, 104 admin tests and comment ratchet pass.",
+      "key_decisions": [
+        "StoreProvider stays: many screens still use it for real, server-backed data.",
+        "lib/invoice.ts and QA demo routes are untouched until TL-INT-GST-INVOICES lands."
+      ],
+      "follow_ups": []
     }
   ]
 }

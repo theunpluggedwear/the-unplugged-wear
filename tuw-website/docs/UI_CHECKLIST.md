@@ -102,3 +102,12 @@
 - [x] The route rejects an empty/overlong order reference for order topics and verifies a signed-in shopper's number with `getOrderForViewer`; a tampered foreign number returns 400. Guest numbers remain free text as agreed.
 - [x] Local browser QA: guest empty order showed the inline error and saved nothing; guest with number succeeded; signed-in dropdown listed only `QA-ORDER-1`, empty selection was blocked, selection succeeded; a direct tampered request returned 400; Size & fit showed no order field. Postgres confirmed both tickets carried the correct order reference and ownership.
 - [x] Gates re-run: typecheck, website build, 104/104 admin tests, 2/2 new helper tests, comment ratchet pass. QA user, order, tickets and notifications removed.
+
+## Demo-state cleanup (2026-11-27)
+
+- [x] Removed the dead demo state from `storefront/mocks/store.tsx`: scenario simulation, `simulatedError`/`retryConnection`, localStorage `v5_orders`, `orders`, `createOrder`, `getOrderById`, `getOrderByNumber` and `resetStoreData`. `StoreProvider` is kept for the data still in use — catalog projection, CMS nav, size charts, DB bag/wishlist, free-shipping thresholds, promo state and toasts.
+- [x] `AnnouncementBar` no longer renders the unreachable simulated-error banner. `AccountShell` no longer shows "Reset demo data" or the misleading "Demo store" copy.
+- [x] `lib/invoice.ts` and QA-only demo routes are untouched; replacing the PDF with the GST invoice remains blocked on `TL-INT-GST-INVOICES`.
+- [x] End-to-end QA locally at 360/768/1024/1440 across `/`, `/cart`, `/checkout`, `/account`, `/account/orders`, `/size-guide`, `/about` and `/contact`: all loaded with correct titles, no reset control, no console errors. The 360px page width of 384px is a pre-existing footer button overflow, unchanged by this work.
+- [x] Stress test: 12 rapid cart-drawer toggles, five add-to-bag submissions (badge reached 5), five invalid promo attempts (inline error each time), and 12 rapid route navigations — no console errors, no broken state. Removing `tuw_website_v5_orders` from localStorage and reloading left it absent, confirming the provider no longer writes it.
+- [x] Gates: full typecheck, website build, 104/104 admin tests, comment ratchet 3150/3186. QA user and bag items removed.
