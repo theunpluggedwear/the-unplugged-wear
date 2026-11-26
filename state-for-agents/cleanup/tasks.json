@@ -9,9 +9,9 @@
   },
   "summary": {
     "total": 116,
-    "done": 112,
+    "done": 113,
     "in_progress": 1,
-    "backlog": 3
+    "backlog": 2
   },
   "session": {
     "branch": "urvil-ui",
@@ -2547,7 +2547,7 @@
     {
       "id": "CLN-FSM-05",
       "title": "Checkout phase and placement machines",
-      "status": "backlog",
+      "status": "done",
       "owner": "agent",
       "parent": "CLN-FSM",
       "category": "refactor",
@@ -2559,11 +2559,11 @@
       "fix": "Discriminated-union state machine with reducer transitions",
       "reference_verification": false,
       "started": null,
-      "finished": null,
-      "log": "Separate checkoutPhase cart|details|payment from placement idle|creating|awaiting_gateway|retryable|failed|placed. Remove placingRef double-flag and guard double Pay.",
+      "finished": "2026-11-27",
+      "log": "Checkout placement is now an explicit machine: idle|creating|awaiting_gateway|retryable|failed|placed with guarded START, GATEWAY, RETRYABLE, FAIL, PLACED and RESET. Replaced placeError/retryablePayment/placing booleans and the placingRef double-flag with one reducer plus a synchronous ref for same-tick clicks. Three reducer tests; 110/110 admin tests, typecheck, build and ratchet pass. Local browser QA placed a COD order with a double-click and confirmed exactly one order in Postgres.",
       "design_match": "n/a",
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": []
     },

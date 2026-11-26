@@ -16,6 +16,7 @@ import { previewGiftCardAction } from '@/server/gift-card-actions';
 import { getCheckoutQuoteAction } from '@/server/payment-actions';
 import { createInvoiceCheckoutAction } from '@/server/invoice-actions';
 import { usePaymentConfig } from '@storefront/lib/payment-config';
+import { placementReducer, initialPlacement, type PlacementState, type PlacementEvent } from '@storefront/lib/checkout-machine';
 import { useSession } from '@storefront/lib/session';
 import { useAccount } from '@storefront/lib/account';
 import { RETURN_WINDOW_DAYS, deliveryEstimate, variantLabelOf } from '@storefront/lib/product';
@@ -64,12 +65,16 @@ export default function CheckoutPage() {
   const EXPRESS_FEE = useSiteSettings().shipping.expressFeePaise / 100;
   // One key per checkout attempt: a retried or double-clicked payment returns the same order.
   const [checkoutKey, setCheckoutKey] = useState(() => crypto.randomUUID());
-  const [placeError, setPlaceError] = useState<string | null>(null);
-  const [retryablePayment, setRetryablePayment] = useState(false);
-  const [placing, setPlacing] = useState(false);
-  // Synchronous guard: state updates are not applied until the next render, so a
-  // double click in the same tick would otherwise open two Razorpay flows (WEB-004).
-  const placingRef = useRef(false);
+  const [placement, setPlacement] = useState<PlacementState>(initialPlacement);
+  const placementRef = useRef(placement);
+  const dispatchPlacement = (event: PlacementEvent) => {
+    const next = placementReducer(placementRef.current, event);
+    placementRef.current = next;
+    setPlacement(next);
+  };
+  const placing = placement.kind === 'creating';
+  const placeError = placement.kind === 'retryable' || placement.kind === 'failed' ? placement.message : null;
+  const retryablePayment = placement.kind === 'retryable';
   // Read on the server in checkout/layout.tsx and streamed down as a plain
   // value (CLN-NXT-006): no hydration effect, no "Loading payment options…"
   // gap, and the live-gateway / COD-sandbox branches below stay unchanged.
@@ -258,11 +263,8 @@ export default function CheckoutPage() {
   };
 
   const handlePaymentSuccess = async (paymentMethod: 'UPI' | 'Card' | 'COD (Demo)') => {
-    // Ref guard is synchronous so two same-tick clicks cannot both proceed (WEB-004).
-    if (placing || placingRef.current) return;
-    placingRef.current = true;
-    setPlacing(true);
-    setPlaceError(null);
+    if (placementRef.current.kind === 'creating' || placementRef.current.kind === 'awaiting_gateway') return;
+    dispatchPlacement({ type: 'START' });
     try {
       const method = paymentMethod === 'Card' ? 'card' : paymentMethod === 'UPI' ? 'upi' : 'cod';
       const orderInput = {
@@ -283,43 +285,39 @@ export default function CheckoutPage() {
         const invoice = await createInvoiceCheckoutAction(orderInput);
         if (!invoice.ok) throw new Error(invoice.error.message);
         if (invoice.data.retryable || !invoice.data.invoiceUrl) {
-          setRetryablePayment(true);
-          setPlaceError('The previous payment attempt could not be created. Start a new attempt.');
+          dispatchPlacement({ type: 'RETRYABLE', message: 'The previous payment attempt could not be created. Start a new attempt.' });
           return;
         }
-        setRetryablePayment(false);
         // Keep the order/receipt in the URL so a customer who returns can open
         // the streaming success page even if the hosted provider has no return URL.
         sessionStorage.setItem('tuw_last_checkout', JSON.stringify({
           orderNumber: invoice.data.orderNumber,
           receipt: invoice.data.receipt,
         }));
+        dispatchPlacement({ type: 'GATEWAY', orderNumber: invoice.data.orderNumber, receipt: invoice.data.receipt });
         window.location.assign(invoice.data.invoiceUrl);
         return;
       }
 
       const result = await placeOrderAction(orderInput);
       if (!result.ok) {
-        setPlaceError(result.error.details[0]?.message && result.error.code === 'VALIDATION_FAILED' ? `${result.error.message} ${result.error.details[0].message}` : result.error.message);
+        dispatchPlacement({ type: 'FAIL', message: result.error.details[0]?.message && result.error.code === 'VALIDATION_FAILED' ? `${result.error.message} ${result.error.details[0].message}` : result.error.message });
         return;
       }
       removePromo();
       setGiftCard(null);
       setGiftCardMessage(null);
+      dispatchPlacement({ type: 'PLACED' });
       router.push(`/checkout/success?order=${encodeURIComponent(result.data.orderNumber)}&t=${encodeURIComponent(result.data.receipt)}`);
       setTimeout(() => void refreshBag(), 500);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Payment could not be completed.';
       // Provider details are logged server-side; shoppers get a clear retry path.
       if (/Razorpay|invoice|provider/i.test(message)) {
-        setRetryablePayment(true);
-        setPlaceError('We could not start the secure payment. Please try again.');
+        dispatchPlacement({ type: 'RETRYABLE', message: 'We could not start the secure payment. Please try again.' });
       } else {
-        setPlaceError(message);
+        dispatchPlacement({ type: 'FAIL', message });
       }
-    } finally {
-      placingRef.current = false;
-      setPlacing(false);
     }
   };
 
@@ -1013,8 +1011,7 @@ export default function CheckoutPage() {
                         type="button"
                         onClick={() => {
                           setCheckoutKey(crypto.randomUUID());
-                          setRetryablePayment(false);
-                          setPlaceError(null);
+                          dispatchPlacement({ type: 'RESET' });
                         }}
                         className="mt-3 inline-flex items-center justify-center px-4 py-2 rounded-full border border-red-800 text-xs font-semibold uppercase tracking-wider hover:bg-red-100 cursor-pointer"
                       >
@@ -1042,7 +1039,7 @@ export default function CheckoutPage() {
                   <PaymentSimulationPanel
                     totalAmount={displayPayable}
                     onPaymentSuccess={handlePaymentSuccess}
-                    onPaymentFail={(reason) => setPlaceError(reason)}
+                    onPaymentFail={(reason) => dispatchPlacement({ type: 'FAIL', message: reason })}
                     onCancel={() => { if (placing) return; setStep(2); }}
                   />
                 )}
