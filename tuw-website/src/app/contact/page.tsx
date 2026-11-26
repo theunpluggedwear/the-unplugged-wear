@@ -7,7 +7,10 @@ import Header from '@storefront/components/layout/Header';
 import Footer from '@storefront/components/layout/Footer';
 import Breadcrumb from '@storefront/components/ui/Breadcrumb';
 import Input from '@storefront/components/ui/Input';
+import Select from '@storefront/components/ui/Select';
 import Textarea from '@storefront/components/ui/Textarea';
+import { myOrdersAction } from '@/server/order-actions';
+import type { OrderView } from '@tuw/heart/modules/orders';
 import { useSession } from '@storefront/lib/session';
 import { site } from '@storefront/lib/site';
 import { ArrowRight, Check, Clock, Info, Mail, MapPin } from 'lucide-react';
@@ -43,6 +46,8 @@ export default function ContactPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [orderRef, setOrderRef] = useState('');
+  const [orders, setOrders] = useState<OrderView[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [topic, setTopic] = useState<Topic>('order');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,10 +62,23 @@ export default function ContactPage() {
     setEmail((e) => e || session.email);
   }, [session]);
 
+  useEffect(() => {
+    if (!session) return;
+    let live = true;
+    setOrdersLoading(true);
+    void myOrdersAction({})
+      .then((result) => { if (live && result.ok) setOrders(result.data); })
+      .finally(() => { if (live) setOrdersLoading(false); });
+    return () => { live = false; };
+  }, [session]);
+
   const validate = () => {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = 'Please add your name';
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) errs.email = 'Please enter a valid email address';
+    if ((topic === 'order' || topic === 'returns') && !orderRef.trim()) {
+      errs.orderRef = 'Please choose or enter your order number';
+    }
     if (message.trim().length < 10) errs.message = 'Please tell us a little more (at least 10 characters)';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -200,12 +218,38 @@ export default function ContactPage() {
                 </div>
 
                 {(topic === 'order' || topic === 'returns') && (
-                  <Input
-                    label="Order number (optional)"
-                    placeholder="e.g. TUW-9042"
-                    value={orderRef}
-                    onChange={(e) => setOrderRef(e.target.value.toUpperCase())}
-                  />
+                  <div className="space-y-1.5">
+                    {session && orders.length > 0 ? (
+                      <Select
+                        label="Your order"
+                        value={orderRef}
+                        onChange={setOrderRef}
+                        error={errors.orderRef}
+                        helperText="Choose the order your message is about."
+                        required
+                        options={[
+                          { value: '', label: 'Select an order' },
+                          ...orders.map((order) => ({
+                            value: order.orderNumber,
+                            label: `${order.orderNumber} · ${new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · ${order.status}`,
+                          })),
+                        ]}
+                      />
+                    ) : (
+                      <Input
+                        label="Order number"
+                        placeholder="e.g. TUW-9042"
+                        value={orderRef}
+                        onChange={(e) => setOrderRef(e.target.value.toUpperCase())}
+                        error={errors.orderRef}
+                        required
+                      />
+                    )}
+                    {ordersLoading ? <p className="text-xs text-store-text-secondary">Loading your orders…</p> : null}
+                    {session && !ordersLoading && orders.length === 0 ? (
+                      <p className="text-xs text-store-text-secondary">You have no orders yet — enter your order number above.</p>
+                    ) : null}
+                  </div>
                 )}
 
                 <Textarea

@@ -2997,7 +2997,7 @@
         "src/app/contact/page.tsx",
         "src/app/api/contact/route.ts (remove)"
       ],
-      "description": "Contact form now creates real support tickets: heart createTicket inserts a contact_form ticket plus its first customer message in one transaction and notifies customer.view staff with a deep link; the storefront POST requires an Idempotency-Key and preserves input on failure. Local browser QA confirmed the ticket, notification and preselected admin thread. Three validation tests; 104/104 admin tests, both builds and comment ratchet pass.",
+      "description": "Contact form now creates real support tickets: heart createTicket inserts a contact_form ticket plus its first customer message in one transaction and notifies customer.view staff with a deep link; the storefront POST requires an Idempotency-Key and preserves input on failure. Local browser QA confirmed the ticket, notification and preselected admin thread. Three validation tests; 104/104 admin tests, both builds and comment ratchet pass. QoL follow-up: order-related topics now require an order reference; signed-in shoppers pick from their own orders via myOrdersAction in a dropdown, guests type it manually, and the route verifies signed-in ownership with getOrderForViewer. Local browser QA covered guest, signed-in, empty, tampered and non-order cases.",
       "key_decisions": [],
       "follow_ups": []
     },

@@ -94,3 +94,11 @@
 - [x] Three unit tests cover ticket input validation (valid, missing/malformed, overlong). Admin suite is 104/104.
 - [x] Local browser QA (no Tailnet): submitted the form at `http://127.0.0.1:3007/contact`; success block appeared, Postgres held the ticket with `source='contact_form'`, the order reference in the first message, and a staff notification; admin `/support?ticket=<id>` preselected the thread. Replaying the same idempotency key returned the same ticket without creating a duplicate.
 - [x] Gates: full typecheck, both production builds, 104/104 admin tests, comment ratchet pass. Static pages (`/about`, `/about/sustainability`, `/policies/*`) were deliberately left unchanged.
+
+### Required order picker on the contact form (2026-11-27)
+
+- [x] For **An order** and **Returns & exchanges**, an order reference is now required; other topics stay order-free. A pure helper `requiresOrderRef` plus two unit tests define which subjects need it.
+- [x] Signed-in shoppers get a dropdown populated by `myOrdersAction` showing their own orders (`number · date · status`); guests get a required manual order-number input. Signed-in shoppers with no orders also fall back to manual entry.
+- [x] The route rejects an empty/overlong order reference for order topics and verifies a signed-in shopper's number with `getOrderForViewer`; a tampered foreign number returns 400. Guest numbers remain free text as agreed.
+- [x] Local browser QA: guest empty order showed the inline error and saved nothing; guest with number succeeded; signed-in dropdown listed only `QA-ORDER-1`, empty selection was blocked, selection succeeded; a direct tampered request returned 400; Size & fit showed no order field. Postgres confirmed both tickets carried the correct order reference and ownership.
+- [x] Gates re-run: typecheck, website build, 104/104 admin tests, 2/2 new helper tests, comment ratchet pass. QA user, order, tickets and notifications removed.

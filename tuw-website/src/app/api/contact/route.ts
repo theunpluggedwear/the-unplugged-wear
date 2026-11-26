@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AppError } from '@tuw/heart/platform/errors';
 import { claim, complete, fail, hashRequest } from '@tuw/heart/platform/idempotency';
 import { createTicket } from '@tuw/heart/modules/support';
+import { getOrderForViewer } from '@tuw/heart/modules/orders';
 import { hitRateLimit } from '@tuw/heart/platform/ratelimit';
+import { requiresOrderRef } from '@storefront/lib/contact-order';
 import { session } from '@/server/session';
 
 const SCOPE = 'support.create';
@@ -33,6 +35,9 @@ export async function POST(req: NextRequest) {
     if (message.length > 5000) {
       return NextResponse.json({ error: 'Message exceeds maximum length.' }, { status: 400 });
     }
+    if (requiresOrderRef(subject) && (!orderRef || orderRef.length > 50)) {
+      return NextResponse.json({ error: 'Please provide your order number.' }, { status: 400 });
+    }
     if (!idempotencyKey) {
       return NextResponse.json({ error: 'A valid Idempotency-Key is required.' }, { status: 400 });
     }
@@ -47,10 +52,19 @@ export async function POST(req: NextRequest) {
       scope: SCOPE,
       actorRef: claims?.sub ? `user:${claims.sub}` : `guest:${ip}`,
       key: idempotencyKey,
-      requestHash: hashRequest(SCOPE, { name, email, subject, message }),
+      requestHash: hashRequest(SCOPE, { name, email, subject, message, orderRef }),
       userId: claims?.sub ?? null,
     });
     if (gate.kind === 'replay') return NextResponse.json(gate.body, { status: gate.status });
+
+    if (claims?.sub && orderRef) {
+      try {
+        await getOrderForViewer(orderRef, { userId: claims.sub });
+      } catch {
+        await fail(gate.id, 400, { error: 'We could not find that order for your account.' });
+        return NextResponse.json({ error: 'We could not find that order for your account.' }, { status: 400 });
+      }
+    }
 
     try {
       const ticket = await createTicket({
