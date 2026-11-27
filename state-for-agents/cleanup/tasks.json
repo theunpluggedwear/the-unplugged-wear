@@ -2616,7 +2616,7 @@
     {
       "id": "CLN-FSM-08",
       "title": "Permanently fix audited state-machine defects",
-      "status": "in_progress",
+      "status": "done",
       "owner": "agent",
       "parent": "CLN-FSM",
       "category": "refactor",
@@ -2628,13 +2628,19 @@
       "fix": "Canonical transition relations, SQL transition triggers, transactional claims, guarded reducers, model-check tests in CI",
       "reference_verification": false,
       "started": "2026-11-27",
-      "finished": null,
-      "log": "Phase 0/1: state-machine explorer test and canonical order/payment/refund transition relations landed with migration 037 SQL guards. Remaining: refund/money integrity, atomic claims, admin/storefront FSM fixes, liveness and final gates.",
+      "finished": "2026-11-27",
+      "log": "Done 2026-11-27 (3a0985e..19a9d9f): canonical transition relations with SQL triggers (migrations 037-041), refund/ gift-card/ exchange/ claim integrity, atomic job claims and idempotency takeover, guarded admin/storefront FSMs with model-check tests, cron consolidation, seed drift fix, Reset Demo controls. Gates: typecheck, full pnpm test (heart 249, admin 135, website 84), both builds, comment ratchet 3129/3186.",
       "design_match": "n/a",
-      "key_decisions": [],
-      "verified": false,
+      "key_decisions": [
+        "platform/status is the single source of truth; SQL triggers reject transitions not in state_transitions",
+        "claim SELECT ... FOR UPDATE SKIP LOCKED and follow-up writes share one transaction",
+        "UI reducers have reachable exit paths and model-check liveness tests"
+      ],
+      "verified": true,
       "pushed": false,
-      "follow_ups": []
+      "follow_ups": [
+        "Vercel Pro upgrade still needed to restore frequent fulfilment schedules (TL-BE-17.13)"
+      ]
     }
   ]
 }

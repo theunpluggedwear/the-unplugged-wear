@@ -375,3 +375,12 @@ Two distinct code bugs were found and fixed; no speculative changes were made to
 
 - [x] Root cause: `toDraft()` sent the read-only `store.currency` field on every General tab save; heart `updateSettings` rejected the whole batch with "This setting is fixed.", so the Monogram previews toggle never persisted. Fixed by excluding `kind: 'fixed'` fields from the save payload; backend read-only validation stays strict.
 - [x] Browser QA: Settings → General → Monogram previews ON → Save → "Saved — the storefront now shows the new values."; after reload the switch stays checked, no unsaved banner and no fixed-setting error. Two unit tests added; admin suite 126/126.
+
+### State-machine hardening (2026-11-27, CLN-FSM-08)
+
+- [x] Four read-only audits found 45 heart / 79 admin / 62 storefront / 56 db-distributed machines. Explicit-state model checking confirmed 20 order rank/table divergences (including `delivered → cancelled`), a permanent nav-menu suppression dead-end, personalisation dead controls, refund regression, double webhook claim and a tooltip ghost; all now have executable property tests.
+- [x] Canonical transition relations live in `packages/heart/src/platform/status/index.ts`; migrations 037/040/041 seed `state_transitions` and install BEFORE UPDATE triggers so forbidden transitions are rejected in SQL. `expirePendingPayment` can no longer cancel a shipped/delivered order; admin status changes report CAS conflicts.
+- [x] Refund webhook cannot demote `completed`; gift-card reversals cover every unit; zero-difference exchanges are auto-submitted; claim wallet credit is posted at resolution. Job claims (`FOR UPDATE SKIP LOCKED`) and idempotency takeover are transactional; late `complete()` cannot overwrite the winner.
+- [x] Admin and storefront UI FSMs have reachable exits (`RESET_SUPPRESSION`, `RESET → inactive`, guarded `APPROVED`, request-id tracked saves, cancel-during-import marker, tooltip timer cancellation); async flags use `try/finally`; blob URLs and timers are cleaned up. Reset Demo controls exist in both shells.
+- [x] Cron consolidated to two Hobby-compatible aggregate jobs; settings seed no longer drifts from the registry.
+- [x] Gates: full `pnpm typecheck`, `pnpm test` (heart 249/249, admin 135/135, website 84/84), both production builds, comment ratchet 3129/3186.
