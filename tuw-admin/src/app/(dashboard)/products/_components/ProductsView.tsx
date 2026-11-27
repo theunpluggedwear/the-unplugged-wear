@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Plus, Filter, Search, Edit3, Trash2, CheckCircle2, Eye, AlertTriangle, LayoutGrid, List, Tag, ChevronDown, Download, Archive, GripVertical, Upload, Images, Focus, Library, RotateCcw, X } from 'lucide-react';
 import { StatCard, ContentCard, SurfaceCard, UpliftSurface, Button, Badge, IconButton, Input, Drawer, Modal, Pagination, FilterPills, PageHeader, ViewToggle, DropdownMenu, Checkbox, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, MediaFrame, FormTextarea, Tabs, Stepper, Switch, DrawerSection, DrawerCard, SearchableSelect, Disclosure, Carousel, LinkButton, ImageWithFallback } from '@/components/ui';
 import { useToast } from '@/components/providers/ToastProvider';
-import { resolveVariants, variantStockTotal, buildVariantSku, deriveVariantPrice, recomputeVariants, minFromPrice, pruneAdjustments, roundPrice, hasPriceSpread, adjustmentKey, sumAdjustments } from '@tuw/heart/modules/catalog/variants';
+import { resolveVariants, variantStockTotal, buildVariantSku, deriveVariantPrice, recomputeVariants, minFromPrice, pruneAdjustments, roundPrice, hasPriceSpread, adjustmentKey } from '@tuw/heart/modules/catalog/variants';
 import type { LibraryAttribute, SizeChart } from '@tuw/heart/modules/catalog';
 import type { ProductItem, ProductVariant, ProductAttribute, PhotoSettings, ProductDiscount, ProductGender, StockMovement } from '@/lib/admin-dto';
 import PartnerSkuPanel from './PartnerSkuPanel';
@@ -14,6 +14,11 @@ import { saveSizeChartAction, deleteSizeChartAction, createProductAction, delete
 import { attributeDisplayLabel, normalizeAttributeDisplayType, parseCompareAtPrice, slugify, UNCATEGORIZED_CATEGORY } from '@tuw/heart/modules/catalog/rules';
 import { groupImportRows, isValidHsnCode, parseQikinkListing } from '@tuw/heart/modules/catalog/planner';
 import type { ImportProductGroup } from '@tuw/heart/modules/catalog/planner';
+import {
+  parseChartCell, baseName, colorsSizesOf, variantDraftError,
+  cellAdjustment, cellPriceBreakdown, storefrontNote,
+  deriveCategoryOptions, filterProducts, paginateProducts, catalogCounts,
+} from './editor/productEditorUtils';
 
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'sub-' + String(p) });
 
@@ -131,13 +136,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
   
   const chartTimers = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; commit: () => void }>());
   
-  const cellValue = (v: number | string): number | string | null => {
-    if (typeof v === 'number') return v;
-    const text = v.trim();
-    if (text === '') return 0;
-    if (/^\d+(\.\d+)?$/.test(text)) return Number(text);
-    return /^\d+(\.\d+)?\s*[–-]\s*\d+(\.\d+)?$/.test(text) ? text : null;
-  };
+  const cellValue = parseChartCell;
   const persistChart = (chart: SizeChart, delay = 0) => {
     const pending = chartTimers.current.get(chart.id);
     if (pending) clearTimeout(pending.timer);
@@ -223,14 +222,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const libId = (name: string) => initialLibrary.find((l) => l.name.toLowerCase() === name.toLowerCase())?.id;
   const refused = (what: string) => showToast({ type: 'warning', title: 'Action Restricted', description: `You do not have permission to ${what}.` });
   
-  const storefrontNote = (storefront: { ok: true } | { ok: false; reason: string }) =>
-    storefront.ok ? 'The storefront now shows it.' : `${storefront.reason} Shoppers will see it within the hour.`;
-
   
-  const categoryOptions = React.useMemo(() => {
-    const names = [...new Set([...categories, ...products.map((product) => product.category), UNCATEGORIZED_CATEGORY])];
-    return names.filter(Boolean).map((category) => ({ value: category, label: category }));
-  }, [categories, products]);
+  const categoryOptions = React.useMemo(() => deriveCategoryOptions(categories, products), [categories, products]);
 
   const [selectedCat, setSelectedCat] = useState<string>('All');
   const [publicationFilter, setPublicationFilter] = useState<'all' | 'published' | 'draft' | 'archived'>('all');
@@ -438,11 +431,6 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const [formImages, setFormImages] = useState<
     Array<{ id: string; src: string; name: string; persisted: boolean }>
   >([]);
-
-  const baseName = (url: string) => {
-    const part = url.split('?')[0].split('/');
-    return part[part.length - 1] || url;
-  };
 
   const setCoverImage = (id: string) => {
     setFormImages((prev) => {
@@ -716,10 +704,6 @@ export default function ProductsView({ initialProducts, categories, perms, store
   
   
   
-  const colorsSizesOf = (attrs: Array<{ name: string; values: string[] }>) => ({
-    colors: attrs.find((a) => a.name === 'Color')?.values ?? [],
-    sizes: attrs.find((a) => a.name === 'Size')?.values ?? [],
-  });
   const addAttrValue = (name: string) => {
     const v = (attrDrafts[name] ?? '').trim();
     if (!v) return;
@@ -1338,7 +1322,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     
     
     
-    const draftError = variantDraftError();
+    const draftError = variantDraftError(formVariants);
     if (draftError) {
       showToast({ type: 'warning', title: 'Check Variants', description: draftError });
       revealField('variants');
@@ -1426,24 +1410,13 @@ export default function ProductsView({ initialProducts, categories, perms, store
     setCurrentPage(1);
   }, [searchTerm, selectedCat, publicationFilter, stockFilter]);
 
-  const filteredProducts = products.filter((p) => {
-    const matchesSearch =
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.slug.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCat = selectedCat === 'All' || p.category === selectedCat;
-    const matchesPub = publicationFilter === 'all' || p.publicationStatus === publicationFilter;
-    const matchesStock =
-      stockFilter === 'all'
-        ? true
-        : stockFilter === 'low'
-          ? !p.madeToOrder && p.stock > 0 && p.stock <= (p.lowStockAt ?? 10)
-          : !p.madeToOrder && p.stock === 0;
-    return matchesSearch && matchesCat && matchesPub && matchesStock;
+  const filteredProducts = filterProducts(products, {
+    search: searchTerm,
+    category: selectedCat,
+    publication: publicationFilter,
+    stock: stockFilter,
   });
-
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
-  const paginatedProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const { totalPages, pageProducts: paginatedProducts } = paginateProducts(filteredProducts, currentPage, pageSize);
 
   
   const pageIds = paginatedProducts.map((p) => p.id);
@@ -1514,43 +1487,15 @@ export default function ProductsView({ initialProducts, categories, perms, store
 
   
   
-  const variantDraftError = (): string | null => {
-    const seen = new Set<string>();
-    for (const v of formVariants) {
-      const color = v.color.trim();
-      const size = v.size.trim();
-      if (!color || !size) return 'Each variant needs a color and a size — fill the blank row or remove it.';
-      const key = `${color.toLowerCase()}|${size.toLowerCase()}`;
-      if (seen.has(key)) return `Duplicate variant "${v.color} / ${v.size}" — merge it or remove one.`;
-      seen.add(key);
-    }
-    return null;
-  };
 
   
   const variantLowest = formVariants.length > 0 ? minFromPrice(formVariants) : null;
   const variantSpread = formVariants.length > 1 && new Set(formVariants.map((v) => v.price)).size > 1;
 
   
-  const cellAdjustment = (color: string, size: string) =>
-    sumAdjustments(formAdjustments, [
-      { attr: 'Color', value: color },
-      { attr: 'Size', value: size },
-    ]);
 
   
   
-  const cellPriceBreakdown = (color: string, size: string, effective: number) => {
-    const base = parseFloat(formPrice) || 0;
-    const parts: string[] = [];
-    const colorAdj = formAdjustments[adjustmentKey('Color', color)] ?? 0;
-    const sizeAdj = formAdjustments[adjustmentKey('Size', size)] ?? 0;
-    if (colorAdj > 0) parts.push(`${color} ₹${colorAdj.toFixed(2)}`);
-    if (sizeAdj > 0) parts.push(`${size} ₹${sizeAdj.toFixed(2)}`);
-    return parts.length > 0
-      ? `Base ₹${base.toFixed(2)} + ${parts.join(' + ')} = ₹${effective.toFixed(2)}`
-      : `Base ₹${base.toFixed(2)}`;
-  };
 
   
   
@@ -1800,9 +1745,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     clearSelection();
   };
 
-  const lowStockCount = products.filter((p) => !p.madeToOrder && p.stock > 0 && p.stock <= (p.lowStockAt ?? 10)).length;
-  const outOfStockCount = products.filter((p) => !p.madeToOrder && p.stock === 0).length;
-  const draftCount = products.filter((p) => p.publicationStatus === 'draft').length;
+  const { lowStock: lowStockCount, outOfStock: outOfStockCount, drafts: draftCount } = catalogCounts(products);
 
   
   const filtersClear = selectedCat === 'All' && publicationFilter === 'all' && stockFilter === 'all';
@@ -3494,11 +3437,11 @@ export default function ProductsView({ initialProducts, categories, perms, store
                         >
                           {!v.priceOverridden &&
                             (() => {
-                              const adjSum = cellAdjustment(v.color, v.size);
+                              const adjSum = cellAdjustment(formAdjustments, v.color, v.size);
                               if (adjSum <= 0) return null;
                               return (
                                 <span
-                                  title={cellPriceBreakdown(v.color, v.size, v.price)}
+                                  title={cellPriceBreakdown(formAdjustments, formPrice, v.color, v.size, v.price)}
                                   className="tuw-tabular-nums"
                                   style={{
                                     fontSize: 12,
