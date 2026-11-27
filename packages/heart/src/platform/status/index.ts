@@ -18,7 +18,7 @@ export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
 export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   pending: ['confirmed', 'cancelled'],
-  confirmed: ['processing', 'cancelled'],
+  confirmed: ['processing', 'shipped', 'cancelled'],
   processing: ['shipped', 'cancelled'],
   shipped: ['delivered'],
   delivered: [],

@@ -49,6 +49,8 @@ export async function confirmPaidOrder(input: ConfirmPaidInput): Promise<{ order
     }
     if (order.payment_status !== 'paid') {
       await tx.execute(sql`UPDATE orders SET payment_status='paid', updated_at=now() WHERE id=${intent.order_id}::uuid`);
+      await tx.execute(sql`INSERT INTO order_status_history (id, order_id, from_status, to_status, note, actor)
+        VALUES (${uuidv7()}, ${intent.order_id}::uuid, 'pending', 'pending', 'Payment captured', 'system')`);
     }
 
     await tx.execute(sql`UPDATE payment_intents SET status='paid', provider_payment_id=${input.providerPaymentId},
