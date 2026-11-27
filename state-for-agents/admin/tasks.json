@@ -15,7 +15,7 @@
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "5695f6a",
+    "tip": "da95086",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -50,9 +50,10 @@
       "PEDIT expanded card layout (2645eb0): Compact stays one card per row; Expanded matrix / Full canvas shows two cards per row at 1024/1440; card 5 spans both columns; Storefront attributes show three per row when expanded/wide; Internal only stays a separate group; open-card neighbours stay top-aligned; no horizontal overflow; tab order stays 1-5; 360/768/1024/1440 - browser pass pending",
       "Workbook import (67bdf97): header-row detection, 155-group preview, one-commit staging, HSN validation, internal S.No display, Uncategorized category filter, edit/reload preservation, 305-variant product table, Reset Demo; 360/768/1024/1440 - browser pass pending",
       "PEDIT Clothing Specs cards (c86e718): Compact one card per row; Expanded/Full pairs Display options+Clothing specs and Size chart+Monogram at 1024/1440; Display options switch hides/shows the monogram card; independent collapse survives tab switches; size-chart table scrolls inside a half-width card; monogram pair collapses to one column at 360; chart add/remove + in-use guard feedback; Reset Demo; 360/768/1024/1440 - browser pass pending",
-      "SQL dry-run (f9de18b + 04f31ec): psql is not installed; validate 002 + 010 against a real Postgres instance before the first migration run. The static schema guard (28eccec + 04f31ec) checks inventory/FK order/retired names/semantic columns but does not replace a real parser."
+      "SQL dry-run (f9de18b + 04f31ec): psql is not installed; validate 002 + 010 against a real Postgres instance before the first migration run. The static schema guard (28eccec + 04f31ec) checks inventory/FK order/retired names/semantic columns but does not replace a real parser.",
+      "product editor split stages 1-4 (9a8df36..da95086): interactive 360/768/1024/1440 QA of create/edit/save/import, validation focus, compare-at, variants pin/draft, media, size charts — automated gates + smoke QA passed; exhaustive per-width pass pending"
     ],
-    "last_updated": "2026-11-22",
+    "last_updated": "2026-11-27",
     "updated_by": "agent (OpenCode)"
   },
   "tasks": [
@@ -4253,7 +4254,7 @@
       "title": "Product editor refactor — card-stack IA, global attribute showcase, modular split",
       "status": "in_progress",
       "owner": "unassigned",
-      "log": "Re-planned 2026-10-20 (supersedes the 2026-10-19 collapsible-heading plan). Keep the four existing tabs; inside each, replace flat headings with DrawerCard stacks: title + description + related fields, every field retained. First slice TL-UI-PEDIT-ATTR-DISPLAY moves only the PDP showcase type (Pill / Color swatch / Radio) to Settings → Attributes; products keep individual control of which attributes they show and which values they offer. Then the General five-card pass — Basic Information first (TL-UI-PEDIT-BASIC-CARD, now including Description after a396de7), followed by Pricing & stock, Scheduled discounts, Fulfillment & shipping, and Attributes & values. This folds publishing status into Basic Information and surfaces hidden Category/Gender/Partner/Placement; it supersedes the earlier seven-card Identity/Catalog split. Later backlog: ATTR-VALUES (library-owned value catalogue) and ATTR-SWATCH (global swatch colors), Media/Variants/Specs cards, and finally the pure logic extraction split (HOOK → SPLIT → SHELL/RESET). No cross-tab moves; VPRICE pin/draft, expand-once width, media wide layout, size-chart CRUD, and attribute linking preserved. PARTIAL: General and Clothing Specs card stacks shipped; Media and Variants stacks remain",
+      "log": "Re-planned 2026-10-20 (supersedes the 2026-10-19 collapsible-heading plan). Keep the four existing tabs; inside each, replace flat headings with DrawerCard stacks: title + description + related fields, every field retained. First slice TL-UI-PEDIT-ATTR-DISPLAY moves only the PDP showcase type (Pill / Color swatch / Radio) to Settings → Attributes; products keep individual control of which attributes they show and which values they offer. Then the General five-card pass — Basic Information first (TL-UI-PEDIT-BASIC-CARD, now including Description after a396de7), followed by Pricing & stock, Scheduled discounts, Fulfillment & shipping, and Attributes & values. This folds publishing status into Basic Information and surfaces hidden Category/Gender/Partner/Placement; it supersedes the earlier seven-card Identity/Catalog split. Later backlog: ATTR-VALUES (library-owned value catalogue) and ATTR-SWATCH (global swatch colors), Media/Variants/Specs cards, and finally the pure logic extraction split (HOOK → SPLIT → SHELL/RESET). No cross-tab moves; VPRICE pin/draft, expand-once width, media wide layout, size-chart CRUD, and attribute linking preserved. PARTIAL: General and Clothing Specs card stacks shipped; Media and Variants stacks remain 2026-11-27: HOOK and SPLIT stages shipped (9a8df36, c42f67e, eebdac8, da95086); ProductsView is now a thin shell (~2100 lines) plus editor modules. Remaining explicit-state-machine work tracked in CLN-FSM-07.",
       "design_match": "pending",
       "verified": false,
       "pushed": false,
@@ -4556,24 +4557,24 @@
     {
       "id": "TL-UI-PEDIT-HOOK",
       "title": "Extract product editor draft hook + helpers (pure move)",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-UI-PEDIT-IA",
-      "log": "After the card IA stabilizes: move form state/derive/submit out of ProductsView into products/_components/editor/useProductEditorDraft.ts + productEditorUtils.ts; JSX unchanged; behavior-preserving.",
+      "log": "After the card IA stabilizes: move form state/derive/submit out of ProductsView into products/_components/editor/useProductEditorDraft.ts + productEditorUtils.ts; JSX unchanged; behavior-preserving. Done 2026-11-27 (9a8df36, c42f67e): pure helpers + focused draft hooks extracted; full gates + browser QA passed.",
       "design_match": "pending",
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": []
     },
     {
       "id": "TL-UI-PEDIT-SPLIT",
       "title": "Split editor tabs into section modules (pure file split)",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-UI-PEDIT-IA",
-      "log": "After HOOK: move per-tab JSX into editor/sections/ files; identical output; enables per-section memoization.",
+      "log": "After HOOK: move per-tab JSX into editor/sections/ files; identical output; enables per-section memoization. Done 2026-11-27 (eebdac8, da95086): catalog list + useCatalogFilters and five byte-identical tab sections with shared constants/types; full gates + browser QA passed.",
       "design_match": "pending",
-      "verified": false,
+      "verified": true,
       "pushed": false,
       "follow_ups": []
     },
