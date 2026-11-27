@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useReducer } from 'react';
+import React, { useEffect, useReducer, useRef } from 'react';
 import Button from '@storefront/components/ui/Button';
 import Input from '@storefront/components/ui/Input';
 import { useStore } from '@storefront/mocks/store';
@@ -28,6 +28,7 @@ export default function PersonalizationPanel({
 }: PersonalizationPanelProps) {
   const { addPersonalisedToCart, approvePreviewFor, setIsCartDrawerOpen } = useStore();
   const [state, dispatch] = useReducer(personalizationReducer, initialPersonalizationState);
+  const addingRef = useRef(false);
   const active = state.kind !== 'inactive';
   useEffect(() => { onActiveChange?.(active); }, [active, onActiveChange]);
   const areas = printAreas?.length ? printAreas : ['Front'];
@@ -40,21 +41,31 @@ export default function PersonalizationPanel({
     if (state.kind !== 'editing' && state.kind !== 'error') return;
     const error = validateMonogram(state.monogram, maxChars);
     if (error) { dispatch({ type: 'INVALID', message: error }); return; }
-    const previewUrl = previewUrlFor({ productId, color, size, monogram: state.monogram, placement: state.placement || areas[0] });
+    const previewUrl = previewUrlFor({ productId, color, size, monogram: state.monogram, placement: state.placement || areas[0], maxChars });
     dispatch({ type: 'RENDER', previewUrl });
   };
 
   const add = async () => {
-    if (state.kind !== 'previewing') return;
+    if (addingRef.current || state.kind !== 'previewing') return;
+    addingRef.current = true;
     dispatch({ type: 'ADD' });
     const lineId = await addPersonalisedToCart({
       productId, title: productName, color: color ?? 'Standard', size: size ?? 'One size',
       priceINR, quantity: 1, image, monogram: state.monogram, placement: state.placement || areas[0],
       previewImageUrl: state.previewUrl, previewApproved: false,
     });
-    if (!lineId) { dispatch({ type: 'FAIL', message: 'Your monogram was not added. Please try again.' }); return; }
+    if (!lineId) {
+      addingRef.current = false;
+      dispatch({ type: 'FAIL', message: 'Your monogram was not added. Please try again.' });
+      return;
+    }
     const approved = await approvePreviewFor(lineId);
-    if (!approved) { dispatch({ type: 'FAIL', message: 'Added — please approve the preview in your bag.' }); return; }
+    if (!approved) {
+      addingRef.current = false;
+      dispatch({ type: 'FAIL', message: 'Added — please approve the preview in your bag.' });
+      return;
+    }
+    addingRef.current = false;
     dispatch({ type: 'APPROVED', lineId });
     onAdded?.();
     setIsCartDrawerOpen(true);
@@ -117,7 +128,7 @@ export default function PersonalizationPanel({
               </Button>
             ) : null}
             {active && state.kind !== 'approved' ? (
-              <Button type="button" variant="ghost" size="md" onClick={() => dispatch({ type: 'RESET' })}>Remove monogram</Button>
+              <Button type="button" variant="ghost" size="md" onClick={() => { addingRef.current = false; dispatch({ type: 'RESET' }); }}>Remove monogram</Button>
             ) : null}
           </div>
         </form>

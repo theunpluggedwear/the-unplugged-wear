@@ -21,8 +21,8 @@ import { placementReducer, initialPlacement, type PlacementState, type Placement
 import { useSession } from '@storefront/lib/session';
 import { useAccount } from '@storefront/lib/account';
 import { RETURN_WINDOW_DAYS, deliveryEstimate, variantLabelOf } from '@storefront/lib/product';
-import { formatRupees, formatShortDate } from '@storefront/lib/format';
-import { Address, Order } from '@storefront/lib/types';
+import { formatPaise, formatRupees, formatShortDate } from '@storefront/lib/format';
+import { Address, CartItem, Order } from '@storefront/lib/types';
 import {
   ShieldCheck,
   Truck,
@@ -40,6 +40,8 @@ import {
 } from 'lucide-react';
 
 type CheckoutQuote = { payablePaise: number; totalPaise: number; discountPaise: number; giftCardPaise: number };
+
+const linePaise = (item: CartItem) => item.priceMinorINR ?? item.priceINR * 100;
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -64,6 +66,8 @@ export default function CheckoutPage() {
     products,
   } = useStore();
   const EXPRESS_FEE = useSiteSettings().shipping.expressFeePaise / 100;
+  const previewBlockers = cart.filter((item) => Boolean(item.previewImageUrl) && !item.previewApproved && item.productKind !== 'gift_card');
+  const checkoutBlocked = previewBlockers.length > 0;
   // One key per checkout attempt: a retried or double-clicked payment returns the same order.
   const [checkoutKey, setCheckoutKey] = useState(() => crypto.randomUUID());
   const [placement, setPlacement] = useState<PlacementState>(initialPlacement);
@@ -251,19 +255,20 @@ export default function CheckoutPage() {
   };
 
   const handleProceedToDetails = () => {
-    if (placing) return;
+    if (placing || checkoutBlocked) return;
     if (cart.length > 0) setStep(2);
   };
 
   const handleProceedToPayment = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (placing) return;
+    if (placing || checkoutBlocked) return;
     if (validateDetails()) {
       setStep(3);
     }
   };
 
   const handlePaymentSuccess = async (paymentMethod: 'UPI' | 'Card' | 'COD (Demo)') => {
+    if (checkoutBlocked) return;
     if (placementRef.current.kind === 'creating' || placementRef.current.kind === 'awaiting_gateway') return;
     dispatchPlacement({ type: 'START' });
     try {
@@ -399,6 +404,26 @@ export default function CheckoutPage() {
           </div>
         ) : null}
 
+        {bagError && (
+          <div role="alert" className="mb-6 rounded-xl border border-store-border bg-store-cream px-4 py-3 text-sm text-store-text-primary">
+            We could not refresh your bag: {bagError}
+            <button type="button" onClick={() => void refreshBag()} className="ml-2 underline underline-offset-4 hover:text-store-charcoal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold">
+              Try again
+            </button>
+          </div>
+        )}
+
+        {checkoutBlocked && (
+          <div role="alert" className="mb-6 rounded-xl border border-store-gold/50 bg-store-cream px-4 py-3 text-sm text-store-text-primary">
+            <p className="font-medium">Approve each print preview before you continue.</p>
+            <ul className="mt-2 list-disc pl-5 text-store-text-secondary">
+              {previewBlockers.map((item) => (
+                <li key={item.id}>{item.title} — preview not approved yet. Use “Approve preview” on the item below.</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* ======================================================== */}
         {/* TOP ROW: Header Title (L) + Floating 3-Step Indicator (R)*/}
         {/* Byte-identical to Figma media_1793276765072_2f83cc78.png */}
@@ -449,10 +474,11 @@ export default function CheckoutPage() {
             <button
               type="button"
               onClick={() => {
-                if (placing) return;
+                if (placing || checkoutBlocked) return;
                 if (cart.length > 0) setStep(2);
               }}
-              className="flex items-center cursor-pointer group"
+              disabled={checkoutBlocked}
+              className="flex items-center cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span
                 className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all ${
@@ -483,13 +509,14 @@ export default function CheckoutPage() {
             <button
               type="button"
               onClick={() => {
-                if (placing) return;
+                if (placing || checkoutBlocked) return;
                 // Payment may only be entered from the Details step; from Cart
                 // the fields are unmounted, so validating them is a no-op (WEB-001).
                 if (step !== 2) return;
                 if (validateDetails()) setStep(3);
               }}
-              className="flex items-center cursor-pointer group"
+              disabled={checkoutBlocked}
+              className="flex items-center cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span
                 className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all ${
@@ -572,6 +599,9 @@ export default function CheckoutPage() {
                               {product?.priceIsDraft ? ' · draft price, to be confirmed' : ''}
                             </p>
                             <BagPreview item={item} />
+                            {item.previewImageUrl && !item.previewApproved && item.productKind !== 'gift_card' ? (
+                              <p className="text-xs text-store-terracotta">Preview approval is required before checkout.</p>
+                            ) : null}
 
                             {/* Colour and size can be changed right here */}
                             <div className="flex flex-wrap items-center gap-2">
@@ -667,7 +697,9 @@ export default function CheckoutPage() {
                   <button
                     type="button"
                     onClick={handleProceedToDetails}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-store-checkout-gold hover:bg-store-checkout-gold-hover text-store-charcoal font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
+                    disabled={checkoutBlocked}
+                    title={checkoutBlocked ? 'Approve the pending print previews first' : undefined}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-store-checkout-gold hover:bg-store-checkout-gold-hover text-store-charcoal font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span>Proceed to details</span>
                     <ArrowRight size={14} />
@@ -1116,7 +1148,7 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                       <span className="font-semibold text-white shrink-0">
-                        {formatRupees((item.priceINR * item.quantity))}
+                        {formatPaise(linePaise(item) * item.quantity)}
                       </span>
                     </div>
                   ))}

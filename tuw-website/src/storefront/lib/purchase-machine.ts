@@ -12,9 +12,17 @@ export type PurchaseEvent =
 
 export function purchaseReducer(state: PurchaseState, event: PurchaseEvent): PurchaseState {
   switch (event.type) {
-    case 'ADD': return { kind: 'added' };
-    case 'BUY': return { kind: 'buying' };
-    case 'FAIL': return { kind: 'error', message: event.message };
-    case 'RESET': return { kind: 'idle' };
+    case 'ADD': return state.kind === 'buying' ? state : { kind: 'added' };
+    case 'BUY': return state.kind === 'buying' ? state : { kind: 'buying' };
+    case 'FAIL':
+      return state.kind === 'buying' || state.kind === 'added'
+        ? { kind: 'error', message: event.message }
+        : state;
+    case 'RESET':
+      return state.kind === 'buying'
+        ? { kind: 'error', message: 'Your bag could not be updated. Please try again.' }
+        : { kind: 'idle' };
+    default:
+      return state;
   }
 }

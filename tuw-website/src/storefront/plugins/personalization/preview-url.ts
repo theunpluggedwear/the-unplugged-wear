@@ -4,6 +4,7 @@ export interface PreviewInput {
   size?: string;
   monogram: string;
   placement?: string;
+  maxChars?: number;
 }
 
 export function previewUrlFor(input: PreviewInput): string {
@@ -14,6 +15,7 @@ export function previewUrlFor(input: PreviewInput): string {
     m: input.monogram,
     pl: input.placement ?? '',
   });
+  if (input.maxChars !== undefined) params.set('mx', String(input.maxChars));
   return `/api/previews?${params.toString()}`;
 }
 

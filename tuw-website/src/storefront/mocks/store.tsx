@@ -96,6 +96,8 @@ interface StoreContextType {
 
 const StoreContext = createContext<StoreContextType | null>(null);
 
+const linePaise = (item: CartItem) => item.priceMinorINR ?? item.priceINR * 100;
+
 // The cart drawer is UI-only state. Keeping it outside the data context means
 // opening/closing it re-renders just the drawer, not every bag/catalog consumer.
 let cartDrawerOpen = false;
@@ -120,8 +122,8 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
   // orders live in the database (useBag / useMyOrders); promo codes are still
   // held locally.
   const { shipping } = useSiteSettings();
-  const FREE_SHIPPING_THRESHOLD = shipping.freeThresholdPaise / 100;
-  const STANDARD_SHIPPING_FEE = shipping.standardFeePaise / 100;
+  const FREE_SHIPPING_THRESHOLD_PAISE = shipping.freeThresholdPaise;
+  const STANDARD_SHIPPING_FEE_PAISE = shipping.standardFeePaise;
   const [products, setProducts] = useState<Product[]>(STORE_PRODUCTS);
   // A fresh catalog (admin edit → revalidated layout) replaces the baseline.
   useEffect(() => { setProducts(catalog.products); }, [catalog.products]);
@@ -154,7 +156,8 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
   }, [bag.addToCart]);
 
   const buyNow = useCallback(async (item: Omit<CartItem, 'id'>) => {
-    const twin = cart.find((i) => i.productId === item.productId && i.color === item.color && i.size === item.size);
+    const twin = cart.find((i) => i.productId === item.productId && i.color === item.color && i.size === item.size
+      && i.monogram === item.monogram && i.previewImageUrl === item.previewImageUrl);
     if (!twin) return bag.addToCart(item);
     if (twin.quantity === item.quantity) return true;
     return bag.updateQuantity(twin.id, item.quantity);
@@ -204,17 +207,19 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
 
   const totals = useMemo(() => {
     const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-    const cartSubtotal = cart.reduce((acc, item) => acc + item.priceINR * item.quantity, 0);
-    // Same rule the server applies; shown here, recomputed at checkout.
-    const subtotalPaise = Math.round(cartSubtotal * 100);
+    const subtotalPaise = cart.reduce((acc, item) => acc + linePaise(item) * item.quantity, 0);
     const discountPaise = !promoRule || (promoMinPaise !== null && subtotalPaise < promoMinPaise) ? 0
       : promoRule.type === 'percent' ? Math.round((subtotalPaise * promoRule.percent) / 100) : Math.min(subtotalPaise, promoRule.paise);
-    const discountAmount = discountPaise / 100;
-    const eligibleSubtotal = cartSubtotal - discountAmount;
-    const shippingFee = cartSubtotal === 0 || eligibleSubtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_FEE;
-    const freeShippingRemaining = Math.max(0, FREE_SHIPPING_THRESHOLD - eligibleSubtotal);
-    return { cartCount, cartSubtotal, discountAmount, shippingFee, freeShippingRemaining };
-  }, [cart, promoRule, promoMinPaise, FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING_FEE]);
+    const eligiblePaise = subtotalPaise - discountPaise;
+    const shippingFeePaise = subtotalPaise === 0 || eligiblePaise >= FREE_SHIPPING_THRESHOLD_PAISE ? 0 : STANDARD_SHIPPING_FEE_PAISE;
+    return {
+      cartCount,
+      cartSubtotal: subtotalPaise / 100,
+      discountAmount: discountPaise / 100,
+      shippingFee: shippingFeePaise / 100,
+      freeShippingRemaining: Math.max(0, FREE_SHIPPING_THRESHOLD_PAISE - eligiblePaise) / 100,
+    };
+  }, [cart, promoRule, promoMinPaise, FREE_SHIPPING_THRESHOLD_PAISE, STANDARD_SHIPPING_FEE_PAISE]);
   const { cartCount, cartSubtotal, discountAmount, shippingFee, freeShippingRemaining } = totals;
 
   /** Checked on the server against the bag; the order total is decided again at checkout. */
@@ -301,7 +306,7 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
     cartCount,
     cartSubtotal,
     shippingFee,
-    freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
+    freeShippingThreshold: FREE_SHIPPING_THRESHOLD_PAISE / 100,
     freeShippingRemaining,
     promoCode,
     discountAmount,
@@ -318,7 +323,7 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
   }), [
     products, nav.hiddenCategories, nav.menuItems,
     catalog.sizeCharts, getProductBySlug, cart, addToCart, bag.addPersonalisedToCart, bag.approvePreviewFor, buyNow, updateQuantity, updateCartItemVariant,
-    removeFromCart, saveForLater, clearCart, cartCount, cartSubtotal, shippingFee, FREE_SHIPPING_THRESHOLD,
+    removeFromCart, saveForLater, clearCart, cartCount, cartSubtotal, shippingFee, FREE_SHIPPING_THRESHOLD_PAISE,
     freeShippingRemaining, promoCode, discountAmount, applyPromoCode, removePromoCode,
     bag.ready, bag.error, wishlist, toggleWishlist, isInWishlist, addToast,
     bag.refreshBag,

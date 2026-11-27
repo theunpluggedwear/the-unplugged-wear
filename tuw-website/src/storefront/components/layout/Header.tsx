@@ -378,11 +378,17 @@ export default function Header() {
   const closeSearch = useCallback(() => setIsSearchOpen(false), []);
 
   const openMenuNow = useCallback((label: string) => {
+    dispatchNav({ type: 'CANCEL_CLOSE' });
     dispatchNav({ type: 'ENTER_GROUP', key: label });
+  }, []);
+
+  const clickMenuTrigger = useCallback((label: string) => {
+    dispatchNav({ type: 'CLICK_TRIGGER', key: label });
   }, []);
 
   const scheduleMenuClose = useCallback(() => {
     dispatchNav({ type: 'POINTER_LEAVE' });
+    dispatchNav({ type: 'RESET_SUPPRESSION' });
   }, []);
 
   const closeMenuNow = useCallback(() => {
@@ -391,11 +397,12 @@ export default function Header() {
 
   useEffect(() => {
     dispatchNav({ type: 'NAVIGATE' });
+    dispatchNav({ type: 'RESET_SUPPRESSION' });
   }, [pathname]);
 
   useEffect(() => {
-    if (navMenu.kind !== 'open') return;
-    if (!navMenu.pendingClose) return;
+    const finishing = navMenu.kind === 'closing' || (navMenu.kind === 'open' && navMenu.pendingClose);
+    if (!finishing) return;
     const timer = setTimeout(() => dispatchNav({ type: 'FINALIZE' }), 120);
     return () => clearTimeout(timer);
   }, [navMenu.kind, navMenu.kind === 'open' && navMenu.pendingClose]);
@@ -513,7 +520,7 @@ export default function Header() {
                       onFocus={() => hasPanel && openMenuNow(item.label)}
                       onBlur={(e) => {
                         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-                          dispatchNav({ type: 'CLOSE_REQUEST' });
+                          closeMenuNow();
                         }
                       }}
                     >
@@ -522,7 +529,7 @@ export default function Header() {
                         data-nav-top={item.label}
                         aria-expanded={hasPanel ? isOpen : undefined}
                         aria-controls={hasPanel ? panelId : undefined}
-                        onClick={() => dispatchNav({ type: 'NAVIGATE' })}
+                        onClick={() => (hasPanel ? clickMenuTrigger(item.label) : dispatchNav({ type: 'NAVIGATE' }))}
                         className={`inline-flex items-center min-h-6 text-sm font-medium tracking-wide transition-colors hover:text-black whitespace-nowrap border-b-2 pb-0.5 ${
                           isActive || isOpen
                             ? 'text-store-text-primary border-primary-dark'

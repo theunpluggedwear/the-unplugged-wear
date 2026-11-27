@@ -1,7 +1,7 @@
 'use client';
 import { formatRupees } from '@storefront/lib/format';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { priceLabel, sizePriceINR } from '@storefront/lib/product';
 import Link from 'next/link';
 import { Heart, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
@@ -45,6 +45,8 @@ export default function ProductCard({
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const [quickAddFeedback, setQuickAddFeedback] = useState<string | null>(null);
+  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (feedbackTimer.current) clearTimeout(feedbackTimer.current); }, []);
 
   const activeColorValue = hoveredColor || selectedColor;
   const activeColorObj =
@@ -96,7 +98,8 @@ export default function ProductCard({
     });
 
     setQuickAddFeedback(size);
-    setTimeout(() => setQuickAddFeedback(null), 1500);
+    if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+    feedbackTimer.current = setTimeout(() => setQuickAddFeedback(null), 1500);
   };
 
   // Derive collection eyebrow label (e.g. "Acid Wash Collection")

@@ -7,7 +7,10 @@ export function handlePreviewRequest(request: Request): Response {
   const monogram = url.searchParams.get('m') ?? '';
   const placement = url.searchParams.get('pl') ?? '';
   const color = url.searchParams.get('c') ?? '';
-  if (!productId || !monogram || monogram.length > 30 || placement.length > 50 || color.length > 50) {
+  const rawMaxChars = url.searchParams.get('mx');
+  const maxChars = rawMaxChars === null ? 30 : Number(rawMaxChars);
+  if (!productId || !monogram || !Number.isInteger(maxChars) || maxChars < 1 || maxChars > 30
+    || monogram.length > maxChars || placement.length > 50 || color.length > 50) {
     return NextResponse.json({ error: 'Invalid preview request.' }, { status: 400 });
   }
   const label = escapeXml(placement || 'Front');

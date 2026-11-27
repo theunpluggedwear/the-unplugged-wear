@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useReducer, useState } from 'react';
+import React, { useEffect, useReducer, useRef, useState } from 'react';
 import { useSiteSettings } from '@storefront/lib/site-settings';
 import Link from 'next/link';
 import Header from '@storefront/components/layout/Header';
@@ -52,6 +52,8 @@ export default function ContactPage() {
   const [topic, setTopic] = useState<Topic>('order');
   const [message, setMessage] = useState('');
   const [request, dispatchRequest] = useReducer(asyncReducer<string | null>, initialAsync);
+  const idempotencyRef = useRef<string | null>(null);
+  if (!idempotencyRef.current) idempotencyRef.current = crypto.randomUUID();
   const submitted = request.kind === 'success';
   const submitError = request.kind === 'error' ? request.message : null;
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -94,7 +96,7 @@ export default function ContactPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Idempotency-Key': crypto.randomUUID(),
+          'Idempotency-Key': idempotencyRef.current!,
         },
         body: JSON.stringify({
           name,
@@ -166,6 +168,7 @@ export default function ContactPage() {
                 <button
                   type="button"
                   onClick={() => {
+                    idempotencyRef.current = crypto.randomUUID();
                     dispatchRequest({ type: 'RESET' });
                     setMessage('');
                     setOrderRef('');

@@ -27,8 +27,6 @@ describe('Server Route & Asset Coverage Invariants', () => {
     'src/server/order-actions.ts',
     'src/app/api/contact/route.ts',
     'src/app/api/webhooks/razorpay/route.ts',
-    'src/app/api/fulfillment/qikink/route.ts',
-    'src/storefront/lib/qikink.ts',
   ];
 
   // Checkout and order reads are guarded server actions on the database now (TL-BE-08).
@@ -44,6 +42,15 @@ describe('Server Route & Asset Coverage Invariants', () => {
       assert.equal(existsSync(fullPath), true, `Missing expected file: ${relPath}`);
     });
   }
+
+  test('Qikink fulfilment lives in the shared backend, not as a storefront route', () => {
+    for (const gone of ['src/app/api/fulfillment/qikink/route.ts', 'src/storefront/lib/qikink.ts']) {
+      assert.equal(existsSync(join(repoRoot, gone)), false, `${gone} must not be duplicated in the storefront`);
+    }
+    const client = join(repoRoot, '../packages/heart/src/integrations/fulfillment/qikink.ts');
+    assert.equal(existsSync(client), true, 'the Qikink client belongs to packages/heart');
+    assert.ok(readFileSync(client, 'utf8').includes('createQikinkPartner'), 'heart exposes the Qikink fulfilment partner');
+  });
 
   // One URL per page: legacy duplicates are redirects, not second copies.
   test('legacy duplicate URLs redirect to their canonical page', () => {

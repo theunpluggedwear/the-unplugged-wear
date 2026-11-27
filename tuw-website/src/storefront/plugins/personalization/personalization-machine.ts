@@ -24,27 +24,35 @@ export function personalizationReducer(state: PersonalizationState, event: Perso
     case 'ENABLE':
       return state.kind === 'inactive' ? { kind: 'editing', monogram: '', placement: '', error: null } : state;
     case 'SET_MONOGRAM':
-      return state.kind === 'editing' ? { ...state, monogram: event.value, error: null } : state;
-    case 'SET_PLACEMENT':
-      return state.kind === 'editing' ? { ...state, placement: event.value } : state;
-    case 'INVALID':
-      return state.kind === 'editing' ? { ...state, error: event.message } : state;
-    case 'RENDER':
-      return state.kind === 'editing'
-        ? { kind: 'previewing', monogram: state.monogram, placement: state.placement, previewUrl: event.previewUrl }
+      if (state.kind === 'editing') return { ...state, monogram: event.value, error: null };
+      return state.kind === 'error'
+        ? { kind: 'editing', monogram: event.value, placement: state.placement, error: null }
         : state;
+    case 'SET_PLACEMENT':
+      if (state.kind === 'editing') return { ...state, placement: event.value };
+      return state.kind === 'error'
+        ? { kind: 'editing', monogram: state.monogram, placement: event.value, error: null }
+        : state;
+    case 'INVALID':
+      if (state.kind === 'editing') return { ...state, error: event.message };
+      return state.kind === 'error' ? { ...state, message: event.message } : state;
+    case 'RENDER':
+      if (state.kind === 'editing' || state.kind === 'error') {
+        return { kind: 'previewing', monogram: state.monogram, placement: state.placement, previewUrl: event.previewUrl };
+      }
+      return state;
     case 'ADD':
       return state.kind === 'previewing'
         ? { kind: 'adding', monogram: state.monogram, placement: state.placement, previewUrl: state.previewUrl }
         : state;
     case 'APPROVED':
-      return { kind: 'approved', lineId: event.lineId };
+      return state.kind === 'adding' ? { kind: 'approved', lineId: event.lineId } : state;
     case 'FAIL':
       return state.kind === 'adding' || state.kind === 'previewing'
         ? { kind: 'error', monogram: state.monogram, placement: state.placement, previewUrl: state.previewUrl, message: event.message }
         : state;
     case 'RESET':
-      return state.kind === 'inactive' ? state : { kind: 'editing', monogram: '', placement: '', error: null };
+      return state.kind === 'inactive' ? state : { kind: 'inactive' };
     default:
       return state;
   }

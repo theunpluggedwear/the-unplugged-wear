@@ -25,7 +25,7 @@ test('personalization FSM failure retains the shopper input', () => {
   assert.equal(failed.kind, 'error');
   assert.equal(failed.monogram, 'UK');
   assert.equal(failed.previewUrl, '/api/previews?m=UK');
-  assert.equal(personalizationReducer(failed, { type: 'RESET' }).kind, 'editing');
+  assert.equal(personalizationReducer(failed, { type: 'RESET' }).kind, 'inactive');
 });
 
 test('preview URLs are local paths and monograms stay within the product limit', () => {

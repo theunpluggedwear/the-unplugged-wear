@@ -19,16 +19,22 @@ export const initialPlacement: PlacementState = { kind: 'idle' };
 export function placementReducer(state: PlacementState, event: PlacementEvent): PlacementState {
   switch (event.type) {
     case 'START':
-      return state.kind === 'creating' || state.kind === 'awaiting_gateway' ? state : { kind: 'creating' };
+      return state.kind === 'creating' || state.kind === 'awaiting_gateway' || state.kind === 'placed'
+        ? state
+        : { kind: 'creating' };
     case 'GATEWAY':
       return state.kind === 'creating' ? { kind: 'awaiting_gateway', orderNumber: event.orderNumber, receipt: event.receipt } : state;
     case 'RETRYABLE':
-      return { kind: 'retryable', message: event.message };
+      return state.kind === 'creating' || state.kind === 'awaiting_gateway'
+        ? { kind: 'retryable', message: event.message }
+        : state;
     case 'FAIL':
-      return { kind: 'failed', message: event.message };
+      return state.kind === 'creating' || state.kind === 'awaiting_gateway'
+        ? { kind: 'failed', message: event.message }
+        : state;
     case 'PLACED':
       return state.kind === 'creating' ? { kind: 'placed' } : state;
     case 'RESET':
-      return { kind: 'idle' };
+      return state.kind === 'placed' ? state : { kind: 'idle' };
   }
 }

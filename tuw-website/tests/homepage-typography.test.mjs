@@ -159,7 +159,8 @@ describe('Homepage typography roles (weight & size only)', () => {
       'hero headline stays a 28-40px / 400 caption (luxury-house scale, not a billboard)'
     );
     assert.ok(/text-sm text-white\/75 font-sans font-light/.test(page), 'hero subtitle stays 14px / 300');
-    assert.ok(page.includes("'Pause background video'"), 'looping hero video keeps its pause control (WCAG 2.2.2)');
+    assert.ok(page.includes('heroVideoRef.current?.pause()'), 'looping hero video pauses for reduced-motion visitors');
+    assert.ok(!page.includes('aria-label="Pause background video"'), 'the hero intentionally has no on-screen pause control');
     assert.ok(/font-heading font-black uppercase jitter-brand-signature/.test(footer), 'footer brand signature stays 900');
   });
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Button from '@storefront/components/ui/Button';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
 import { useStore } from '@storefront/mocks/store';
@@ -47,6 +47,8 @@ export default function OrdersSection() {
   const [visibleCount, setVisibleCount] = useState(ORDERS_PAGE_SIZE);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(orders[0]?.id ?? null);
   const [buyAgainOrderId, setBuyAgainOrderId] = useState<string | null>(null);
+  const buyAgainTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (buyAgainTimer.current) clearTimeout(buyAgainTimer.current); }, []);
 
   const filteredOrders = useMemo(
     () => orders.filter((order) => matchesFilter(order, orderFilter)),
@@ -90,7 +92,8 @@ export default function OrdersSection() {
   const handleBuyAgain = (order: Order) => {
     order.items.forEach(({ id: _id, ...item }) => addToCart(item));
     setBuyAgainOrderId(order.id);
-    setTimeout(() => setBuyAgainOrderId(null), 2000);
+    if (buyAgainTimer.current) clearTimeout(buyAgainTimer.current);
+    buyAgainTimer.current = setTimeout(() => setBuyAgainOrderId(null), 2000);
   };
 
   const changeFilter = (filter: OrderFilter) => {

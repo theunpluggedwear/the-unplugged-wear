@@ -39,8 +39,14 @@ const toItem = (l: CartLine): CartItem => ({
 /** The storefront's neutral labels mean "no such axis" to the server. */
 const axis = (value: string | undefined, neutral: RegExp) => (value && !neutral.test(value) ? value : undefined);
 
+const sameLine = (a: CartItem, b: Omit<CartItem, 'id'>) =>
+  a.productId === b.productId && a.color === b.color && a.size === b.size
+  && a.monogram === b.monogram && a.previewImageUrl === b.previewImageUrl;
+
 export function useBag(opts: { session: unknown; onError: (title: string, message: string) => void }) {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const cartRef = useRef<CartItem[]>([]);
+  useEffect(() => { cartRef.current = cart; }, [cart]);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [load, dispatchLoad] = useReducer(asyncReducer<{ signedIn: boolean }>, initialAsync);
   const ready = load.kind === 'success';
@@ -62,17 +68,21 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
   }, []);
 
   const refreshBag = useCallback(async () => {
+    const reportFailure = (message: string) => {
+      dispatchLoad({ type: 'FAIL', message });
+      if (cartRef.current.length > 0) onError.current('Could not refresh your bag', message);
+    };
     try {
       const result = await getBagAction({});
       if (!result.ok) {
-        dispatchLoad({ type: 'FAIL', message: result.error.message });
+        reportFailure(result.error.message);
         return;
       }
       setCart(result.data.lines.map(toItem));
       applyWishlist(result.data.wishlist);
       dispatchLoad({ type: 'SUCCESS', data: { signedIn: result.data.signedIn } });
     } catch (cause) {
-      dispatchLoad({ type: 'FAIL', message: cause instanceof Error ? cause.message : 'Could not load your bag.' });
+      reportFailure(cause instanceof Error ? cause.message : 'Could not load your bag.');
     }
   }, [applyWishlist]);
 
@@ -80,7 +90,7 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
   useEffect(() => { void refreshBag(); }, [opts.session, refreshBag]);
 
   /** Optimistic change now, server call in turn; the server's lines win. */
-  const send = useCallback((optimistic: (prev: CartItem[]) => CartItem[], call: () => Promise<Result<CartLine[]>>, failTitle: string) => {
+  const runQueue = useCallback((optimistic: (prev: CartItem[]) => CartItem[], call: () => Promise<Result<CartLine[]>>, failTitle: string) => {
     setCart(optimistic);
     pending.current.push(optimistic);
     const settle = () => { pending.current = pending.current.filter((op) => op !== optimistic); };
@@ -95,17 +105,20 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
         onError.current(failTitle, result.error.message);
         await refreshBag();
       }
-      return result.ok;
+      return result;
     });
     queue.current = next.catch(() => undefined);
     return next;
   }, [refreshBag]);
 
+  const send = useCallback((optimistic: (prev: CartItem[]) => CartItem[], call: () => Promise<Result<CartLine[]>>, failTitle: string) =>
+    runQueue(optimistic, call, failTitle).then((result) => result.ok), [runQueue]);
+
   const addToCart = useCallback((item: Omit<CartItem, 'id'>) => {
     const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     return send(
       (prev) => {
-        const twin = prev.find((i) => i.productId === item.productId && i.color === item.color && i.size === item.size && i.monogram === item.monogram && i.previewImageUrl === item.previewImageUrl);
+        const twin = prev.find((i) => sameLine(i, item));
         return twin ? prev.map((i) => (i === twin ? { ...i, quantity: i.quantity + item.quantity } : i)) : [...prev, { ...item, id: tempId }];
       },
       () => addToBagAction({
@@ -186,25 +199,28 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
   const isWishlistSaved = useCallback((productId: string) => wishlistRef.current.includes(productId), []);
 
   const addPersonalisedToCart = useCallback(async (item: Omit<CartItem, 'id'>) => {
-    const result = await addToBagAction({
-      productId: item.productId,
-      color: axis(item.color, /^standard$/i),
-      size: axis(item.size, /^one size$/i),
-      qty: item.quantity,
-      personalization: {
-        ...(item.monogram ? { monogram: item.monogram } : {}),
-        ...(item.placement ? { placement: item.placement } : {}),
+    const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const result = await runQueue(
+      (prev) => {
+        const twin = prev.find((i) => sameLine(i, item));
+        return twin ? prev.map((i) => (i === twin ? { ...i, quantity: i.quantity + item.quantity } : i)) : [...prev, { ...item, id: tempId }];
       },
-      previewImageUrl: item.previewImageUrl,
-    });
-    if (!result.ok) {
-      onError.current('Could not add to bag', result.error.message);
-      await refreshBag();
-      return null;
-    }
-    await refreshBag();
+      () => addToBagAction({
+        productId: item.productId,
+        color: axis(item.color, /^standard$/i),
+        size: axis(item.size, /^one size$/i),
+        qty: item.quantity,
+        personalization: {
+          ...(item.monogram ? { monogram: item.monogram } : {}),
+          ...(item.placement ? { placement: item.placement } : {}),
+        },
+        previewImageUrl: item.previewImageUrl,
+      }),
+      'Could not add to bag',
+    );
+    if (!result.ok) return null;
     return result.data.find((l) => l.previewImageUrl === item.previewImageUrl && l.personalization?.monogram === item.monogram)?.id ?? null;
-  }, [refreshBag]);
+  }, [runQueue]);
 
   const approvePreviewFor = useCallback((lineId: string) => send(
     (prev) => prev.map((i) => (i.id === lineId ? { ...i, previewApproved: true } : i)),
