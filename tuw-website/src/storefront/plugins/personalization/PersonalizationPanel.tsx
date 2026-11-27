@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useEffect, useReducer, useRef } from 'react';
+import React, { useEffect, useReducer, useRef, useState } from 'react';
 import Button from '@storefront/components/ui/Button';
 import Input from '@storefront/components/ui/Input';
 import { useStore } from '@storefront/mocks/store';
 import {
   personalizationReducer, initialPersonalizationState,
 } from './personalization-machine';
-import { previewUrlFor, validateMonogram } from './preview-url';
+import {
+  previewUrlFor, previewFamilyFor, previewImageFor, validateMonogram, type PreviewAngle,
+} from './preview-url';
+import PreviewCarousel from './PreviewCarousel';
 
 export interface PersonalizationPanelProps {
   productId: string;
@@ -18,16 +21,19 @@ export interface PersonalizationPanelProps {
   productName: string;
   priceINR: number;
   image: string;
+  category?: string;
+  productType?: string;
   disabled?: boolean;
   onActiveChange?: (active: boolean) => void;
   onAdded?: () => void;
 }
 
 export default function PersonalizationPanel({
-  productId, maxChars, printAreas, color, size, productName, priceINR, image, disabled, onActiveChange, onAdded,
+  productId, maxChars, printAreas, color, size, productName, priceINR, image, category, productType, disabled, onActiveChange, onAdded,
 }: PersonalizationPanelProps) {
   const { addPersonalisedToCart, approvePreviewFor, setIsCartDrawerOpen } = useStore();
   const [state, dispatch] = useReducer(personalizationReducer, initialPersonalizationState);
+  const [angle, setAngle] = useState<PreviewAngle>('Front');
   const addingRef = useRef(false);
   const active = state.kind !== 'inactive';
   useEffect(() => { onActiveChange?.(active); }, [active, onActiveChange]);
@@ -35,13 +41,18 @@ export default function PersonalizationPanel({
   const monogram = 'monogram' in state ? state.monogram : '';
   const placement = 'placement' in state ? state.placement : '';
   const previewUrl = 'previewUrl' in state ? state.previewUrl : '';
+  const family = previewFamilyFor({ category, productType, name: productName, image });
+  const angleImage = previewImageFor(family, angle);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (state.kind !== 'editing' && state.kind !== 'error') return;
     const error = validateMonogram(state.monogram, maxChars);
     if (error) { dispatch({ type: 'INVALID', message: error }); return; }
-    const previewUrl = previewUrlFor({ productId, color, size, monogram: state.monogram, placement: state.placement || areas[0], maxChars });
+    const previewUrl = previewUrlFor({
+      productId, color, size, monogram: state.monogram,
+      placement: state.placement || areas[0], maxChars, angle, family, imageUrl: angleImage,
+    });
     dispatch({ type: 'RENDER', previewUrl });
   };
 
@@ -107,13 +118,14 @@ export default function PersonalizationPanel({
             {areas.map((area) => <option key={area} value={area}>{area}</option>)}
           </select>
 
-          {(state.kind === 'previewing' || state.kind === 'adding' || state.kind === 'error' || state.kind === 'approved') ? (
-            <div className="flex items-center gap-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={previewUrl} alt="Monogram print preview" className="h-20 w-20 rounded border border-store-border object-cover" />
-              <p className="text-xs text-store-text-secondary">Demo preview generated locally — no design file is uploaded.</p>
-            </div>
-          ) : null}
+          <PreviewCarousel
+            family={family}
+            angle={angle}
+            onAngleChange={setAngle}
+            monogram={monogram}
+            previewUrl={previewUrl}
+            disabled={state.kind !== 'editing' && state.kind !== 'error'}
+          />
 
           {state.kind === 'error' ? <p role="alert" className="text-sm text-store-error">{state.message}</p> : null}
           {state.kind === 'approved' ? <p role="status" className="text-sm text-store-charcoal">Preview approved and added to your bag.</p> : null}
@@ -128,7 +140,7 @@ export default function PersonalizationPanel({
               </Button>
             ) : null}
             {active && state.kind !== 'approved' ? (
-              <Button type="button" variant="ghost" size="md" onClick={() => { addingRef.current = false; dispatch({ type: 'RESET' }); }}>Remove monogram</Button>
+              <Button type="button" variant="ghost" size="md" onClick={() => { addingRef.current = false; setAngle('Front'); dispatch({ type: 'RESET' }); }}>Remove monogram</Button>
             ) : null}
           </div>
         </form>
