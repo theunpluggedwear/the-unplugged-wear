@@ -73,8 +73,8 @@ after(async () => { await drop?.(); });
 test('an unpaid paid-window order is skipped, a paid one is sent exactly once', { skip }, async () => {
   const product = await tee();
   await cart.addLine({ userId: shopper }, { productRef: product.id, color: 'Black', size: 'M', qty: 1 });
-  const unpaid = await orders.placeOrder({ userId: shopper, email: 'fulfil.shopper@example.com' },
-    orders.orderSchemas.placeOrder.parse({ checkoutKey: uuidv7(), shippingAddress: address, method: 'cod' }));
+  const unpaid = await orders.createPendingOrder({ userId: shopper },
+    orders.orderSchemas.placeOrder.parse({ checkoutKey: uuidv7(), shippingAddress: address, method: 'card' }));
   await db().execute(sql`UPDATE orders SET cancellable_until = now() - interval '1 minute' WHERE id = ${unpaid.orderId}`);
   await f.submitDueOrders(10);
   assert.deepEqual(await fulfillmentFor(unpaid.orderId), []);

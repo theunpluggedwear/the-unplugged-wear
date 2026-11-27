@@ -26,6 +26,8 @@ before(async () => { if (!skip) drop = (await createTestDatabase()).drop; }, { t
 after(async () => { await drop?.(); });
 
 test('import creates drafts only — nothing reaches the storefront until published', { skip }, async () => {
+  const beforeIds = new Set((await db().execute<{ id: string }>(sql`SELECT id FROM products`)).rows.map((r) => r.id));
+  const beforeStorefront = (await catalog.getStorefrontCatalog()).products.length;
   const report = await catalog.importQikinkListing(listing, { actorId: null });
   assert.equal(report.created, 3);
   assert.equal(report.status, 'partial', 'the Robot row failed; the honest middle state');
@@ -34,8 +36,9 @@ test('import creates drafts only — nothing reaches the storefront until publis
   const job = (await db().execute<{ status: string; success_count: number; failed_count: number; errors: unknown[] }>(sql`SELECT status, success_count, failed_count, errors FROM import_jobs WHERE id = ${report.jobId}`)).rows[0]!;
   assert.deepEqual([job.status, job.success_count, job.failed_count], ['partial', 4, 1]);
   assert.ok(JSON.stringify(job.errors).includes('Robot'));
-  assert.equal(await count(sql`SELECT count(*)::int AS n FROM products WHERE status <> 'draft'`), 0);
-  assert.equal((await catalog.getStorefrontCatalog()).products.length, 0);
+  const leaked = (await db().execute<{ id: string }>(sql`SELECT id FROM products WHERE status <> 'draft'`)).rows.filter((r) => !beforeIds.has(r.id));
+  assert.deepEqual(leaked, []);
+  assert.equal((await catalog.getStorefrontCatalog()).products.length, beforeStorefront);
   assert.equal(await count(sql`SELECT count(*)::int AS n FROM products WHERE name LIKE '%DROP TABLE%'`), 1, 'hostile names are data, never SQL');
 });
 
