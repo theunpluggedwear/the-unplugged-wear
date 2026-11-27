@@ -1,32 +1,39 @@
 import type { ProductItem } from '@/lib/admin-dto';
 
 export type EditorState =
-  | { status: 'closed' }
-  | { status: 'opening'; id: string }
-  | { status: 'create' }
-  | { status: 'edit'; product: ProductItem };
+  | { status: 'closed'; sequence: number }
+  | { status: 'opening'; id: string; sequence: number }
+  | { status: 'create'; sequence: number }
+  | { status: 'edit'; product: ProductItem; sequence: number };
 
 export type EditorAction =
   | { type: 'OPEN_CREATE' }
-  | { type: 'OPEN_EDIT_START'; id: string }
-  | { type: 'OPEN_EDIT_DONE'; product: ProductItem }
-  | { type: 'OPEN_EDIT_FAIL' }
+  | { type: 'OPEN_EDIT_START'; id: string; sequence?: number }
+  | { type: 'OPEN_EDIT_DONE'; product: ProductItem; sequence?: number }
+  | { type: 'OPEN_EDIT_FAIL'; sequence?: number }
   | { type: 'CLOSE' }
   | { type: 'PATCH_EDIT_PRODUCT'; patch: Partial<ProductItem> };
 
-export const initialEditorState: EditorState = { status: 'closed' };
+export const initialEditorState: EditorState = { status: 'closed', sequence: 0 };
 
 export function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
     case 'OPEN_CREATE':
-      return { status: 'create' };
+      if (state.status === 'create') return state;
+      return { status: 'create', sequence: state.sequence + 1 };
     case 'OPEN_EDIT_START':
-      return { status: 'opening', id: action.id };
-    case 'OPEN_EDIT_DONE':
-      return { status: 'edit', product: action.product };
+      if (state.status === 'create') return state;
+      return { status: 'opening', id: action.id, sequence: action.sequence ?? state.sequence + 1 };
+    case 'OPEN_EDIT_DONE': {
+      if (action.sequence !== undefined && action.sequence !== state.sequence) return state;
+      if (state.status === 'opening' && state.id !== action.product.id) return state;
+      return { status: 'edit', product: action.product, sequence: state.sequence };
+    }
     case 'OPEN_EDIT_FAIL':
+      if (action.sequence !== undefined && action.sequence !== state.sequence) return state;
+      return { status: 'closed', sequence: state.sequence + 1 };
     case 'CLOSE':
-      return { status: 'closed' };
+      return { status: 'closed', sequence: state.sequence + 1 };
     case 'PATCH_EDIT_PRODUCT':
       return state.status === 'edit'
         ? { ...state, product: { ...state.product, ...action.patch } }

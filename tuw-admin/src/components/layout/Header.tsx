@@ -37,6 +37,12 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
   const [navMenu, dispatchNav] = React.useReducer(navMenuReducer, initialNavMenu);
   const navRef = React.useRef<HTMLDivElement>(null);
   const leaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressionTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressionRef = React.useRef<string | null>(navMenu.kind === 'closed' ? navMenu.suppressed : null);
+  const hoveredGroupRef = React.useRef<string | null>(null);
+  const navMenuKindRef = React.useRef(navMenu.kind);
+  suppressionRef.current = navMenu.kind === 'closed' ? navMenu.suppressed : null;
+  navMenuKindRef.current = navMenu.kind;
   const navAnim = usePopoverAnimation(navMenu.kind === 'open', () => dispatchNav({ type: 'FINALIZE' }), 150);
   const activeGroup = getActiveGroupForPath(pathname);
   const renderedKey = navMenu.kind === 'closed' ? null : navMenu.key;
@@ -48,14 +54,35 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
     }
   }, []);
 
+  const clearSuppressionTimer = React.useCallback(() => {
+    if (suppressionTimerRef.current !== null) {
+      clearTimeout(suppressionTimerRef.current);
+      suppressionTimerRef.current = null;
+    }
+  }, []);
+
+  const requestSuppressionReset = React.useCallback((reopenKey: string | null) => {
+    clearSuppressionTimer();
+    suppressionTimerRef.current = setTimeout(() => {
+      suppressionTimerRef.current = null;
+      dispatchNav({ type: 'RESET_SUPPRESSION' });
+      if (reopenKey && navMenuKindRef.current === 'closed') dispatchNav({ type: 'ENTER_GROUP', key: reopenKey });
+    }, 220);
+  }, [clearSuppressionTimer]);
+
   const scheduleClose = React.useCallback(() => {
     dispatchNav({ type: 'POINTER_LEAVE' });
   }, []);
 
   const handleGroupEnter = React.useCallback((groupKey: string) => {
+    hoveredGroupRef.current = groupKey;
     clearLeaveTimer();
+    if (suppressionRef.current) {
+      requestSuppressionReset(groupKey);
+      return;
+    }
     dispatchNav({ type: 'ENTER_GROUP', key: groupKey });
-  }, [clearLeaveTimer]);
+  }, [clearLeaveTimer, requestSuppressionReset]);
 
   useEffect(() => {
     let live = true;
@@ -74,12 +101,16 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
 
   useEffect(() => {
     clearLeaveTimer();
+    clearSuppressionTimer();
     dispatchNav({ type: 'NAVIGATE' });
-  }, [pathname, clearLeaveTimer]);
+  }, [pathname, clearLeaveTimer, clearSuppressionTimer]);
 
   useEffect(() => {
-    return () => clearLeaveTimer();
-  }, [clearLeaveTimer]);
+    return () => {
+      clearLeaveTimer();
+      clearSuppressionTimer();
+    };
+  }, [clearLeaveTimer, clearSuppressionTimer]);
 
   useEffect(() => {
     const close = (event: PointerEvent) => {
@@ -138,8 +169,13 @@ export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions
           onMouseEnter={() => {
             clearLeaveTimer();
             dispatchNav({ type: 'CANCEL_CLOSE' });
+            if (suppressionRef.current) requestSuppressionReset(hoveredGroupRef.current);
           }}
-          onPointerDown={(event) => event.stopPropagation()}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            clearSuppressionTimer();
+            if (suppressionRef.current) dispatchNav({ type: 'RESET_SUPPRESSION' });
+          }}
         >
           <div className="topNavTriggers">
             {navGroups.map((group) => {

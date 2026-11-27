@@ -80,7 +80,7 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
     }
   }, [stateParam, initialMode]);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pending) return;
     setNotice('');
@@ -90,9 +90,9 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
       return;
     }
     setPending(true);
-    const next = searchParams.get('next') ?? undefined;
-    void loginAction({ email, password, remember: rememberMe, next }).then((result) => {
-      setPending(false);
+    try {
+      const next = searchParams.get('next') ?? undefined;
+      const result = await loginAction({ email, password, remember: rememberMe, next });
       if (!result.ok) {
         
         setHasError(true);
@@ -104,26 +104,35 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
       
       setPassword('');
       router.push(result.data.next);
-    });
+    } catch {
+      setHasError(true);
+      setErrorMessage('Sign-in is unavailable. Please try again.');
+    } finally {
+      setPending(false);
+    }
   };
 
-  const handleResetSubmit = (e: React.FormEvent) => {
+  const handleResetSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pending) return;
     setNotice('');
     setPending(true);
-    void forgotPasswordAction({ email }).then((result) => {
-      setPending(false);
+    try {
+      const result = await forgotPasswordAction({ email });
       if (!result.ok) {
         setNotice(result.error.message);
         return;
       }
       setDevLink(result.data.devLink);
       applyState('recovery');
-    });
+    } catch {
+      setNotice('The reset link could not be requested. Please try again.');
+    } finally {
+      setPending(false);
+    }
   };
 
-  const handleSetPasswordSubmit = (e: React.FormEvent) => {
+  const handleSetPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pending) return;
     setNotice('');
@@ -131,14 +140,18 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
     if (!token) return setNotice('Open the reset link from your email to set a new password.');
     if (newPassword !== confirmPassword) return setNotice('The two passwords do not match.');
     setPending(true);
-    void resetPasswordAction({ token, password: newPassword }).then((result) => {
-      setPending(false);
+    try {
+      const result = await resetPasswordAction({ token, password: newPassword });
       if (!result.ok) return setNotice(result.error.message);
       setNewPassword('');
       setConfirmPassword('');
       applyState('default');
       setNotice('Your password was changed. Log in with the new password.');
-    });
+    } catch {
+      setNotice('The password could not be changed. Please try again.');
+    } finally {
+      setPending(false);
+    }
   };
 
   const socialUnavailable = (provider: string) => () =>

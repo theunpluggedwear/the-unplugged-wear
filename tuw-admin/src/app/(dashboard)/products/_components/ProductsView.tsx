@@ -55,8 +55,10 @@ export default function ProductsView({ initialProducts, categories, perms, store
   useEffect(() => setProducts(initialProducts), [initialProducts]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [asyncState, dispatchAsync] = React.useReducer(asyncReducer, initialAsyncState);
+  const asyncRequestRef = useRef(0);
   const saving = isAsyncBusy(asyncState);
   const [editorState, dispatchEditor] = React.useReducer(editorReducer, initialEditorState);
+  const editorSequenceRef = useRef(0);
   const editingProduct = editorProduct(editorState);
   const isCreating = editorIsCreating(editorState);
   const openingId = editorOpeningId(editorState);
@@ -222,6 +224,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const openCreateDrawer = () => {
     if (!can('product.create')) return refused('create products');
     releaseUploadPreviews();
+    editorSequenceRef.current += 1;
     dispatchEditor({ type: 'OPEN_CREATE' });
     resetCards();
     setProductTab('general');
@@ -296,6 +299,19 @@ export default function ProductsView({ initialProducts, categories, perms, store
     });
   };
 
+  const liveUploadPreviews = useRef(formImages);
+  liveUploadPreviews.current = formImages;
+  React.useEffect(() => () => {
+    liveUploadPreviews.current.forEach((image) => {
+      if (image.persisted) return;
+      try {
+        URL.revokeObjectURL(image.src);
+      } catch {
+        
+      }
+    });
+  }, []);
+
   
   
   
@@ -358,6 +374,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const closeEditor = () => {
     flushChartTimers();
     releaseUploadPreviews();
+    editorSequenceRef.current += 1;
     dispatchEditor({ type: 'CLOSE' });
     resetCards();
     setDrawerView('compact');
@@ -849,22 +866,23 @@ export default function ProductsView({ initialProducts, categories, perms, store
     if (openingId) return;
     
     
-    dispatchEditor({ type: 'OPEN_EDIT_START', id: summary.id });
+    const sequence = ++editorSequenceRef.current;
+    dispatchEditor({ type: 'OPEN_EDIT_START', id: summary.id, sequence });
     try {
       const result = await getProductAction({ id: summary.id });
       if (!result.ok) {
         showToast({ type: 'warning', title: 'Could Not Open Product', description: result.error.message });
-        dispatchEditor({ type: 'OPEN_EDIT_FAIL' });
+        dispatchEditor({ type: 'OPEN_EDIT_FAIL', sequence });
         return;
       }
       const { movements, ...detail } = result.data;
       const loaded = detail as unknown as ProductItem;
       setStockMovements(movements as StockMovement[]);
       loadEditDrawer(loaded);
-      dispatchEditor({ type: 'OPEN_EDIT_DONE', product: loaded });
+      dispatchEditor({ type: 'OPEN_EDIT_DONE', product: loaded, sequence });
     } catch {
       showToast({ type: 'warning', title: 'Could Not Open Product', description: 'The request failed. Please try again.' });
-      dispatchEditor({ type: 'OPEN_EDIT_FAIL' });
+      dispatchEditor({ type: 'OPEN_EDIT_FAIL', sequence });
     }
   };
 
@@ -1045,14 +1063,15 @@ export default function ProductsView({ initialProducts, categories, perms, store
     run: () => Promise<T>,
     failureTitle: string
   ): Promise<T | null> => {
-    dispatchAsync({ type: 'START', action });
+    const requestId = ++asyncRequestRef.current;
+    dispatchAsync({ type: 'START', action, id: requestId });
     try {
       return await run();
     } catch {
       showToast({ type: 'warning', title: failureTitle, description: 'The request failed. Please try again.' });
       return null;
     } finally {
-      dispatchAsync({ type: 'FINISH' });
+      dispatchAsync({ type: 'FINISH', id: requestId });
     }
   };
 
@@ -1294,9 +1313,16 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const [importState, dispatchImport] = React.useReducer(importReducer, initialImportState);
   const importPreview = importPreviewOf(importState);
   const importing = isImporting(importState);
+  const importCancelledRef = useRef(false);
   const setImportPreview = (next: React.SetStateAction<ImportPreview | null>) => {
     const value = typeof next === 'function' ? next(importPreview) : next;
-    dispatchImport(value === null ? { type: 'CANCEL' } : { type: 'SHOW_PREVIEW', preview: value });
+    if (value === null) {
+      if (importing) importCancelledRef.current = true;
+      dispatchImport({ type: 'CANCEL' });
+      return;
+    }
+    importCancelledRef.current = false;
+    dispatchImport({ type: 'SHOW_PREVIEW', preview: value });
   };
   const setImporting = (busy: boolean) => {
     dispatchImport({ type: busy ? 'START_IMPORT' : 'FINISH_IMPORT' });
@@ -1427,6 +1453,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     const result = await withGuard(setImporting, () => importListingAction({
       rows: importPreview.listing,
     }), 'Import Failed');
+    if (importCancelledRef.current) return;
     if (!result) return;
     if (!result.ok) return showToast({ type: 'warning', title: 'Import Failed', description: result.error.message });
     setImportPreview(null);
@@ -1477,13 +1504,15 @@ export default function ProductsView({ initialProducts, categories, perms, store
       String(p.soldCount),
       p.publicationStatus,
     ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const csvContent = [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const url = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
-    link.setAttribute('href', encodeURI(csvContent));
+    link.href = url;
     link.setAttribute('download', `tuw_products_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
     showToast({
       type: 'success',
       title: 'Selected Products Exported',
@@ -2029,7 +2058,9 @@ export default function ProductsView({ initialProducts, categories, perms, store
                 variant="danger"
                 size="sm"
                 icon={<Trash2 size={14} />}
+                disabled={saving}
                 onClick={() => {
+                  if (saving) return;
                   if (window.confirm(`Delete "${editingProduct.name}" from the catalog? It disappears from the store; past orders keep their records.`)) {
                     void removeProducts([editingProduct.id]).then((ok) => {
                       if (!ok) return;

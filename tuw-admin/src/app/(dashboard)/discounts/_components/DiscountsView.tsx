@@ -78,53 +78,83 @@ export default function DiscountsView({ initialCodes, initialSchedules, perms }:
   
   const handleCreate = async () => {
     if (!canManage) return refused();
+    if (saving) return;
     const value = parseFloat(formValue);
     const min = formMin.trim() === '' ? null : parseFloat(formMin);
     const maxUses = formMaxUses.trim() === '' ? null : parseInt(formMaxUses, 10);
     setSaving(true);
-    const result = await createDiscountAction({
-      code: formCode,
-      discountType: formType,
-      value: Number.isNaN(value) ? 0 : value,
-      minOrderAmount: min !== null && Number.isNaN(min) ? -1 : min,
-      maxUses: maxUses !== null && Number.isNaN(maxUses) ? 0 : maxUses,
-      startsAt: formStarts ? new Date(`${formStarts}T00:00:00+05:30`).toISOString() : null,
-      endsAt: formEnds ? new Date(`${formEnds}T23:59:59+05:30`).toISOString() : null,
-      isActive: formActive,
-    });
-    setSaving(false);
-    if (!result.ok) {
-      
-      setFormError(result.error.details[0]?.message ?? result.error.message);
-      return;
+    try {
+      const result = await createDiscountAction({
+        code: formCode,
+        discountType: formType,
+        value: Number.isNaN(value) ? 0 : value,
+        minOrderAmount: min !== null && Number.isNaN(min) ? -1 : min,
+        maxUses: maxUses !== null && Number.isNaN(maxUses) ? 0 : maxUses,
+        startsAt: formStarts ? new Date(`${formStarts}T00:00:00+05:30`).toISOString() : null,
+        endsAt: formEnds ? new Date(`${formEnds}T23:59:59+05:30`).toISOString() : null,
+        isActive: formActive,
+      });
+      if (!result.ok) {
+        
+        setFormError(result.error.details[0]?.message ?? result.error.message);
+        return;
+      }
+      setDiscountCodes(result.data);
+      setIsCreateOpen(false);
+      showToast({ type: 'success', title: 'Code Created', description: `"${formCode.trim().toUpperCase()}" ${formActive ? 'is live at checkout' : 'is saved and switched off'}.` });
+      resetForm();
+    } catch {
+      showToast({ type: 'warning', title: 'Not Created', description: 'The request failed. Please try again.' });
+    } finally {
+      setSaving(false);
     }
-    setDiscountCodes(result.data);
-    setIsCreateOpen(false);
-    showToast({ type: 'success', title: 'Code Created', description: `"${formCode.trim().toUpperCase()}" ${formActive ? 'is live at checkout' : 'is saved and switched off'}.` });
-    resetForm();
   };
 
   const toggleDiscountCode = async (d: DiscountCode) => {
     if (!canManage) return refused();
-    const result = await setDiscountActiveAction({ id: d.id, isActive: !d.isActive });
-    if (!result.ok) return showToast({ type: 'warning', title: 'Not Changed', description: result.error.message });
-    setDiscountCodes(result.data);
-    showToast({ type: 'success', title: d.isActive ? 'Code Switched Off' : 'Code Switched On', description: `"${d.code}" ${d.isActive ? 'no longer works at checkout' : 'works at checkout again'}.` });
+    if (saving) return;
+    setSaving(true);
+    try {
+      const result = await setDiscountActiveAction({ id: d.id, isActive: !d.isActive });
+      if (!result.ok) return showToast({ type: 'warning', title: 'Not Changed', description: result.error.message });
+      setDiscountCodes(result.data);
+      showToast({ type: 'success', title: d.isActive ? 'Code Switched Off' : 'Code Switched On', description: `"${d.code}" ${d.isActive ? 'no longer works at checkout' : 'works at checkout again'}.` });
+    } catch {
+      showToast({ type: 'warning', title: 'Not Changed', description: 'The request failed. Please try again.' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const deleteDiscountCode = async (d: DiscountCode) => {
     if (!canManage) return refused();
-    const result = await deleteDiscountAction({ id: d.id });
-    if (!result.ok) return showToast({ type: 'warning', title: 'Code Kept', description: result.error.message });
-    setDiscountCodes(result.data);
-    showToast({ type: 'success', title: 'Code Deleted', description: `"${d.code}" was never used, so it has been removed.` });
+    if (saving) return;
+    setSaving(true);
+    try {
+      const result = await deleteDiscountAction({ id: d.id });
+      if (!result.ok) return showToast({ type: 'warning', title: 'Code Kept', description: result.error.message });
+      setDiscountCodes(result.data);
+      showToast({ type: 'success', title: 'Code Deleted', description: `"${d.code}" was never used, so it has been removed.` });
+    } catch {
+      showToast({ type: 'warning', title: 'Code Kept', description: 'The request failed. Please try again.' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleSchedule = async (d: ProductDiscountRow) => {
     if (!canManage) return refused();
-    const result = await setProductDiscountActiveAction({ id: d.id, isActive: !d.isActive });
-    if (!result.ok) return showToast({ type: 'warning', title: 'Not Changed', description: result.error.message });
-    setScheduleRows(result.data.rows);
+    if (saving) return;
+    setSaving(true);
+    try {
+      const result = await setProductDiscountActiveAction({ id: d.id, isActive: !d.isActive });
+      if (!result.ok) return showToast({ type: 'warning', title: 'Not Changed', description: result.error.message });
+      setScheduleRows(result.data.rows);
+    } catch {
+      showToast({ type: 'warning', title: 'Not Changed', description: 'The request failed. Please try again.' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleExportCSV = () => {
@@ -139,13 +169,15 @@ export default function DiscountsView({ initialCodes, initialSchedules, perms }:
       d.endsAt ?? '',
       String(d.isActive),
     ]);
-    const csv = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const csv = [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
-    link.setAttribute('href', encodeURI(csv));
+    link.href = url;
     link.setAttribute('download', `tuw_discounts_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   return (

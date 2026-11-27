@@ -49,6 +49,7 @@ export function usePopoverAnimation(
 
   const finishClose = React.useCallback(() => {
     clearTimer();
+    if (openRef.current) return;
     dispatch({ type: 'EXPIRE' });
     onClosedRef.current?.();
   }, [clearTimer]);

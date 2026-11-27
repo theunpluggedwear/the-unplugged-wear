@@ -70,12 +70,17 @@ export default function CustomersView({ list, stats, detail, selectedId, query }
     e.preventDefault();
     if (!openId || !newNote.trim() || pending) return;
     setPending(true);
-    const result = await addCustomerNoteAction({ profileId: openId, note: newNote });
-    setPending(false);
-    if (!result.ok) return setNoteError(result.error.message);
-    setNoteError(null);
-    setNewNote('');
-    setSavedNotes({ profileId: openId, notes: result.data });
+    try {
+      const result = await addCustomerNoteAction({ profileId: openId, note: newNote });
+      if (!result.ok) return setNoteError(result.error.message);
+      setNoteError(null);
+      setNewNote('');
+      setSavedNotes({ profileId: openId, notes: result.data });
+    } catch {
+      setNoteError('The note could not be saved. Please try again.');
+    } finally {
+      setPending(false);
+    }
   };
 
   const openCreate = () => {
@@ -89,22 +94,27 @@ export default function CustomersView({ list, stats, detail, selectedId, query }
     if (e) e.preventDefault();
     if (pending) return;
     setPending(true);
-    const result = await createCustomerAction({ ...newCustomerForm, idempotencyKey: createKey });
-    setPending(false);
-    if (!result.ok) {
-      
-      setFieldErrors(Object.fromEntries(result.error.details.filter((d) => d.field).map((d) => [d.field!, d.message])));
-      return setCreateMsg({ tone: 'error', text: result.error.message });
+    try {
+      const result = await createCustomerAction({ ...newCustomerForm, idempotencyKey: createKey });
+      if (!result.ok) {
+        
+        setFieldErrors(Object.fromEntries(result.error.details.filter((d) => d.field).map((d) => [d.field!, d.message])));
+        return setCreateMsg({ tone: 'error', text: result.error.message });
+      }
+      setFieldErrors({});
+      setIsAddModalOpen(false);
+      setCreateMsg({
+        tone: 'ok',
+        text: result.data.devLink ? `${newCustomerForm.email} was created. Email is not connected yet (development) — set-password link:` : `${newCustomerForm.email} was created and emailed a link to set a password.`,
+        link: result.data.devLink ?? undefined,
+      });
+      setNewCustomerForm({ name: '', email: '', phone: '', initialNote: '' });
+      router.refresh();
+    } catch {
+      setCreateMsg({ tone: 'error', text: 'The customer could not be created. Please try again.' });
+    } finally {
+      setPending(false);
     }
-    setFieldErrors({});
-    setIsAddModalOpen(false);
-    setCreateMsg({
-      tone: 'ok',
-      text: result.data.devLink ? `${newCustomerForm.email} was created. Email is not connected yet (development) — set-password link:` : `${newCustomerForm.email} was created and emailed a link to set a password.`,
-      link: result.data.devLink ?? undefined,
-    });
-    setNewCustomerForm({ name: '', email: '', phone: '', initialNote: '' });
-    router.refresh();
   };
 
   const handleExportCSV = () => {

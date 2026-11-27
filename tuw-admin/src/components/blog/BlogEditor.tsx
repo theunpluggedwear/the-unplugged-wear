@@ -206,7 +206,7 @@ export default function BlogEditor({
   };
 
   const save = async (nextStatus?: BlogStatus) => {
-    if (!canManage) return;
+    if (!canManage || isSaving) return;
     setIsSaving(true);
     setNotice(null);
     const status: BlogStatus = nextStatus ?? form.status;
@@ -216,62 +216,72 @@ export default function BlogEditor({
         : status === 'scheduled'
           ? toIso(form.publishedAt)
           : toIso(form.publishedAt) ?? new Date().toISOString();
-    const result = await savePostAction({
-      ...(form.id ? { id: form.id } : {}),
-      slug: form.slug,
-      title: form.title,
-      subtitle: form.subtitle,
-      excerpt: form.excerpt,
-      categoryId: form.categoryId ?? null,
-      authorId: form.authorId,
-      coverMediaId: form.coverMediaId ?? null,
-      ogMediaId: form.ogMediaId ?? null,
-      content: form.content,
-      status,
-      isFeatured: form.isFeatured,
-      publishedAt: publishedAt ?? null,
-      seoTitle: form.seoTitle,
-      seoDescription: form.seoDescription,
-      canonicalUrl: form.canonicalUrl,
-      noindex: form.noindex,
-      tagIds: form.tagIds,
-    });
-    setIsSaving(false);
-    if (!result.ok) {
-      setErrors({ form: result.error.message });
-      return;
+    try {
+      const result = await savePostAction({
+        ...(form.id ? { id: form.id } : {}),
+        slug: form.slug,
+        title: form.title,
+        subtitle: form.subtitle,
+        excerpt: form.excerpt,
+        categoryId: form.categoryId ?? null,
+        authorId: form.authorId,
+        coverMediaId: form.coverMediaId ?? null,
+        ogMediaId: form.ogMediaId ?? null,
+        content: form.content,
+        status,
+        isFeatured: form.isFeatured,
+        publishedAt: publishedAt ?? null,
+        seoTitle: form.seoTitle,
+        seoDescription: form.seoDescription,
+        canonicalUrl: form.canonicalUrl,
+        noindex: form.noindex,
+        tagIds: form.tagIds,
+      });
+      if (!result.ok) {
+        setErrors({ form: result.error.message });
+        return;
+      }
+      setErrors({});
+      const refreshNote = result.data.storefront.ok
+        ? ''
+        : ` Storefront refresh failed: ${result.data.storefront.reason}`;
+      setNotice(`Saved ${result.data.post.slug}.${refreshNote}`);
+      if (mode === 'create') {
+        router.push('/content/journal');
+        return;
+      }
+      setForm((prev) => ({ ...prev, status, publishedAt }));
+      router.refresh();
+    } catch {
+      setErrors({ form: 'The post could not be saved. Please try again.' });
+    } finally {
+      setIsSaving(false);
     }
-    setErrors({});
-    const refreshNote = result.data.storefront.ok
-      ? ''
-      : ` Storefront refresh failed: ${result.data.storefront.reason}`;
-    setNotice(`Saved ${result.data.post.slug}.${refreshNote}`);
-    if (mode === 'create') {
-      router.push('/content/journal');
-      return;
-    }
-    setForm((prev) => ({ ...prev, status, publishedAt }));
-    router.refresh();
   };
 
   const handleRestore = async (revisionId: string) => {
-    if (!postId) return;
+    if (!postId || isSaving) return;
     setIsSaving(true);
     setNotice(null);
-    const result = await restoreRevisionAction({ postId, id: revisionId });
-    setIsSaving(false);
-    if (!result.ok) {
-      setErrors({ form: result.error.message });
-      return;
+    try {
+      const result = await restoreRevisionAction({ postId, id: revisionId });
+      if (!result.ok) {
+        setErrors({ form: result.error.message });
+        return;
+      }
+      setErrors({});
+      const refreshNote = result.data.storefront.ok
+        ? ''
+        : ` Storefront refresh failed: ${result.data.storefront.reason}`;
+      setNotice(`Restored as a new draft version.${refreshNote}`);
+      setIsRevisionsOpen(false);
+      setRevisionToRestore(null);
+      router.refresh();
+    } catch {
+      setErrors({ form: 'The revision could not be restored. Please try again.' });
+    } finally {
+      setIsSaving(false);
     }
-    setErrors({});
-    const refreshNote = result.data.storefront.ok
-      ? ''
-      : ` Storefront refresh failed: ${result.data.storefront.reason}`;
-    setNotice(`Restored as a new draft version.${refreshNote}`);
-    setIsRevisionsOpen(false);
-    setRevisionToRestore(null);
-    router.refresh();
   };
 
   const revisionList = blogRevisions

@@ -73,6 +73,7 @@ export default function NotificationsView({
   }
 
   async function markRead(id: string) {
+    if (busy) return;
     setBusy(true);
     setNotice(null);
     try {
@@ -85,6 +86,7 @@ export default function NotificationsView({
   }
 
   async function markAll() {
+    if (busy) return;
     setBusy(true);
     setNotice(null);
     try {

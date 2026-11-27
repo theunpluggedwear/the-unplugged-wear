@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { SidebarNavGroup, SidebarNavItem } from './sidebar-nav';
@@ -20,9 +20,11 @@ const STORAGE_KEY = 'tuw_admin_open_groups';
 
 export default function Sidebar({ mobileMenuOpen, onCloseMobileMenu, permissions }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const groups = visibleNavGroups(permissions);
   const footer = visibleFooterItems(permissions);
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => globalOpenGroups ?? new Set<string>());
+  const [resetNotice, setResetNotice] = useState<string | null>(null);
 
   React.useEffect(() => {
     try {
@@ -69,6 +71,20 @@ export default function Sidebar({ mobileMenuOpen, onCloseMobileMenu, permissions
 
   const handleSidebarClick = (event: React.MouseEvent) => {
     if ((event.target as HTMLElement).closest('a')) onCloseMobileMenu();
+  };
+
+  const resetDemo = () => {
+    ['tuw_admin_open_groups', 'tuw_admin_v2_product_editor', 'tuw_search_frequent'].forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        
+      }
+    });
+    globalOpenGroups = null;
+    setOpenGroups(new Set<string>());
+    setResetNotice('Demo state reset — saved menu groups and demo preferences were cleared.');
+    router.refresh();
   };
 
   return (
@@ -123,6 +139,18 @@ export default function Sidebar({ mobileMenuOpen, onCloseMobileMenu, permissions
             </li>
           ))}
         </ul>
+        <button
+          type="button"
+          className="mt-1 px-2.5 py-2 text-left"
+          style={{ fontSize: 13, color: 'var(--tuw-text-secondary, #5D6772)', borderRadius: 'var(--tuw-radius-control, 8px)' }}
+          onClick={resetDemo}
+          title="Clear saved demo state"
+        >
+          Reset Demo
+        </button>
+        {resetNotice ? (
+          <p role="status" className="px-2.5 pb-1" style={{ fontSize: 12, color: 'var(--tuw-text-success, #187343)' }}>{resetNotice}</p>
+        ) : null}
       </div>
     </aside>
   );

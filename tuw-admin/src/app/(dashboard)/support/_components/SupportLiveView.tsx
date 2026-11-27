@@ -14,25 +14,42 @@ export default function SupportLiveView({ initial, selectedId: requestedId }: { 
   const [busy, setBusy] = useState(false);
   const selected = tickets.find((t) => t.id === selectedId) ?? null;
 
-  async function sendReply() {
-    if (!selected) return;
-    setBusy(true);
-    const result = await replyTicketAction({ id: selected.id, body: reply });
-    setBusy(false);
-    if (!result.ok) { setNotice(result.error.message); return; }
+  function selectTicket(id: string) {
+    if (id === selectedId) return;
+    setSelectedId(id);
     setReply('');
-    setNotice('Reply saved to the thread.');
-    setTickets((list) => list.map((t) => t.id === selected.id ? { ...t, status: 'pending' } : t));
+    setNotice(null);
+  }
+
+  async function sendReply() {
+    if (!selected || busy) return;
+    setBusy(true);
+    try {
+      const result = await replyTicketAction({ id: selected.id, body: reply });
+      if (!result.ok) { setNotice(result.error.message); return; }
+      setReply('');
+      setNotice('Reply saved to the thread.');
+      setTickets((list) => list.map((t) => t.id === selected.id ? { ...t, status: 'pending' } : t));
+    } catch {
+      setNotice('The reply could not be sent. Please try again.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function changeStatus(status: SupportTicketRow['status']) {
-    if (!selected) return;
+    if (!selected || busy) return;
     setBusy(true);
-    const result = await setTicketStatusAction({ id: selected.id, status });
-    setBusy(false);
-    if (!result.ok) { setNotice(result.error.message); return; }
-    setTickets((list) => list.map((t) => t.id === selected.id ? { ...t, status } : t));
-    setNotice(`Status set to ${status}.`);
+    try {
+      const result = await setTicketStatusAction({ id: selected.id, status });
+      if (!result.ok) { setNotice(result.error.message); return; }
+      setTickets((list) => list.map((t) => t.id === selected.id ? { ...t, status } : t));
+      setNotice(`Status set to ${status}.`);
+    } catch {
+      setNotice('The status could not be changed. Please try again.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -61,7 +78,7 @@ export default function SupportLiveView({ initial, selectedId: requestedId }: { 
                   </Badge>
                 </TableCell>
                 <TableCell><Badge variant={t.status === 'resolved' ? 'success' : t.status === 'pending' ? 'warning' : 'info'}>{t.status}</Badge></TableCell>
-                <TableCell><Button variant="secondary" size="sm" onClick={() => setSelectedId(t.id)}>Open</Button></TableCell>
+                <TableCell><Button variant="secondary" size="sm" onClick={() => selectTicket(t.id)}>Open</Button></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -80,7 +97,7 @@ export default function SupportLiveView({ initial, selectedId: requestedId }: { 
             ))}
           </div>
           <div style={{ marginTop: 16 }}>
-            <Textarea label="Reply" rows={4} value={reply} onChange={(e) => setReply(e.target.value)} />
+            <Textarea key={selected.id} label="Reply" rows={4} value={reply} onChange={(e) => setReply(e.target.value)} />
             <div className="flex gap-2" style={{ marginTop: 12 }}>
               <Button variant="primary" size="md" disabled={busy || !reply.trim()} onClick={() => void sendReply()}>Send reply</Button>
               <Button variant="secondary" size="md" disabled={busy} onClick={() => void changeStatus('resolved')}>Resolve</Button>

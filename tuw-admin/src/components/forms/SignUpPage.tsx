@@ -90,7 +90,7 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
   }, [searchParams, initialMode]);
 
   
-  const handleSignUpSubmit = (e: React.FormEvent) => {
+  const handleSignUpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pending) return;
     if (!invite) return setNotice('The Unplugged Wear admin is invitation only. Ask an admin to invite you.');
@@ -99,13 +99,17 @@ function SignUpPageContent({ initialMode, invite = null }: SignUpPageProps) {
     if (!agreeTerms) return setNotice('Please accept the terms to continue.');
     const [firstName = '', ...rest] = username.trim().split(/\s+/);
     setPending(true);
-    void acceptInviteAction({ token: invite.token, password, firstName, lastName: rest.join(' ') || firstName }).then((result) => {
-      setPending(false);
+    try {
+      const result = await acceptInviteAction({ token: invite.token, password, firstName, lastName: rest.join(' ') || firstName });
       if (!result.ok) return setNotice(result.error.message); 
       setPassword('');
       setConfirmPassword('');
       router.push(result.data.next);
-    });
+    } catch {
+      setNotice('The invitation could not be accepted. Please try again.');
+    } finally {
+      setPending(false);
+    }
   };
 
   

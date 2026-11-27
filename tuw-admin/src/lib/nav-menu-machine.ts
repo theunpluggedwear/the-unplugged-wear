@@ -13,7 +13,8 @@ export type NavMenuEvent =
   | { type: 'FINALIZE' }
   | { type: 'CANCEL_CLOSE' }
   | { type: 'ESCAPE' }
-  | { type: 'NAVIGATE' };
+  | { type: 'NAVIGATE' }
+  | { type: 'RESET_SUPPRESSION' };
 
 export const initialNavMenu: NavMenuState = { kind: 'closed', suppressed: null };
 
@@ -52,5 +53,10 @@ export function navMenuReducer(state: NavMenuState, event: NavMenuEvent): NavMen
     case 'ESCAPE':
     case 'NAVIGATE':
       return state.kind === 'closed' ? state : { kind: 'closed', suppressed: 'all' };
+
+    case 'RESET_SUPPRESSION':
+      return 'suppressed' in state && state.suppressed !== null
+        ? { ...state, suppressed: null }
+        : state;
   }
 }

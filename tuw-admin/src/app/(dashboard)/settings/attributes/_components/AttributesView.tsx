@@ -86,14 +86,20 @@ export default function AttributesView({ initialLibrary, canManage }: { initialL
     }
     if (busy) return false;
     setBusy(true);
-    const result = await work();
-    setBusy(false);
-    if (!result.ok) {
-      showToast({ type: 'warning', title: 'Not Saved', description: result.error.message });
+    try {
+      const result = await work();
+      if (!result.ok) {
+        showToast({ type: 'warning', title: 'Not Saved', description: result.error.message });
+        return false;
+      }
+      setLibrary(result.data);
+      return true;
+    } catch {
+      showToast({ type: 'warning', title: 'Not Saved', description: 'The request failed. Please try again.' });
       return false;
+    } finally {
+      setBusy(false);
     }
-    setLibrary(result.data);
-    return true;
   };
   const createLibraryAttribute = (name: string, displayType: AttributeDisplayType) => name.trim() ? apply(() => createAttributeAction({ name, displayType })) : Promise.resolve(false);
   const deleteLibraryAttribute = (id: string) => void apply(() => deleteAttributeAction({ id }));

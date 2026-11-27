@@ -101,6 +101,7 @@ export default function Tooltip({
     if (!anim.visible) return;
 
     const dismiss = () => {
+      clearShowTimer();
       dispatchTooltip({ type: 'HIDE' });
     };
     const handleScroll = () => dismiss();
@@ -130,6 +131,7 @@ export default function Tooltip({
   };
 
   const handlePointerLeave = () => {
+    clearShowTimer();
     dispatchTooltip({ type: 'POINTER_LEAVE' });
   };
 

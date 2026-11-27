@@ -34,14 +34,19 @@ export default function PartnerSkuPanel({ productId }: { productId: string }) {
     const bad = rows.find((r) => r.costText.trim() !== '' && !(Number(r.costText) >= 0));
     if (bad) return setNotice({ tone: 'error', text: `Unit cost for ${bad.label} must be an amount in rupees.` });
     setSaving(true);
-    const result = await saveMappingsAction({
-      productId,
-      rows: rows.map((r) => ({ variantId: r.variantId, providerSku: r.providerSku, unitCost: r.costText.trim() === '' ? null : Number(r.costText), payload: r.payload })),
-    });
-    setSaving(false);
-    if (!result.ok) return setNotice({ tone: 'error', text: result.error.message });
-    setRows(result.data.variants.map(toDraft));
-    setNotice({ tone: 'ok', text: 'Partner SKUs saved.' });
+    try {
+      const result = await saveMappingsAction({
+        productId,
+        rows: rows.map((r) => ({ variantId: r.variantId, providerSku: r.providerSku, unitCost: r.costText.trim() === '' ? null : Number(r.costText), payload: r.payload })),
+      });
+      if (!result.ok) return setNotice({ tone: 'error', text: result.error.message });
+      setRows(result.data.variants.map(toDraft));
+      setNotice({ tone: 'ok', text: 'Partner SKUs saved.' });
+    } catch {
+      setNotice({ tone: 'error', text: 'The SKUs could not be saved. Please try again.' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!rows) return <p style={{ fontSize: 13, color: 'var(--tuw-text-secondary, #5D6772)' }}>{notice?.text ?? 'Loading…'}</p>;

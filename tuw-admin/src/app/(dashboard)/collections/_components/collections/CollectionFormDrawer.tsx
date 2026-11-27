@@ -78,16 +78,21 @@ export default function CollectionFormDrawer({
     
     
     setSaving(true);
-    const saved = await onSave(collection?.id, payload);
-    setSaving(false);
-    if (!saved.ok) {
-      if (saved.field === 'slug' || saved.field === 'name' || saved.field === 'publishedAt') setErrors({ [saved.field]: saved.message });
-      else setFormError(saved.message);
-      return;
-    }
+    try {
+      const saved = await onSave(collection?.id, payload);
+      if (!saved.ok) {
+        if (saved.field === 'slug' || saved.field === 'name' || saved.field === 'publishedAt') setErrors({ [saved.field]: saved.message });
+        else setFormError(saved.message);
+        return;
+      }
 
-    if (collection) onSaved?.(collection.id);
-    onClose();
+      if (collection) onSaved?.(collection.id);
+      onClose();
+    } catch {
+      setFormError('The collection could not be saved. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

@@ -133,35 +133,45 @@ export default function SettingsView({ tab, values, providers: initialProviders 
     e?.preventDefault();
     if (saving || !section) return;
     setSaving(true);
-    const result = await saveSettingsAction({ group: tab as Exclude<SettingsTab, 'payments' | 'fulfillment'>, values: draft });
-    setSaving(false);
-    if (!result.ok) {
-      
-      setFieldErrors(Object.fromEntries(result.error.details.filter((d) => d.field).map((d) => [d.field!, d.message])));
-      setNotice({ tone: 'error', text: result.error.message });
-      return;
+    try {
+      const result = await saveSettingsAction({ group: tab as Exclude<SettingsTab, 'payments' | 'fulfillment'>, values: draft });
+      if (!result.ok) {
+        
+        setFieldErrors(Object.fromEntries(result.error.details.filter((d) => d.field).map((d) => [d.field!, d.message])));
+        setNotice({ tone: 'error', text: result.error.message });
+        return;
+      }
+      const next = { ...saved, ...result.data.values } as SettingsValues;
+      setSaved(next);
+      setDraft(toDraft(fields, next));
+      setFieldErrors({});
+      const { changed, storefront } = result.data;
+      setNotice(
+        changed.length === 0 ? { tone: 'ok', text: 'Nothing changed — the values were already saved.' }
+          : storefront === null ? { tone: 'ok', text: 'Saved.' }
+          : storefront.ok ? { tone: 'ok', text: 'Saved — the storefront now shows the new values.' }
+          : { tone: 'warn', text: `Saved. ${storefront.reason} Shoppers will see the change within the hour.` },
+      );
+    } catch {
+      setNotice({ tone: 'error', text: 'The settings could not be saved. Please try again.' });
+    } finally {
+      setSaving(false);
     }
-    const next = { ...saved, ...result.data.values } as SettingsValues;
-    setSaved(next);
-    setDraft(toDraft(fields, next));
-    setFieldErrors({});
-    const { changed, storefront } = result.data;
-    setNotice(
-      changed.length === 0 ? { tone: 'ok', text: 'Nothing changed — the values were already saved.' }
-        : storefront === null ? { tone: 'ok', text: 'Saved.' }
-        : storefront.ok ? { tone: 'ok', text: 'Saved — the storefront now shows the new values.' }
-        : { tone: 'warn', text: `Saved. ${storefront.reason} Shoppers will see the change within the hour.` },
-    );
   };
 
   const toggleProvider = async (p: Provider, patch: { isActive?: boolean; environment?: 'sandbox' | 'live' }) => {
     if (providerBusy) return;
     setProviderBusy(p.slug);
     setProviderError(null);
-    const result = await updateProviderAction({ slug: p.slug, ...patch });
-    setProviderBusy(null);
-    if (!result.ok) return setProviderError({ slug: p.slug, text: result.error.message });
-    setProviders((list) => list.map((x) => result.data.find((u) => u.slug === x.slug) ?? x));
+    try {
+      const result = await updateProviderAction({ slug: p.slug, ...patch });
+      if (!result.ok) return setProviderError({ slug: p.slug, text: result.error.message });
+      setProviders((list) => list.map((x) => result.data.find((u) => u.slug === x.slug) ?? x));
+    } catch {
+      setProviderError({ slug: p.slug, text: 'The provider could not be updated. Please try again.' });
+    } finally {
+      setProviderBusy(null);
+    }
   };
 
   const confirmLeave = (e: React.MouseEvent) => {

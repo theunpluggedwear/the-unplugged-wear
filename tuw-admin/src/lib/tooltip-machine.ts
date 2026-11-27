@@ -30,6 +30,7 @@ export function tooltipReducer(state: TooltipState, event: TooltipEvent): Toolti
     case 'HIDE':
       return { kind: 'hidden' };
     case 'POINTER_LEAVE':
+      if (state.kind === 'scheduled') return { kind: 'hidden' };
       return state.kind === 'visible' && state.reason === 'hover' ? { kind: 'hidden' } : state;
     case 'BLUR':
       return state.kind === 'visible' && state.reason === 'focus' ? { kind: 'hidden' } : state;
