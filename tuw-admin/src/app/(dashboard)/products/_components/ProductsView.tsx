@@ -31,6 +31,8 @@ import { GENDER_OPTIONS, PUBLICATION_OPTIONS, DISCOUNT_TYPE_OPTIONS, PARTNER_OPT
 import {
   editorReducer, initialEditorState, isEditorOpen, editorProduct, editorIsCreating, editorOpeningId,
 } from './editor/editorMachine';
+import { asyncReducer, initialAsyncState, isAsyncBusy } from './editor/asyncMachine';
+import type { SaveAction } from './editor/asyncMachine';
 
 
 
@@ -46,7 +48,8 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const [products, setProducts] = useState<ProductItem[]>(initialProducts);
   useEffect(() => setProducts(initialProducts), [initialProducts]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
-  const [saving, setSaving] = useState(false);
+  const [asyncState, dispatchAsync] = React.useReducer(asyncReducer, initialAsyncState);
+  const saving = isAsyncBusy(asyncState);
   const [editorState, dispatchEditor] = React.useReducer(editorReducer, initialEditorState);
   const editingProduct = editorProduct(editorState);
   const isCreating = editorIsCreating(editorState);
@@ -1074,6 +1077,22 @@ export default function ProductsView({ initialProducts, categories, perms, store
     }
   };
 
+  const runSaveGuarded = async <T,>(
+    action: SaveAction,
+    run: () => Promise<T>,
+    failureTitle: string
+  ): Promise<T | null> => {
+    dispatchAsync({ type: 'START', action });
+    try {
+      return await run();
+    } catch {
+      showToast({ type: 'warning', title: failureTitle, description: 'The request failed. Please try again.' });
+      return null;
+    } finally {
+      dispatchAsync({ type: 'FINISH' });
+    }
+  };
+
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (saving) return;
@@ -1097,7 +1116,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
         return;
       }
       setFormCompareError(null);
-      const created = await withGuard(setSaving, () => createProductAction({
+      const created = await runSaveGuarded('create', () => createProductAction({
         name: formName,
         slug: formSlug,
         category: formCategory,
@@ -1185,7 +1204,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     setFormCompareError(null);
     const cleanAdjustments = pruneAdjustments(formAdjustments, formAttributes).next;
 
-    const updated = await withGuard(setSaving, () => updateProductAction({
+    const updated = await runSaveGuarded('update', () => updateProductAction({
       id: editingProduct.id,
       expectedUpdatedAt: editingProduct.updatedAt,
       colors: colorValues,
@@ -1513,7 +1532,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     const ids = [...selectedIds];
     if (ids.length === 0 || saving) return;
     if (!can(status === 'archived' ? 'product.archive' : 'product.update')) return refused('change product status');
-    const result = await withGuard(setSaving, () => setProductsStatusAction({ ids, status }), 'Not Updated');
+    const result = await runSaveGuarded('bulk-status', () => setProductsStatusAction({ ids, status }), 'Not Updated');
     if (!result) return;
     if (!result.ok) return showToast({ type: 'warning', title: 'Not Updated', description: result.error.message });
     const done = new Set(result.data.updated);
@@ -1532,7 +1551,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
 
   const removeProducts = async (ids: string[]) => {
     if (!can('product.archive')) { refused('delete products'); return false; }
-    const result = await withGuard(setSaving, () => deleteProductsAction({ ids }), 'Not Deleted');
+    const result = await runSaveGuarded('bulk-delete', () => deleteProductsAction({ ids }), 'Not Deleted');
     if (!result) return false;
     if (!result.ok) { showToast({ type: 'warning', title: 'Not Deleted', description: result.error.message }); return false; }
     const gone = new Set(result.data.deleted);

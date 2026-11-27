@@ -4,6 +4,9 @@ import {
   editorReducer, initialEditorState, isEditorOpen, editorProduct,
   editorIsCreating, editorOpeningId,
 } from '../src/app/(dashboard)/products/_components/editor/editorMachine.ts';
+import {
+  asyncReducer, initialAsyncState, isAsyncBusy,
+} from '../src/app/(dashboard)/products/_components/editor/asyncMachine.ts';
 
 const product = { id: 'p1', name: 'Demo', publicationStatus: 'draft' };
 
@@ -49,4 +52,14 @@ test('open-create after an in-flight edit removes creating state', () => {
   const create = editorReducer(opening, { type: 'OPEN_CREATE' });
   assert.equal(editorIsCreating(create), true);
   assert.equal(editorOpeningId(create), null);
+});
+
+test('async machine records which save action is busy and always returns to idle', () => {
+  for (const action of ['create', 'update', 'bulk-status', 'bulk-delete']) {
+    const busy = asyncReducer(initialAsyncState, { type: 'START', action });
+    assert.equal(isAsyncBusy(busy), true);
+    assert.equal(busy.action, action);
+    assert.equal(isAsyncBusy(asyncReducer(busy, { type: 'FINISH' })), false);
+  }
+  assert.equal(isAsyncBusy(initialAsyncState), false);
 });
