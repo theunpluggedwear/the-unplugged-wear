@@ -8,20 +8,19 @@ import type { SettingsValues, SettingKey } from '@tuw/heart/modules/settings';
 import type { Provider } from '@tuw/heart/integrations/registry';
 import { saveSettingsAction, updateProviderAction } from '@/server/settings-actions';
 import { SETTINGS_TABS, type SettingsTab } from './tabs';
+import { toDraft, type Draft, type DraftField } from './draft';
 
 
 
 
 
-type FieldKind = 'text' | 'email' | 'money' | 'int' | 'bool' | 'select' | 'color' | 'textarea' | 'fixed';
-interface Field {
+type Field = DraftField & {
   key: SettingKey;
   label: string;
-  kind: FieldKind;
   helper?: string;
   options?: string[];
   fixedText?: string;
-}
+};
 
 const TIMEZONES = ['Asia/Kolkata', 'UTC', 'Asia/Dubai', 'Asia/Singapore', 'Europe/London', 'America/New_York'];
 
@@ -92,17 +91,6 @@ const FIELDS: Partial<Record<SettingsTab, { title: string; intro?: string; field
   },
 };
 
-const paiseToRupees = (p: number) => `${Math.floor(p / 100)}.${String(p % 100).padStart(2, '0')}`;
-
-type Draft = Record<string, string | boolean>;
-function toDraft(fields: Field[], values: SettingsValues): Draft {
-  const draft: Draft = {};
-  for (const f of fields) {
-    const v = values[f.key] as unknown;
-    draft[f.key] = f.kind === 'bool' ? Boolean(v) : f.kind === 'money' ? paiseToRupees(v as number) : v == null ? '' : String(v);
-  }
-  return draft;
-}
 
 const PROVIDER_NOTES: Record<string, string> = {
   mock: 'Demo gateway — no money is collected.',

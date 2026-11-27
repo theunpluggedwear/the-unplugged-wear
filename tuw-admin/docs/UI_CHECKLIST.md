@@ -370,3 +370,8 @@ Two distinct code bugs were found and fixed; no speculative changes were made to
 - [x] Browser QA on local `127.0.0.1:3024`: create drawer, edit drawer, save + "Product Updated", import preview + "Import Staged", HSN validation jump (focus `hsnCode`, pricing card auto-opened), card collapse persistence across tab switches, expand-once into Variants, deep link `?open=<uuid>`, bulk selection, search/filter and view toggle. No console errors; no horizontal overflow at 360/768/1024/1440.
 - [x] Gates: full typecheck, 124/124 admin tests, both production builds, comment ratchet 3136/3186.
 - [x] Diagnosed the "Operational Interface Interruption" report: a production server had been left running while `next build` replaced `.next`, so cached HTML requested a removed chunk (`1bvq_48zwald4.js` → 500) and the root error boundary rendered. Stop → build → restart restored all 13 chunk requests to 200 and a clean console; no code defect was involved. QA note: never rebuild under a live prod server.
+
+### General settings save fix (2026-11-27)
+
+- [x] Root cause: `toDraft()` sent the read-only `store.currency` field on every General tab save; heart `updateSettings` rejected the whole batch with "This setting is fixed.", so the Monogram previews toggle never persisted. Fixed by excluding `kind: 'fixed'` fields from the save payload; backend read-only validation stays strict.
+- [x] Browser QA: Settings → General → Monogram previews ON → Save → "Saved — the storefront now shows the new values."; after reload the switch stays checked, no unsaved banner and no fixed-setting error. Two unit tests added; admin suite 126/126.
