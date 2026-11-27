@@ -7,6 +7,9 @@ import {
 import {
   asyncReducer, initialAsyncState, isAsyncBusy,
 } from '../src/app/(dashboard)/products/_components/editor/asyncMachine.ts';
+import {
+  importReducer, initialImportState, isImportModalOpen, isImporting, importPreviewOf,
+} from '../src/app/(dashboard)/products/_components/editor/importMachine.ts';
 
 const product = { id: 'p1', name: 'Demo', publicationStatus: 'draft' };
 
@@ -62,4 +65,23 @@ test('async machine records which save action is busy and always returns to idle
     assert.equal(isAsyncBusy(asyncReducer(busy, { type: 'FINISH' })), false);
   }
   assert.equal(isAsyncBusy(initialAsyncState), false);
+});
+
+test('import machine keeps the preview open during import and on failure', () => {
+  const preview = { fileName: 'x.csv', groups: [], listing: [], errors: [], hasCategoryColumn: true };
+  assert.equal(isImportModalOpen(initialImportState), false);
+  const shown = importReducer(initialImportState, { type: 'SHOW_PREVIEW', preview });
+  assert.equal(isImportModalOpen(shown), true);
+  assert.equal(importPreviewOf(shown), preview);
+
+  const importing = importReducer(shown, { type: 'START_IMPORT' });
+  assert.equal(isImporting(importing), true);
+  assert.equal(isImportModalOpen(importing), true);
+
+  const finished = importReducer(importing, { type: 'FINISH_IMPORT' });
+  assert.equal(isImporting(finished), false);
+  assert.equal(importPreviewOf(finished), preview);
+
+  assert.equal(importReducer(finished, { type: 'CANCEL' }).status, 'idle');
+  assert.equal(importReducer(initialImportState, { type: 'START_IMPORT' }).status, 'idle');
 });

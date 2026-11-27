@@ -33,6 +33,10 @@ import {
 } from './editor/editorMachine';
 import { asyncReducer, initialAsyncState, isAsyncBusy } from './editor/asyncMachine';
 import type { SaveAction } from './editor/asyncMachine';
+import {
+  importReducer, initialImportState, isImporting, importPreviewOf,
+} from './editor/importMachine';
+import type { ImportPreview } from './editor/sections/types';
 
 
 
@@ -1328,15 +1332,16 @@ export default function ProductsView({ initialProducts, categories, perms, store
   
   
   
-  const [importPreview, setImportPreview] = useState<{
-    fileName: string;
-    groups: ImportProductGroup[];
-    
-    listing: Record<string, unknown>[];
-    errors: Array<{ row: number; message: string }>;
-    hasCategoryColumn: boolean;
-  } | null>(null);
-  const [importing, setImporting] = useState(false);
+  const [importState, dispatchImport] = React.useReducer(importReducer, initialImportState);
+  const importPreview = importPreviewOf(importState);
+  const importing = isImporting(importState);
+  const setImportPreview = (next: React.SetStateAction<ImportPreview | null>) => {
+    const value = typeof next === 'function' ? next(importPreview) : next;
+    dispatchImport(value === null ? { type: 'CANCEL' } : { type: 'SHOW_PREVIEW', preview: value });
+  };
+  const setImporting = (busy: boolean) => {
+    dispatchImport({ type: busy ? 'START_IMPORT' : 'FINISH_IMPORT' });
+  };
   const csvInputRef = useRef<HTMLInputElement>(null);
   const importVariantTotal =
     importPreview?.groups.reduce((total, group) => total + group.variants.length, 0) ?? 0;
