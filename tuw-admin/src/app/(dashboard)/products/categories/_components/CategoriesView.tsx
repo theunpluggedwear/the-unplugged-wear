@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { Button, ContentCard, Drawer, Input, PageHeader, Switch, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui';
 import type { AdminCategory } from '@tuw/heart/modules/catalog';
 import { deleteCategoryAction, saveCategoryAction } from '@/server/catalog-actions';
+import { CategoryPreviewConfig, SkuImport } from '@/plugins/personalization';
 
 type Notice = { tone: 'ok' | 'warn' | 'error'; text: string };
 const blank = { name: '', slug: '', sortOrder: '0' };
@@ -75,6 +76,8 @@ export default function CategoriesView({ initialCategories, canManage }: { initi
         eyebrow={<Link href="/products" style={{ color: 'var(--tuw-text-secondary, #5D6772)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}><ArrowLeft size={14} /> Back to Products</Link>}
         actions={canManage ? <Button variant="primary" size="md" icon={<Plus size={16} />} onClick={() => open('new')}>New Category</Button> : undefined}
       />
+      <SkuImport canManage={canManage} />
+      <CategoryPreviewConfig categories={categories} canManage={canManage} />
       {notice && (
         <div role={notice.tone === 'error' ? 'alert' : 'status'} style={{ padding: '12px 16px', borderRadius: 8, fontSize: 13, background: notice.tone === 'error' ? 'var(--tuw-bg-error, #FEF4F4)' : notice.tone === 'warn' ? 'var(--tuw-bg-warning, #FEFBF5)' : 'var(--tuw-bg-success, #F3FAF6)', color: notice.tone === 'error' ? 'var(--tuw-text-error, #C91818)' : notice.tone === 'warn' ? 'var(--tuw-text-warning, #856300)' : 'var(--tuw-text-success, #187343)' }}>
           {notice.text}

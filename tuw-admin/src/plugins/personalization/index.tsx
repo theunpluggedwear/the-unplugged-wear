@@ -4,6 +4,11 @@ import React from 'react';
 import { DrawerCard, Input, Switch } from '@/components/ui';
 import { pairedFieldGrid } from '@/app/(dashboard)/products/_components/editor/sections/constants';
 
+export { default as SkuImport, type SkuImportProps } from './SkuImport';
+export { default as CategoryPreviewConfig, type CategoryPreviewConfigProps } from './CategoryPreviewConfig';
+export type { SkuColumns, SkuRow, SkuMatchResult } from './csv';
+export type { CategoryPreviewSettings, PreviewTemplate, QikinkMode } from './preview-settings';
+
 export interface PersonalizationDisplayOptionProps {
   visible: boolean;
   onChange: (visible: boolean) => void;
@@ -63,4 +68,4 @@ export function PersonalizationMonogramCard({
   );
 }
 
-export const personalizationAdminPlugin = { id: 'personalization', slots: ['specsDisplay', 'specsMonogram'] };
+export const personalizationAdminPlugin = { id: 'personalization', slots: ['specsDisplay', 'specsMonogram', 'skuImport', 'categoryPreviewConfig'] };

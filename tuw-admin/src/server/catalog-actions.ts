@@ -5,6 +5,7 @@ import * as catalog from '@tuw/heart/modules/catalog';
 import { notifyRestocked } from '@tuw/heart/modules/inventory';
 import { catalogSchemas as s, PRODUCTS_TAG } from '@tuw/heart/modules/catalog';
 import { AppError } from '@tuw/heart/platform/errors';
+import { qikinkSkuImport } from '@/plugins/personalization/sku-schema';
 import { guards } from './session';
 import { refreshStorefront } from './storefront-cache';
 
@@ -95,6 +96,11 @@ export const deleteSizeChartAction = guards.action({ permission: 'product.update
 
 export const getMappingsAction = guards.action({ permission: 'product.update', input: s.productRef }, async ({ input }) => catalog.listMappings(input.id));
 export const saveMappingsAction = guards.action({ permission: 'product.update', input: s.mappingSave }, async ({ input, ctx }) => catalog.saveMappings(input, ctx.user!.id));
+
+export const importQikinkSkuMapAction = guards.action({ permission: 'product.update', input: qikinkSkuImport }, async ({ input, ctx }) => {
+  const mappings = await catalog.saveMappings(input, ctx.user!.id);
+  return { saved: input.rows.length, mappings };
+});
 
 const refreshReviews = () => refreshStorefront([catalog.REVIEWS_TAG]);
 export const moderateReviewAction = guards.action({ permission: 'product.update', input: s.reviewModerate }, async ({ input, ctx }) => {
