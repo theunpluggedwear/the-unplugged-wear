@@ -3,7 +3,6 @@ export type { PersonalizationPanelProps } from './PersonalizationPanel';
 export { default as BagPreview } from './BagPreview';
 export { default as PreviewCarousel } from './PreviewCarousel';
 export type { PreviewCarouselProps } from './PreviewCarousel';
-export { handlePreviewRequest } from './previewRoute';
 export { personalizationReducer, initialPersonalizationState } from './personalization-machine';
 export type { PersonalizationState, PersonalizationEvent } from './personalization-machine';
 export {
