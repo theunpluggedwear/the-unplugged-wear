@@ -5,6 +5,9 @@ import { cartSchemas as s, type CartOwner } from '@tuw/heart/modules/cart';
 import type { RequestContext } from '@tuw/heart/platform/guards';
 import { z } from 'zod';
 import { guards, session } from './session';
+import '@tuw/heart/modules/personalization';
+import { getSetting } from '@tuw/heart/modules/settings';
+import { AppError } from '@tuw/heart/platform/errors';
 
 // Bag and wishlist (TL-BE-07). The bag is per person, so nothing here is
 // cached. A guest gets a signed session cookie on their first add; signing
@@ -44,3 +47,8 @@ export const clearBagAction = guards.action({ access: 'guestOrCustomer', input: 
 /** Customers only: a guest's heart asks them to sign in. */
 export const setWishlistAction = guards.action({ access: 'customer', input: s.wishlistToggle }, async ({ input, ctx }) =>
   cart.setWishlisted(ctx.user!.id, input.productId, input.saved));
+
+export const approveBagPreviewAction = guards.action({ access: 'guestOrCustomer', input: s.lineRef }, async ({ input, ctx }) => {
+  if (!(await getSetting('features.personalization'))) throw new AppError('RULE_VIOLATION', 'Personalisation is not available.');
+  return (await cart.approvePreview(ownerOf(ctx)!, input.lineId)).lines;
+});

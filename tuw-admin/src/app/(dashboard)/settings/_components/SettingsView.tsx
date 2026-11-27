@@ -34,6 +34,7 @@ const FIELDS: Partial<Record<SettingsTab, { title: string; intro?: string; field
       { key: 'store.support_email', label: 'Customer support email', kind: 'email', helper: 'Shown on the contact and policy pages' },
       { key: 'store.timezone', label: 'Time zone', kind: 'select', options: TIMEZONES, helper: 'Order dates and reports use this zone' },
       { key: 'store.currency', label: 'Currency', kind: 'fixed', fixedText: 'INR (₹) — Indian Rupee', helper: 'Single-currency store — prices are stored and shown in INR' },
+      { key: 'features.personalization', label: 'Monogram previews', kind: 'bool', helper: 'Show the monogram option on product pages and require preview approval before checkout. Turn off to hide the whole feature.' },
     ],
   },
   brand: {

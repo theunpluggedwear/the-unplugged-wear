@@ -7,6 +7,7 @@ import Header from '@storefront/components/layout/Header';
 import Footer from '@storefront/components/layout/Footer';
 import { PaymentSimulationPanel } from '@storefront/components/commerce';
 import LivePaymentPanel from '@storefront/components/commerce/LivePaymentPanel';
+import { BagPreview } from '@storefront/plugins/personalization';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
 import Listbox from '@storefront/components/ui/Listbox';
 import { useStore } from '@storefront/mocks/store';
@@ -570,6 +571,7 @@ export default function CheckoutPage() {
                               ₹{item.priceINR.toLocaleString('en-IN')} each · printed for you in 2–3 days
                               {product?.priceIsDraft ? ' · draft price, to be confirmed' : ''}
                             </p>
+                            <BagPreview item={item} />
 
                             {/* Colour and size can be changed right here */}
                             <div className="flex flex-wrap items-center gap-2">

@@ -266,10 +266,12 @@ function WishlistButton({ productId, title }: { productId: string; title: string
 export default function ProductShowcase({
   product,
   rating = null,
+  personalizationEnabled = false,
 }: {
   product: Product;
   /** Approved reviews only; null hides the summary. */
   rating?: { average: number; count: number } | null;
+  personalizationEnabled?: boolean;
 }) {
   const [selectedColor, setSelectedColor] = useState<ProductColor | undefined>(
     product.colors && product.colors.length > 0 ? product.colors[0] : undefined
@@ -355,6 +357,7 @@ export default function ProductShowcase({
             onColorChange={setSelectedColor}
             selectedSize={selectedSize}
             onSizeChange={setSelectedSize}
+            personalizationEnabled={personalizationEnabled}
           />
         </div>
 

@@ -9,6 +9,7 @@ const { createTestDatabase, hasTestDatabase } = await import('../../platform/tes
 const auth = await import('../auth/index.ts');
 const c = await import('../catalog/index.ts');
 const cart = await import('./index.ts');
+await import('../personalization/index.ts');
 const { getDb } = await import('../../platform/db/index.ts');
 const { uuidv7 } = await import('../../platform/ids/index.ts');
 

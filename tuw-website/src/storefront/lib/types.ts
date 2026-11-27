@@ -123,6 +123,7 @@ export type Product = {
   priceIsDraft?: boolean;
   /** Print areas offered by the print partner (verbatim from their sheet). */
   printAreas?: string[];
+  monogram?: { maxChars: number };
   weightGrams?: number;
   taxRatePercent?: number;
   hsnCode?: string;
@@ -177,6 +178,10 @@ export type CartItem = {
   giftRecipientName?: string;
   giftRecipientEmail?: string;
   giftMessage?: string;
+  monogram?: string;
+  placement?: string;
+  previewImageUrl?: string;
+  previewApproved?: boolean;
   selectedRadioOptions?: {
     groupKey: string;
     groupLabel: string;

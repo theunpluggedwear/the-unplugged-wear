@@ -2,6 +2,7 @@ import 'server-only';
 import { cacheLife, cacheTag } from 'next/cache';
 import { approvedReviews, getStorefrontCatalog, getStorefrontProductStock, searchProducts, PRODUCTS_TAG, REVIEWS_TAG, type ReviewSummary, type SearchResult } from '@tuw/heart/modules/catalog';
 import type { Collection, Product, ProductSize, SizeChartData } from '@storefront/lib/types';
+import '@tuw/heart/modules/personalization';
 
 export interface Catalog {
   products: Product[];

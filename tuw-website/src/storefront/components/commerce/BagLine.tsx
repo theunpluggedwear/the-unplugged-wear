@@ -10,6 +10,7 @@ import TuwEmblem from '@storefront/components/layout/TuwEmblem';
 import Listbox from '@storefront/components/ui/Listbox';
 import { variantLabelOf } from '@storefront/lib/product';
 import type { CartItem } from '@storefront/lib/types';
+import { BagPreview } from '@storefront/plugins/personalization';
 
 /** The storefront's neutral labels for "this product has no such option". */
 const NEUTRAL_COLOR = /^standard$/i;
@@ -114,6 +115,8 @@ export default function BagLine({ item, onNavigate }: BagLineProps) {
             )}
           </div>
         )}
+
+        <BagPreview item={item} />
 
         {item.selectedRadioOptions && item.selectedRadioOptions.length > 0 && (
           <div className="text-xs text-store-muted mt-1 space-y-0.5">

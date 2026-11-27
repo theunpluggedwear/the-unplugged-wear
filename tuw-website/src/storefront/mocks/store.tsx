@@ -47,6 +47,9 @@ interface StoreContextType {
   // Cart
   cart: CartItem[];
   addToCart: (item: Omit<CartItem, 'id'>) => void;
+  /** Personalisation plugin: add a previewed line and return its id for approval. */
+  addPersonalisedToCart: (item: Omit<CartItem, 'id'>) => Promise<string | null>;
+  approvePreviewFor: (lineId: string) => Promise<boolean>;
   /**
    * Buy now: make the bag hold exactly this item and quantity, without
    * opening the drawer. An identical line is set to the quantity instead of
@@ -287,6 +290,8 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
     getProductBySlug,
     cart,
     addToCart,
+    addPersonalisedToCart: bag.addPersonalisedToCart,
+    approvePreviewFor: bag.approvePreviewFor,
     buyNow,
     updateQuantity,
     updateCartItemVariant,
@@ -312,7 +317,7 @@ export function StoreProvider({ children, catalog, nav, session }: { children: R
     refreshBag: bag.refreshBag,
   }), [
     products, nav.hiddenCategories, nav.menuItems,
-    catalog.sizeCharts, getProductBySlug, cart, addToCart, buyNow, updateQuantity, updateCartItemVariant,
+    catalog.sizeCharts, getProductBySlug, cart, addToCart, bag.addPersonalisedToCart, bag.approvePreviewFor, buyNow, updateQuantity, updateCartItemVariant,
     removeFromCart, saveForLater, clearCart, cartCount, cartSubtotal, shippingFee, FREE_SHIPPING_THRESHOLD,
     freeShippingRemaining, promoCode, discountAmount, applyPromoCode, removePromoCode,
     bag.ready, bag.error, wishlist, toggleWishlist, isInWishlist, addToast,

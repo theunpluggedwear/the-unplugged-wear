@@ -11,6 +11,7 @@ import ProductReviews from '@storefront/components/commerce/ProductReviews';
 import { EditorialFeatureSplit } from '@storefront/components/editorial';
 import { cachedReviews, getCatalog } from '@/server/catalog';
 import { cmsProductFaqs } from '@/server/cms';
+import { getStorefrontSettings } from '@/server/settings';
 import type { Product, ProductSpecTable, ProductType } from '@storefront/lib/types';
 import {
   categoryLabel,
@@ -112,6 +113,7 @@ export default async function ProductDetailPage({
   const { slug } = await params;
   const product = await productForPage(slug);
   const { products } = await getCatalog();
+  const settings = await getStorefrontSettings();
   const scopedFaqs = product.productId ? await cmsProductFaqs(product.productId, product.categoryId) : [];
   // The CMS can return the product's own questions too: show each one once.
   const seen = new Set<string>();
@@ -152,7 +154,7 @@ export default async function ProductDetailPage({
           />
         </div>
 
-        <ProductShowcase product={product} rating={rating} />
+        <ProductShowcase product={product} rating={rating} personalizationEnabled={settings.personalizationEnabled} />
 
         {/* Stock, read fresh per request and handed to the buy box above. */}
         <Suspense fallback={null}>

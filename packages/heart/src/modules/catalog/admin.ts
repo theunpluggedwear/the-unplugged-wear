@@ -8,6 +8,8 @@ import { toPaise, toRupees } from '../../platform/money/index.ts';
 import { ensureAttributeValues, records, textArray } from './import.ts';
 import { adjustStock, isMadeToOrder, syncProductStock } from '../inventory/index.ts';
 import { getSetting } from '../settings/index.ts';
+import { getFeaturePlugin } from '../../platform/plugins/index.ts';
+import type { PersonalizationPort } from '../../platform/plugins/personalization.ts';
 import { skuPart, slugify, variantKey } from './planner.ts';
 import type { ProductInput } from './schemas.ts';
 import type { z } from 'zod';
@@ -623,7 +625,7 @@ export async function cartSnapshot(ref: string, color: string | undefined, size:
   return {
     productId: product.id, publicId: product.publicId, variantId, name: p!.name, slug: p!.slug, image, color: chosenColor, size: chosenSize,
     label: [chosenColor, chosenSize].filter(Boolean).join(' / ').slice(0, 150), unitPaise: toPaise(v!.price),
-    monogram: p!.monogram_enabled ? { maxChars: p!.monogram_max_chars } : null,
+    monogram: (getFeaturePlugin<PersonalizationPort>('personalization')?.productCapability(p!) ?? {}).monogram ?? null,
     productKind: p!.product_kind === 'gift_card' ? 'gift_card' : 'physical',
   };
 }

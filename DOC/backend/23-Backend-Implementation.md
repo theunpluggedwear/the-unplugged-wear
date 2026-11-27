@@ -184,6 +184,7 @@ built-in sandbox/simulator active when blank.
 | `AUTH_SHOW_DEV_LINKS` | yes | yes | no | dev-only: show verification/reset links on screen | local dev only; ignored in production |
 | `CRON_SECRET` | yes | — | yes | `Authorization: Bearer` for `/api/cron/<job>` | admin only |
 | `REVALIDATE_SECRET` | yes | yes | yes | admin → storefront `x-revalidate-secret` | same value in both apps |
+| `TUW_DISABLED_PLUGINS` | no | no | no | comma-separated plugin ids to unregister at boot (e.g. `personalization`) | hard kill switch; blank enables all registered plugins |
 | `STOREFRONT_URL` | yes | — | yes | origin admin calls for cache revalidation and links | admin only; no trailing slash |
 | `APP_URL` | — | yes | yes | public origin used in emails and link builders | website only |
 | `RESEND_API_KEY` | yes | yes | no | real email transport via the adapter in `integrations/email` | both apps; blank uses the local outbox |

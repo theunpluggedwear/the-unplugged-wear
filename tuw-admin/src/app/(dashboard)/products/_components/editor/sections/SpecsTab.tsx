@@ -10,6 +10,7 @@ import { resolveVariants, variantStockTotal, buildVariantSku, deriveVariantPrice
 import { groupImportRows, isValidHsnCode, parseQikinkListing } from '@tuw/heart/modules/catalog/planner';
 import type { ImportProductGroup } from '@tuw/heart/modules/catalog/planner';
 import type { ProductItem, ProductVariant, ProductAttribute, PhotoSettings, ProductDiscount, ProductGender, StockMovement } from '@/lib/admin-dto';
+import { PersonalizationDisplayOption, PersonalizationMonogramCard } from '@/plugins/personalization';
 import { GENDER_OPTIONS, PUBLICATION_OPTIONS, DISCOUNT_TYPE_OPTIONS, PARTNER_OPTIONS, pairedFieldGrid, flatGroupStyle, attributeChipStyle, attributeMetaStyle, attributeGroupLabelStyle } from './constants';
 import type { SectionProps } from './types';
 
@@ -71,10 +72,8 @@ export default function SpecsTab(props: SectionProps) {
               onToggle={setSpecsDisplayCardOpen}
               bodyGap={12}
             >
-              <Switch
-                label="Monogram & embroidery"
-                description="Show the custom embroidery block below"
-                checked={visibleSections.monogram}
+              <PersonalizationDisplayOption
+                visible={visibleSections.monogram}
                 onChange={(v) => setVisibleSections((s) => ({ ...s, monogram: v }))}
               />
             </DrawerCard>
@@ -349,42 +348,17 @@ export default function SpecsTab(props: SectionProps) {
                   </div>
                 </Disclosure>
             </DrawerCard>
-            {visibleSections.monogram ? (
-            <DrawerCard
-              title="4. Monogram & custom embroidery"
-              description="On-demand chest initials and their upcharge"
-              collapsible
-              isOpen={specsMonogramCardOpen}
-              onToggle={setSpecsMonogramCardOpen}
-              bodyGap={16}
-            >
-                <div data-field="monogram">
-                <Switch
-                  label="Offer monogramming"
-                  description="On-demand chest initials with upcharge"
-                  checked={formMonogramEnabled}
-                  onChange={setFormMonogramEnabled}
-                />
-                </div>
-                {formMonogramEnabled ? (
-                <div style={pairedFieldGrid}>
-                  <Input
-                    label="Max Characters"
-                    type="number"
-                    value={formMonogramChars}
-                    onChange={(e) => setFormMonogramChars(e.target.value)}
-                  />
-                  <Input
-                    label="Upcharge (₹)"
-                    type="number"
-                    step="0.01"
-                    value={formMonogramUpcharge}
-                    onChange={(e) => setFormMonogramUpcharge(e.target.value)}
-                  />
-                </div>
-                ) : null}
-            </DrawerCard>
-            ) : null}
+            <PersonalizationMonogramCard
+              visible={visibleSections.monogram}
+              cardOpen={specsMonogramCardOpen}
+              onCardToggle={setSpecsMonogramCardOpen}
+              enabled={formMonogramEnabled}
+              onEnabledChange={setFormMonogramEnabled}
+              maxChars={formMonogramChars}
+              onMaxCharsChange={setFormMonogramChars}
+              upcharge={formMonogramUpcharge}
+              onUpchargeChange={setFormMonogramUpcharge}
+            />
           </div>
   );
 }

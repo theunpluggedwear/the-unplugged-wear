@@ -6,6 +6,8 @@ import { uuidv7 } from '../../platform/ids/index.ts';
 import { toRupees } from '../../platform/money/index.ts';
 import { cartSnapshot } from '../catalog/index.ts';
 import { availableQty } from '../inventory/index.ts';
+import { getFeaturePlugin } from '../../platform/plugins/index.ts';
+import type { PersonalizationPort } from '../../platform/plugins/personalization.ts';
 
 // The bag (DOC/backend/05). Lines freeze what the shopper saw when they added
 // it; price, name and picture refresh only on an explicit re-add. Every write
@@ -122,12 +124,9 @@ function cleanPersonalization(input: Personalization | undefined, monogram: { ma
       ...(input.message ? { message: input.message.trim().slice(0, 500) } : {}),
     };
   }
-  if (!input.monogram && !input.placement) return null;
-  if (!monogram) throw new AppError('RULE_VIOLATION', 'This product cannot be personalised.');
-  const text = input.monogram?.trim() ?? '';
-  if (!text || text.length > monogram.maxChars) throw new AppError('VALIDATION_FAILED', `Use 1 to ${monogram.maxChars} characters.`, [{ field: 'monogram', message: `Use 1 to ${monogram.maxChars} characters.` }]);
-  if (!previewUrl) throw new AppError('VALIDATION_FAILED', 'A personalised item needs a preview before it goes in the bag.', [{ field: 'preview', message: 'Preview required.' }]);
-  return { monogram: text, ...(input.placement ? { placement: input.placement.trim() } : {}) };
+  const plugin = getFeaturePlugin<PersonalizationPort>('personalization');
+  if (!plugin) return null;
+  return plugin.normalize(input, monogram, previewUrl, productKind) as Personalization | null;
 }
 
 export interface AddLineInput {
@@ -252,8 +251,10 @@ export async function approvePreview(owner: CartOwner, lineId: string): Promise<
 
 /** Lines checkout must refuse: personalised without an approved preview, or no longer buyable in that quantity. */
 export function checkoutBlockers(cart: CartView): { lineId: string; reason: string }[] {
+  const plugin = getFeaturePlugin<PersonalizationPort>('personalization');
   return cart.lines.flatMap((l) => {
-    if (l.personalization && l.productKind !== 'gift_card' && !l.previewApproved) return [{ lineId: l.id, reason: 'Approve the print preview first.' }];
+    const previewReason = plugin?.checkoutBlocker(l) ?? null;
+    if (previewReason) return [{ lineId: l.id, reason: previewReason }];
     if (l.maxQty <= 0) return [{ lineId: l.id, reason: `${l.title} is no longer available.` }];
     if (l.qty > l.maxQty) return [{ lineId: l.id, reason: `Only ${l.maxQty} of ${l.title} available.` }];
     return [];

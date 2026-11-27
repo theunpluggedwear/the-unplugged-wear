@@ -5,6 +5,8 @@ import { isUuid } from '../../platform/ids/index.ts';
 import { toPaise } from '../../platform/money/index.ts';
 import { slugify } from './planner.ts';
 import { isMadeToOrder } from '../inventory/index.ts';
+import { getFeaturePlugin } from '../../platform/plugins/index.ts';
+import type { PersonalizationPort } from '../../platform/plugins/personalization.ts';
 
 // Storefront read model: what shoppers may see — active, not deleted
 // products with their active variants — shaped exactly like the
@@ -54,6 +56,7 @@ export interface StorefrontProduct {
   categoryId?: string | null;
   priceIsDraft?: boolean;
   printAreas?: string[];
+  monogram?: { maxChars: number };
   weightGrams?: number;
   taxRatePercent?: number;
   hsnCode?: string;
@@ -167,6 +170,7 @@ type ProductRow = {
   composition: string | null; partner_provider: string | null; partner_availability: StorefrontProduct['partnerAvailability'] | null;
   badge: string | null; tags: string[] | null; product_type: ProductType | null; product_kind: 'physical' | 'gift_card'; variant_label: string | null;
   price_is_draft: boolean; weight_g: number | null; tax_rate: string | null; hsn_code: string | null; size_chart_id: string | null;
+  monogram_enabled: boolean; monogram_max_chars: number;
 };
 
 export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
@@ -176,7 +180,7 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
       SELECT p.id, p.external_id, p.slug, p.slug_aliases, p.name, p.short_description, p.description, c.slug AS category_slug, p.category_id,
              p.gender, p.style_code, p.compare_at_price, p.spec_table, p.details, p.care_instructions, p.composition,
              p.partner_provider, p.partner_availability, p.badge, p.tags, p.product_type, p.product_kind, p.variant_label, p.price_is_draft,
-             p.weight_g, p.tax_rate, p.hsn_code, p.size_chart_id
+             p.weight_g, p.tax_rate, p.hsn_code, p.size_chart_id, p.monogram_enabled, p.monogram_max_chars
       FROM products p LEFT JOIN categories c ON c.id = p.category_id AND c.deleted_at IS NULL
       WHERE p.status = 'active' AND p.deleted_at IS NULL
       ORDER BY p.created_at, p.id`),
@@ -255,6 +259,7 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
     const compare = p.compare_at_price ? toPaise(p.compare_at_price) : null;
     const tags = p.tags ?? [];
     const productFaqs = (faqsBy.get(p.id) ?? []).map((f) => ({ id: f.id, question: f.question, answer: f.answer }));
+    const monogram = getFeaturePlugin<PersonalizationPort>('personalization')?.productCapability(p).monogram ?? null;
     out.push({
       id: p.external_id ?? p.id,
       productId: p.id,
@@ -292,6 +297,7 @@ export async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
       ...(p.variant_label ? { variantLabel: p.variant_label } : {}),
       ...(p.price_is_draft ? { priceIsDraft: true } : {}),
       ...(links.some((l) => l.slug === 'placements') ? { printAreas: links.filter((l) => l.slug === 'placements').map((l) => l.value) } : {}),
+      ...(monogram ? { monogram } : {}),
       ...(p.weight_g ? { weightGrams: p.weight_g } : {}),
       ...(p.tax_rate ? { taxRatePercent: Number(p.tax_rate) } : {}),
       ...(p.hsn_code ? { hsnCode: p.hsn_code } : {}),

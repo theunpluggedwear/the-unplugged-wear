@@ -15,6 +15,7 @@ import RadioOptionSelector from './RadioOptionSelector';
 import NotifyMe from './NotifyMe';
 import { useLiveSizes } from '@storefront/lib/live-stock';
 import { purchaseReducer } from '@storefront/lib/purchase-machine';
+import { PersonalizationPanel } from '@storefront/plugins/personalization';
 import {
   sizePriceINR,
   priceLabel,
@@ -31,6 +32,7 @@ export interface VariantSelectorProps {
   onColorChange?: (color: ProductColor) => void;
   selectedSize?: ProductSize | null;
   onSizeChange?: (size: ProductSize | null) => void;
+  personalizationEnabled?: boolean;
 }
 
 export default function VariantSelector({
@@ -39,6 +41,7 @@ export default function VariantSelector({
   onColorChange,
   selectedSize: controlledSize,
   onSizeChange,
+  personalizationEnabled = false,
 }: VariantSelectorProps) {
   const router = useRouter();
   const { addToCart, buyNow, sizeCharts } = useStore();
@@ -83,6 +86,7 @@ export default function VariantSelector({
   });
 
   const [requestedQty, setRequestedQty] = useState(1);
+  const [personalizationActive, setPersonalizationActive] = useState(false);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [purchase, dispatchPurchase] = useReducer(purchaseReducer, { kind: 'idle' });
@@ -288,6 +292,22 @@ export default function VariantSelector({
         </div>
       )}
 
+      {personalizationEnabled && product.monogram && product.productKind !== 'gift_card' ? (
+        <PersonalizationPanel
+          productId={product.productId ?? product.id}
+          productName={product.title}
+          maxChars={product.monogram.maxChars}
+          printAreas={product.printAreas}
+          color={selectedColor?.name}
+          size={selectedSize?.size}
+          priceINR={effectiveUnitPriceINR}
+          image={product.images[0]?.url ?? ''}
+          disabled={soldOut}
+          onActiveChange={setPersonalizationActive}
+          onAdded={() => dispatchPurchase({ type: 'ADD' })}
+        />
+      ) : null}
+
       {/* 4. Quantity, then the two buy buttons stacked full width */}
       {!soldOut && (
         <div className="flex items-center justify-between gap-4">
@@ -320,6 +340,7 @@ export default function VariantSelector({
         </div>
       )}
 
+      {!personalizationActive && (
       <div id="purchase-actions" ref={purchaseRef} className="space-y-3 scroll-mt-28">
         {atMax && maxQty > 1 && (
           <p className="text-xs text-store-text-secondary text-right" role="status">
@@ -366,6 +387,7 @@ export default function VariantSelector({
           </>
         )}
       </div>
+      )}
 
       {hasSizes && sizeChart && (
         <SizeGuideModal

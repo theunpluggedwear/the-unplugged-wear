@@ -10,6 +10,7 @@ import Button from '@storefront/components/ui/Button';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShieldCheck } from 'lucide-react';
 import { useStore } from '@storefront/mocks/store';
+import { BagPreview } from '@storefront/plugins/personalization';
 
 export default function CartPage() {
   const {
@@ -157,6 +158,7 @@ export default function CartPage() {
                           <span>•</span>
                           <span>Size: <strong className="text-store-charcoal">{item.size}</strong></span>
                         </div>
+                        <BagPreview item={item} />
                       </div>
 
                       <div className="flex items-center justify-between mt-4">

@@ -64,6 +64,7 @@ export interface PublicSettings {
   cancelWindowMinutes: number;
   exchangeWindowDays: number;
   giftCardValidityMonths: number;
+  personalizationEnabled: boolean;
 }
 
 export function toPublic(v: SettingsValues): PublicSettings {
@@ -83,6 +84,7 @@ export function toPublic(v: SettingsValues): PublicSettings {
     cancelWindowMinutes: v['orders.cancel_window_minutes'],
     exchangeWindowDays: v['exchange.window_days'],
     giftCardValidityMonths: v['gift_card.validity_months'],
+    personalizationEnabled: v['features.personalization'],
   };
 }
 

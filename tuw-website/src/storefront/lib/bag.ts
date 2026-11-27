@@ -4,7 +4,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { asyncReducer, initialAsync } from './async-state';
 import type { CartLine } from '@tuw/heart/modules/cart';
 import {
-  addToBagAction, changeBagVariantAction, clearBagAction, getBagAction, removeFromBagAction, setBagQtyAction, setWishlistAction,
+  addToBagAction, approveBagPreviewAction, changeBagVariantAction, clearBagAction, getBagAction, removeFromBagAction, setBagQtyAction, setWishlistAction,
 } from '@/server/cart-actions';
 import type { CartItem } from './types';
 
@@ -30,6 +30,10 @@ const toItem = (l: CartLine): CartItem => ({
   giftRecipientName: l.personalization?.recipientName,
   giftRecipientEmail: l.personalization?.recipientEmail,
   giftMessage: l.personalization?.message,
+  monogram: l.personalization?.monogram,
+  placement: l.personalization?.placement,
+  previewImageUrl: l.previewImageUrl ?? undefined,
+  previewApproved: l.previewApproved,
 });
 
 /** The storefront's neutral labels mean "no such axis" to the server. */
@@ -101,7 +105,7 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
     const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     return send(
       (prev) => {
-        const twin = prev.find((i) => i.productId === item.productId && i.color === item.color && i.size === item.size);
+        const twin = prev.find((i) => i.productId === item.productId && i.color === item.color && i.size === item.size && i.monogram === item.monogram && i.previewImageUrl === item.previewImageUrl);
         return twin ? prev.map((i) => (i === twin ? { ...i, quantity: i.quantity + item.quantity } : i)) : [...prev, { ...item, id: tempId }];
       },
       () => addToBagAction({
@@ -115,6 +119,12 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
             recipientEmail: item.giftRecipientEmail,
             message: item.giftMessage,
           },
+        } : item.monogram ? {
+          personalization: {
+            ...(item.monogram ? { monogram: item.monogram } : {}),
+            ...(item.placement ? { placement: item.placement } : {}),
+          },
+          previewImageUrl: item.previewImageUrl,
         } : {}),
       }),
       'Could not add to bag',
@@ -175,5 +185,32 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
 
   const isWishlistSaved = useCallback((productId: string) => wishlistRef.current.includes(productId), []);
 
-  return { cart, wishlist, signedIn, ready, error, refreshBag, addToCart, updateQuantity, updateCartItemVariant, removeLine, clearCart, setSaved, isWishlistSaved };
+  const addPersonalisedToCart = useCallback(async (item: Omit<CartItem, 'id'>) => {
+    const result = await addToBagAction({
+      productId: item.productId,
+      color: axis(item.color, /^standard$/i),
+      size: axis(item.size, /^one size$/i),
+      qty: item.quantity,
+      personalization: {
+        ...(item.monogram ? { monogram: item.monogram } : {}),
+        ...(item.placement ? { placement: item.placement } : {}),
+      },
+      previewImageUrl: item.previewImageUrl,
+    });
+    if (!result.ok) {
+      onError.current('Could not add to bag', result.error.message);
+      await refreshBag();
+      return null;
+    }
+    await refreshBag();
+    return result.data.find((l) => l.previewImageUrl === item.previewImageUrl && l.personalization?.monogram === item.monogram)?.id ?? null;
+  }, [refreshBag]);
+
+  const approvePreviewFor = useCallback((lineId: string) => send(
+    (prev) => prev.map((i) => (i.id === lineId ? { ...i, previewApproved: true } : i)),
+    () => approveBagPreviewAction({ lineId }),
+    'Could not approve the preview',
+  ), [send]);
+
+  return { cart, wishlist, signedIn, ready, error, refreshBag, addToCart, addPersonalisedToCart, approvePreviewFor, updateQuantity, updateCartItemVariant, removeLine, clearCart, setSaved, isWishlistSaved };
 }
