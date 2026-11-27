@@ -11,25 +11,26 @@
   "_demo": "Figma source of truth established. First track TL-WEB-001 closed.",
   "summary": {
     "total": 123,
-    "done": 117,
+    "done": 118,
     "in_progress": 0,
-    "backlog": 6
+    "backlog": 5
   },
   "session": {
     "branch": "urvil-ui",
-    "tip": "c375057",
+    "tip": "a378b9a",
     "unpushed": [
       "d3eb96f",
       "fc8d6e7",
       "67fe9ff",
       "5b25052",
       "fc45619",
-      "c375057"
+      "c375057",
+      "a378b9a"
     ],
     "next_up": "TL-WEB-BE-31",
     "pending_verifications": [],
-    "last_updated": "2026-11-21",
-    "updated_by": "agent (Buffy)"
+    "last_updated": "2026-11-27",
+    "updated_by": "agent (OpenCode)"
   },
   "workflow": {
     "how_to_close_a_task": "gates green → status done + log commit + design_match + verified + finished → recompute summary → refresh session → commit code + tracker together",
@@ -2542,25 +2543,65 @@
       "id": "TL-WEB-BE-18",
       "title": "Personalised items: preview + approve before adding to bag",
       "category": "backend",
-      "status": "backlog",
+      "status": "done",
       "owner": "unassigned",
       "parent": "TL-WEB-BE",
-      "started": null,
-      "finished": null,
-      "verified": false,
-      "design_match": null,
+      "started": "2026-11-27",
+      "finished": "2026-11-27",
+      "verified": true,
+      "design_match": true,
       "pushed": false,
       "admin_ref": "TL-BE-07.03",
       "depends_on": [
         "TL-BE-07"
       ],
       "files": [
-        "src/app/products/[slug]/page.tsx"
+        "packages/heart/src/platform/plugins/index.ts",
+        "packages/heart/src/platform/plugins/personalization.ts",
+        "packages/heart/src/modules/personalization/index.ts",
+        "packages/heart/src/modules/personalization/rules.ts",
+        "packages/heart/src/modules/settings/keys.ts",
+        "packages/heart/src/modules/settings/service.ts",
+        "packages/heart/src/modules/cart/service.ts",
+        "packages/heart/src/modules/catalog/admin.ts",
+        "packages/heart/src/modules/catalog/read.ts",
+        "tuw-admin/src/plugins/personalization/index.tsx",
+        "tuw-admin/src/app/(dashboard)/settings/_components/SettingsView.tsx",
+        "tuw-admin/src/app/(dashboard)/products/_components/editor/sections/SpecsTab.tsx",
+        "tuw-website/src/storefront/plugins/personalization/index.ts",
+        "tuw-website/src/storefront/plugins/personalization/PersonalizationPanel.tsx",
+        "tuw-website/src/storefront/plugins/personalization/BagPreview.tsx",
+        "tuw-website/src/storefront/plugins/personalization/personalization-machine.ts",
+        "tuw-website/src/storefront/plugins/personalization/preview-url.ts",
+        "tuw-website/src/storefront/plugins/personalization/previewRoute.ts",
+        "tuw-website/src/app/api/previews/route.ts",
+        "tuw-website/src/app/products/[slug]/page.tsx",
+        "tuw-website/src/app/products/[slug]/_components/ProductShowcase.tsx",
+        "tuw-website/src/storefront/components/commerce/VariantSelector.tsx",
+        "tuw-website/src/storefront/components/commerce/BagLine.tsx",
+        "tuw-website/src/app/cart/page.tsx",
+        "tuw-website/src/app/checkout/page.tsx",
+        "tuw-website/src/storefront/lib/bag.ts",
+        "tuw-website/src/storefront/lib/types.ts",
+        "tuw-website/src/storefront/mocks/store.tsx",
+        "tuw-website/src/server/cart-actions.ts",
+        "tuw-website/src/server/catalog.ts",
+        "tuw-website/tests/personalization-plugin.test.mjs",
+        "DOC/backend/23-Backend-Implementation.md",
+        "DOC/backend/25-Personalization-Plugin.md",
+        "db/seed/001-seed-core.sql"
       ],
       "description": "No unapproved custom print can reach checkout.",
-      "key_decisions": [],
-      "follow_ups": [],
-      "log": "Backend rules done (TL-BE-07.03). No personalisation form exists on the storefront yet, and real previews need uploads (TL-INT-R2)."
+      "key_decisions": [
+        "Feature is a removable plugin: heart port + no-op default, one plugin folder per app, no cross-app imports",
+        "Runtime toggle: admin Settings -> General -> Monogram previews writes features.personalization; hard kill via TUW_DISABLED_PLUGINS",
+        "Demo previews are deterministic local SVG at /api/previews; no upload until TL-INT-STORAGE"
+      ],
+      "follow_ups": [
+        "TL-INT-STORAGE: replace the SVG demo preview with a presigned R2 upload returning an https preview URL",
+        "Interactive PDP QA was blocked by a dev-server HMR socket failure; verify add -> approve -> checkout on a stable server before release"
+      ],
+      "log": "Implemented 2026-11-27 on feat/dharmil-admin: heart port/registry and personalization rule module; admin settings toggle and monogram card plugin slot; storefront PDP panel with explicit FSM, preview route, bag approval affordances and checkout blockers; 3 new unit tests. Gate status: typecheck green, admin suite 124/124, comment ratchet green, admin build green; website production build blocked by an external Neon ECONNRESET on the pre-existing getCatalog query. Removal recipe in DOC/backend/25-Personalization-Plugin.md."
     },
     {
       "id": "TL-WEB-BE-19",
