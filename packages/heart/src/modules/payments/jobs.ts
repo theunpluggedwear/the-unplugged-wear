@@ -1,22 +1,30 @@
 import 'server-only';
 import { sql } from 'drizzle-orm';
-import { getDb } from '../../platform/db/index.ts';
+import { getDb, withTransaction } from '../../platform/db/index.ts';
 import { processWebhookEvent } from './webhooks.ts';
 import { getWebhookProvider, type NormalizedWebhookEvent } from '../../integrations/webhooks/index.ts';
+
+type FailedRow = { id: string; provider: string; payload: NormalizedWebhookEvent & { event?: string }; attempts: number };
 
 /** Retry failed webhook deliveries that are due. Safe to run repeatedly. */
 export async function retryFailedWebhooks(limit = 20): Promise<{ processed: number; failed: number }> {
   const db = getDb();
-  const { rows } = await db.execute<{ id: string; provider: string; payload: NormalizedWebhookEvent & { event?: string }; attempts: number }>(sql`
-    SELECT id, provider, payload, attempts FROM webhook_events
-    WHERE status='failed' AND next_attempt_at <= now() AND attempts < 8
-    ORDER BY next_attempt_at LIMIT ${limit} FOR UPDATE SKIP LOCKED`);
+  const rows = await withTransaction(async (tx) => {
+    const { rows: claimed } = await tx.execute<FailedRow>(sql`
+      SELECT id, provider, payload, attempts FROM webhook_events
+      WHERE status='failed' AND next_attempt_at <= now() AND attempts < 8
+      ORDER BY next_attempt_at LIMIT ${limit} FOR UPDATE SKIP LOCKED`);
+    for (const row of claimed) {
+      await tx.execute(sql`
+        UPDATE webhook_events SET next_attempt_at = now() + interval '1 minute'
+        WHERE id=${row.id}::uuid AND status='failed'`);
+    }
+    return claimed;
+  });
   let processed = 0;
   let failed = 0;
   for (const row of rows) {
     try {
-      // Old rows stored the raw provider envelope; newer rows store the
-      // normalized event. Both must be retryable.
       const event = row.payload?.kind
         ? row.payload
         : getWebhookProvider(row.provider)?.normalize(JSON.stringify(row.payload), new Headers());

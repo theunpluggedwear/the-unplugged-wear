@@ -113,9 +113,9 @@ export async function addEvent(tx: Transaction, shipmentId: string, status: Ship
         AND e.occurred_at > now() - interval '1 hour')`);
 }
 
-async function loadOpen(ids: string[] | null, limit: number): Promise<OpenRow[]> {
-  const db = getDb();
-  const { rows } = await db.execute<OpenRow>(sql`
+async function loadOpen(ids: string[] | null, limit: number, tx?: Transaction): Promise<OpenRow[]> {
+  const executor = tx ?? getDb();
+  const { rows } = await executor.execute<OpenRow>(sql`
     SELECT f.id, f.order_id, o.order_number, ip.slug AS provider_slug, f.provider_order_id, f.status
     FROM fulfillment_orders f
     JOIN orders o ON o.id = f.order_id
@@ -128,24 +128,29 @@ async function loadOpen(ids: string[] | null, limit: number): Promise<OpenRow[]>
       AND f.provider_order_id NOT LIKE 'sim\_qk\_%'
       ${ids ? sql`AND f.id IN (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})` : sql``}
     ORDER BY f.synced_at ASC NULLS FIRST, f.created_at
-    LIMIT ${limit}`);
+    LIMIT ${limit} FOR UPDATE OF f SKIP LOCKED`);
   return rows;
 }
 
 /** Ask the provider about one order; returns the state it reported. */
 export async function syncFulfillment(fulfillmentId: string): Promise<ProviderOrderState> {
-  const [row] = await loadOpen([fulfillmentId], 1);
-  if (!row) throw new AppError('NOT_FOUND', 'That fulfilment order is not open, or does not exist.');
-  const partner = getFulfillmentPartner(row.provider_slug);
-  try {
-    const state = await partner.getOrder(row.provider_order_id);
-    await withTransaction((tx) => recordProviderState(tx, { id: row.id, orderId: row.order_id, orderNumber: row.order_number }, state));
-    return state;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    await getDb().execute(sql`UPDATE fulfillment_orders SET last_error = ${message.slice(0, 1000)}, synced_at = now(), updated_at = now() WHERE id = ${row.id}`);
-    throw error;
-  }
+  type Outcome = { state: ProviderOrderState } | { error: unknown };
+  const outcome = await withTransaction(async (tx): Promise<Outcome> => {
+    const [row] = await loadOpen([fulfillmentId], 1, tx);
+    if (!row) return { error: new AppError('NOT_FOUND', 'That fulfilment order is not open, or does not exist.') };
+    const partner = getFulfillmentPartner(row.provider_slug);
+    try {
+      const state = await partner.getOrder(row.provider_order_id);
+      await recordProviderState(tx, { id: row.id, orderId: row.order_id, orderNumber: row.order_number }, state);
+      return { state };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await tx.execute(sql`UPDATE fulfillment_orders SET last_error = ${message.slice(0, 1000)}, synced_at = now(), updated_at = now() WHERE id = ${row.id}`);
+      return { error };
+    }
+  });
+  if ('error' in outcome) throw outcome.error;
+  return outcome.state;
 }
 
 /**
@@ -153,20 +158,22 @@ export async function syncFulfillment(fulfillmentId: string): Promise<ProviderOr
  * recorded on the row and does not stop the batch.
  */
 export async function syncOpenFulfillment(limit = 50): Promise<{ processed: number; failed: number; note?: string }> {
-  const rows = await loadOpen(null, limit);
-  let processed = 0;
-  let failed = 0;
-  for (const row of rows) {
-    const partner = getFulfillmentPartner(row.provider_slug);
-    try {
-      const state = await partner.getOrder(row.provider_order_id);
-      await withTransaction((tx) => recordProviderState(tx, { id: row.id, orderId: row.order_id, orderNumber: row.order_number }, state));
-      processed += 1;
-    } catch (error) {
-      failed += 1;
-      const message = error instanceof Error ? error.message : String(error);
-      await getDb().execute(sql`UPDATE fulfillment_orders SET last_error = ${message.slice(0, 1000)}, synced_at = now(), updated_at = now() WHERE id = ${row.id}`);
+  return withTransaction(async (tx) => {
+    const rows = await loadOpen(null, limit, tx);
+    let processed = 0;
+    let failed = 0;
+    for (const row of rows) {
+      const partner = getFulfillmentPartner(row.provider_slug);
+      try {
+        const state = await partner.getOrder(row.provider_order_id);
+        await recordProviderState(tx, { id: row.id, orderId: row.order_id, orderNumber: row.order_number }, state);
+        processed += 1;
+      } catch (error) {
+        failed += 1;
+        const message = error instanceof Error ? error.message : String(error);
+        await tx.execute(sql`UPDATE fulfillment_orders SET last_error = ${message.slice(0, 1000)}, synced_at = now(), updated_at = now() WHERE id = ${row.id}`);
+      }
     }
-  }
-  return { processed, failed, note: rows.length === 0 ? 'No open provider orders.' : undefined };
+    return { processed, failed, note: rows.length === 0 ? 'No open provider orders.' : undefined };
+  });
 }
