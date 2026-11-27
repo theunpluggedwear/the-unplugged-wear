@@ -82,8 +82,8 @@ describe('seed integrity', () => {
     assert.equal(rowCount(insertFor('navigation_settings')), 1);
 
     const storeSettings = insertFor('store_settings');
-    // 21 keys = the settings registry (packages/heart/src/modules/settings/keys.ts).
-    assert.equal((storeSettings.match(/^\s*\('/gm) ?? []).length, 21);
+    // 22 keys = the settings registry (packages/heart/src/modules/settings/keys.ts).
+    assert.equal((storeSettings.match(/^\s*\('/gm) ?? []).length, 22);
     for (const key of [
       'store.name',
       'brand.color',
