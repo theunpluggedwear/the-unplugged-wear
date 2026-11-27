@@ -30,17 +30,18 @@ export default function ImageWithFallback({
   onError,
   ...props
 }: ImageWithFallbackProps) {
-  const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(true);
+  type ImageStatus = 'loading' | 'loaded' | 'errored';
+  const [status, setStatus] = useState<ImageStatus>('loading');
+  const error = status === 'errored';
+  const loading = status === 'loading';
 
   const handleLoad = (event: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    setLoading(false);
+    setStatus('loaded');
     onLoad?.(event);
   };
 
   const handleError = (event: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    setError(true);
-    setLoading(false);
+    setStatus('errored');
     onError?.(event);
   };
 

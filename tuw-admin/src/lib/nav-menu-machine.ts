@@ -51,6 +51,6 @@ export function navMenuReducer(state: NavMenuState, event: NavMenuEvent): NavMen
 
     case 'ESCAPE':
     case 'NAVIGATE':
-      return { kind: 'closed', suppressed: 'all' };
+      return state.kind === 'closed' ? state : { kind: 'closed', suppressed: 'all' };
   }
 }

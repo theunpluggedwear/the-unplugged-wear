@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState, useEffect, useRef, useCallback } from 'react';
+import React, { Suspense, useState, useEffect, useReducer, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -24,6 +24,7 @@ import { suggestAction } from '@/server/catalog-actions';
 import { matchesShopFilter } from '@storefront/lib/product';
 import { site } from '@storefront/lib/site';
 import { rupeesLabel, useSiteSettings } from '@storefront/lib/site-settings';
+import { navMenuReducer, initialNavMenu } from '@storefront/lib/nav-menu-machine';
 
 // Desktop mega-menu panel: link columns (with live product counts) on the left,
 // product tiles on the right, and a "Shop all" link along the bottom.
@@ -371,46 +372,45 @@ export default function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchVal, setSearchVal] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [navMenu, dispatchNav] = useReducer(navMenuReducer, initialNavMenu);
+  const openMenu = navMenu.kind === 'closed' ? null : navMenu.key;
 
   const closeSearch = useCallback(() => setIsSearchOpen(false), []);
 
   const openMenuNow = useCallback((label: string) => {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-    setOpenMenu(label);
+    dispatchNav({ type: 'ENTER_GROUP', key: label });
   }, []);
 
-  // Short delay lets the pointer travel from a nav label into its panel.
-  const scheduleMenuClose = useCallback((delay = 120) => {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-    closeTimerRef.current = setTimeout(() => setOpenMenu(null), delay);
+  const scheduleMenuClose = useCallback(() => {
+    dispatchNav({ type: 'POINTER_LEAVE' });
   }, []);
 
   const closeMenuNow = useCallback(() => {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-    setOpenMenu(null);
+    dispatchNav({ type: 'CLOSE_REQUEST' });
   }, []);
 
   useEffect(() => {
-    closeMenuNow();
-  }, [pathname, closeMenuNow]);
+    dispatchNav({ type: 'NAVIGATE' });
+  }, [pathname]);
+
+  useEffect(() => {
+    if (navMenu.kind !== 'open') return;
+    if (!navMenu.pendingClose) return;
+    const timer = setTimeout(() => dispatchNav({ type: 'FINALIZE' }), 120);
+    return () => clearTimeout(timer);
+  }, [navMenu.kind, navMenu.kind === 'open' && navMenu.pendingClose]);
 
   useEffect(() => {
     if (!openMenu) return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       const trigger = document.querySelector<HTMLElement>(`[data-nav-top="${openMenu}"]`);
-      closeMenuNow();
+      dispatchNav({ type: 'ESCAPE' });
       trigger?.focus();
     };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
-  }, [openMenu, closeMenuNow]);
-
-  useEffect(() => () => {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-  }, []);
+  }, [openMenu]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -513,7 +513,7 @@ export default function Header() {
                       onFocus={() => hasPanel && openMenuNow(item.label)}
                       onBlur={(e) => {
                         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-                          scheduleMenuClose(0);
+                          dispatchNav({ type: 'CLOSE_REQUEST' });
                         }
                       }}
                     >
@@ -522,7 +522,7 @@ export default function Header() {
                         data-nav-top={item.label}
                         aria-expanded={hasPanel ? isOpen : undefined}
                         aria-controls={hasPanel ? panelId : undefined}
-                        onClick={closeMenuNow}
+                        onClick={() => dispatchNav({ type: 'NAVIGATE' })}
                         className={`inline-flex items-center min-h-6 text-sm font-medium tracking-wide transition-colors hover:text-black whitespace-nowrap border-b-2 pb-0.5 ${
                           isActive || isOpen
                             ? 'text-store-text-primary border-primary-dark'
@@ -536,7 +536,7 @@ export default function Header() {
                           id={panelId}
                           item={item}
                           products={products}
-                          onNavigate={closeMenuNow}
+                          onNavigate={() => dispatchNav({ type: 'NAVIGATE' })}
                         />
                       )}
                     </div>

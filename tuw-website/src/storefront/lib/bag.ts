@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { asyncReducer, initialAsync } from './async-state';
 import type { CartLine } from '@tuw/heart/modules/cart';
 import {
   addToBagAction, changeBagVariantAction, clearBagAction, getBagAction, removeFromBagAction, setBagQtyAction, setWishlistAction,
@@ -37,9 +38,10 @@ const axis = (value: string | undefined, neutral: RegExp) => (value && !neutral.
 export function useBag(opts: { session: unknown; onError: (title: string, message: string) => void }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<string[]>([]);
-  const [signedIn, setSignedIn] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [load, dispatchLoad] = useReducer(asyncReducer<{ signedIn: boolean }>, initialAsync);
+  const ready = load.kind === 'success';
+  const error = load.kind === 'error' ? load.message : null;
+  const signedIn = load.kind === 'success' ? load.data.signedIn : false;
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   /** Optimistic changes sent but not yet answered, oldest first. */
   const pending = useRef<((prev: CartItem[]) => CartItem[])[]>([]);
@@ -59,16 +61,14 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
     try {
       const result = await getBagAction({});
       if (!result.ok) {
-        setError(result.error.message);
+        dispatchLoad({ type: 'FAIL', message: result.error.message });
         return;
       }
       setCart(result.data.lines.map(toItem));
       applyWishlist(result.data.wishlist);
-      setSignedIn(result.data.signedIn);
-      setError(null);
-      setReady(true);
+      dispatchLoad({ type: 'SUCCESS', data: { signedIn: result.data.signedIn } });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not load your bag.');
+      dispatchLoad({ type: 'FAIL', message: cause instanceof Error ? cause.message : 'Could not load your bag.' });
     }
   }, [applyWishlist]);
 

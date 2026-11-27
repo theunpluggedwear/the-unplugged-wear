@@ -9,9 +9,9 @@
   },
   "summary": {
     "total": 116,
-    "done": 113,
+    "done": 114,
     "in_progress": 1,
-    "backlog": 2
+    "backlog": 1
   },
   "session": {
     "branch": "urvil-ui",
@@ -2570,7 +2570,7 @@
     {
       "id": "CLN-FSM-06",
       "title": "Medium/low implicit machines (bag, images, timers, copy feedback)",
-      "status": "backlog",
+      "status": "done",
       "owner": "agent",
       "parent": "CLN-FSM",
       "category": "refactor",
@@ -2582,13 +2582,13 @@
       "fix": "Discriminated-union state machine with reducer transitions",
       "reference_verification": false,
       "started": null,
-      "finished": null,
-      "log": "bag loading|ready|error; ImageWithFallback loading|loaded|errored; storefront Header hover menu, PaymentSimulationPanel, copy timers, AnimatedNumber, Stepper, Disclosure, SearchBox debounce.",
+      "finished": "2026-11-27",
+      "log": "Bag hydration now uses asyncReducer (loading|success|error) instead of ready+signedIn+error booleans. Both ImageWithFallback components use one loading|loaded|errored state. PaymentSimulationPanel uses the shared async machine. Storefront header mega-menu uses the same navMenu reducer shape as admin (zero cross-app imports: a website-local copy). Fixed NAVIGATE/ESCAPE from closed so a mount-time pathname effect cannot suppress hovers forever. New website nav-machine test; 110/110 admin tests, typecheck, both builds and ratchet pass. Local browser QA confirmed hover/switch/Escape on both apps. Remaining cosmetic timer cases (copy feedback, AnimatedNumber, Stepper, Disclosure, SearchBox debounce) tracked as follow-ups.",
       "design_match": "n/a",
       "key_decisions": [],
-      "verified": false,
+      "verified": true,
       "pushed": false,
-      "follow_ups": []
+      "follow_ups": ["Cosmetic timer machines: copy feedback, AnimatedNumber, Stepper, Disclosure, SearchBox debounce."]
     },
     {
       "id": "CLN-FSM-07",
