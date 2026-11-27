@@ -16,11 +16,6 @@ export type ReturnStatus = (typeof RETURN_STATUSES)[number];
 export const NOTIFICATION_KINDS = ['order', 'cart', 'inventory', 'payment', 'system', 'marketing', 'refund'] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
-export const ORDER_STATUS_RANK: Record<OrderStatus, number> = {
-  pending: 0, confirmed: 1, processing: 2, shipped: 3, delivered: 4,
-  cancelled: 5, failed: 5, refunded: 6,
-};
-
 export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   pending: ['confirmed', 'cancelled'],
   confirmed: ['processing', 'cancelled'],
@@ -31,6 +26,31 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   failed: ['confirmed', 'cancelled'],
   refunded: [],
 };
+
+export function canTransitionOrder(from: OrderStatus, to: OrderStatus): boolean {
+  return (ORDER_TRANSITIONS[from] as readonly string[]).includes(to);
+}
+
+export const ORDER_PAYMENT_TRANSITIONS: Record<OrderPaymentStatus, readonly OrderPaymentStatus[]> = {
+  pending: ['paid', 'failed', 'refunded'],
+  paid: ['refunded'],
+  failed: [],
+  refunded: [],
+};
+
+export function canTransitionOrderPayment(from: OrderPaymentStatus, to: OrderPaymentStatus): boolean {
+  return (ORDER_PAYMENT_TRANSITIONS[from] as readonly string[]).includes(to);
+}
+
+export const REFUND_TRANSITIONS: Record<string, readonly string[]> = {
+  processing: ['completed', 'rejected'],
+  completed: [],
+  rejected: [],
+};
+
+export function canTransitionRefund(from: string, to: string): boolean {
+  return (REFUND_TRANSITIONS[from] ?? []).includes(to);
+}
 
 export const RETURN_TRANSITIONS: Record<ReturnStatus, readonly ReturnStatus[]> = {
   requested: ['approved', 'rejected', 'cancelled'],

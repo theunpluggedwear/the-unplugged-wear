@@ -162,7 +162,8 @@ export async function adminSetOrderStatus(change: StatusChange, actorId: string,
       throw new AppError('FORBIDDEN', 'Cancelling a paid order refunds it, and you do not have permission to refund.');
     }
     const note = change.note?.trim().slice(0, 500) || null;
-    await tx.execute(sql`UPDATE orders SET status = ${change.to}, updated_at = now() WHERE id = ${order.id} AND status = ${order.status}`);
+    const moved = await tx.execute(sql`UPDATE orders SET status = ${change.to}, updated_at = now() WHERE id = ${order.id} AND status = ${order.status}`);
+    if (moved.rowCount !== 1) throw new AppError('CONFLICT', 'This order changed while you were deciding. Reload and try again.', [{ field: 'status', message: 'Concurrent status change.' }]);
     if (change.to === 'cancelled') {
       await afterCancel(tx, gateway!, { orderId: order.id, actorId, from: order.status, note: note ?? 'Cancelled by staff' });
     } else {

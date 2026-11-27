@@ -2612,6 +2612,29 @@
       "verified": true,
       "pushed": false,
       "follow_ups": []
+    },
+    {
+      "id": "CLN-FSM-08",
+      "title": "Permanently fix audited state-machine defects",
+      "status": "in_progress",
+      "owner": "agent",
+      "parent": "CLN-FSM",
+      "category": "refactor",
+      "severity": "high",
+      "status_claim": "confirmed",
+      "source_audit": "four subagent audits 2026-11-27 (heart 45, admin 79, storefront 62, db/distributed 56 machines)",
+      "file": "see log",
+      "evidence": "Explicit-state model checking found 20 rank/table divergences, nav suppression dead-end, personalisation dead controls, refund regression, double webhook claim and tooltip ghost",
+      "fix": "Canonical transition relations, SQL transition triggers, transactional claims, guarded reducers, model-check tests in CI",
+      "reference_verification": false,
+      "started": "2026-11-27",
+      "finished": null,
+      "log": "Phase 0/1: state-machine explorer test and canonical order/payment/refund transition relations landed with migration 037 SQL guards. Remaining: refund/money integrity, atomic claims, admin/storefront FSM fixes, liveness and final gates.",
+      "design_match": "n/a",
+      "key_decisions": [],
+      "verified": false,
+      "pushed": false,
+      "follow_ups": []
     }
   ]
 }
