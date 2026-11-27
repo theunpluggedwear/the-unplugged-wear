@@ -37,6 +37,8 @@ import {
   importReducer, initialImportState, isImporting, importPreviewOf,
 } from './editor/importMachine';
 import type { ImportPreview } from './editor/sections/types';
+import { cardForField } from './editor/cards';
+import type { CardKey } from './editor/cards';
 
 
 
@@ -196,7 +198,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     specsSizeChartCardOpen, setSpecsSizeChartCardOpen, specsMonogramCardOpen, setSpecsMonogramCardOpen,
     mediaGalleryCardOpen, setMediaGalleryCardOpen, mediaPresentationCardOpen, setMediaPresentationCardOpen,
     variantsMatrixCardOpen, setVariantsMatrixCardOpen, variantsPricingCardOpen, setVariantsPricingCardOpen,
-    variantsStockCardOpen, setVariantsStockCardOpen,
+    variantsStockCardOpen, setVariantsStockCardOpen, resetCards,
     formPhoto, setFormPhoto, addImageUrl, setAddImageUrl, photoInputRef,
     formImages, setFormImages, stageIndex, setStageIndex,
     mediaWide, setMediaWide, mediaCards, setMediaCards,
@@ -221,20 +223,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     if (!can('product.create')) return refused('create products');
     releaseUploadPreviews();
     dispatchEditor({ type: 'OPEN_CREATE' });
-    setBasicCardOpen(false);
-    setPricingCardOpen(false);
-    setDiscountsCardOpen(false);
-    setFulfillmentCardOpen(false);
-    setAttributesCardOpen(false);
-    setSpecsDisplayCardOpen(false);
-    setSpecsClothingCardOpen(false);
-    setSpecsSizeChartCardOpen(false);
-    setSpecsMonogramCardOpen(false);
-    setMediaGalleryCardOpen(false);
-    setMediaPresentationCardOpen(false);
-    setVariantsMatrixCardOpen(true);
-    setVariantsPricingCardOpen(false);
-    setVariantsStockCardOpen(false);
+    resetCards();
     setProductTab('general');
     setDrawerView('compact');
     autoExpandedRef.current = false;
@@ -370,20 +359,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     flushChartTimers();
     releaseUploadPreviews();
     dispatchEditor({ type: 'CLOSE' });
-    setBasicCardOpen(false);
-    setPricingCardOpen(false);
-    setDiscountsCardOpen(false);
-    setFulfillmentCardOpen(false);
-    setAttributesCardOpen(false);
-    setSpecsDisplayCardOpen(false);
-    setSpecsClothingCardOpen(false);
-    setSpecsSizeChartCardOpen(false);
-    setSpecsMonogramCardOpen(false);
-    setMediaGalleryCardOpen(false);
-    setMediaPresentationCardOpen(false);
-    setVariantsMatrixCardOpen(true);
-    setVariantsPricingCardOpen(false);
-    setVariantsStockCardOpen(false);
+    resetCards();
     setDrawerView('compact');
     autoExpandedRef.current = false;
   };
@@ -906,20 +882,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     
     
     releaseUploadPreviews();
-    setBasicCardOpen(false);
-    setPricingCardOpen(false);
-    setDiscountsCardOpen(false);
-    setFulfillmentCardOpen(false);
-    setAttributesCardOpen(false);
-    setSpecsDisplayCardOpen(false);
-    setSpecsClothingCardOpen(false);
-    setSpecsSizeChartCardOpen(false);
-    setSpecsMonogramCardOpen(false);
-    setMediaGalleryCardOpen(false);
-    setMediaPresentationCardOpen(false);
-    setVariantsMatrixCardOpen(true);
-    setVariantsPricingCardOpen(false);
-    setVariantsStockCardOpen(false);
+    resetCards();
     setProductTab('general');
     setFormCompareError(null);
     setDrawerView('compact');
@@ -1020,32 +983,28 @@ export default function ProductsView({ initialProducts, categories, perms, store
   };
 
   
+  const cardOpeners: Record<CardKey, (open: boolean) => void> = {
+    basic: setBasicCardOpen,
+    pricing: setPricingCardOpen,
+    discounts: setDiscountsCardOpen,
+    fulfillment: setFulfillmentCardOpen,
+    attributes: setAttributesCardOpen,
+    specsDisplay: setSpecsDisplayCardOpen,
+    specsClothing: setSpecsClothingCardOpen,
+    specsSizeChart: setSpecsSizeChartCardOpen,
+    specsMonogram: setSpecsMonogramCardOpen,
+    mediaGallery: setMediaGalleryCardOpen,
+    mediaPresentation: setMediaPresentationCardOpen,
+    variantsMatrix: setVariantsMatrixCardOpen,
+    variantsPricing: setVariantsPricingCardOpen,
+    variantsStock: setVariantsStockCardOpen,
+  };
+
   const revealField = (field: string) => {
     const base = field.split(/[.[]/)[0] || field;
-    let tab: 'general' | 'media' | 'variants' | 'specs' = 'general';
-    let opener: ((open: boolean) => void) | null = null;
-    if (base.startsWith('variants') || base === 'colors' || base === 'sizes' || base === 'stock') {
-      tab = 'variants';
-    } else if (base === 'images' || base === 'photoSettings') {
-      tab = 'media';
-    } else if (['fabricGsm', 'cut', 'modelDims', 'care', 'monogram'].includes(base)) {
-      tab = 'specs';
-      opener = base === 'monogram' ? setSpecsMonogramCardOpen : setSpecsClothingCardOpen;
-    } else if (['name', 'slug', 'description', 'styleCode', 'internalSerialNo', 'category', 'gender', 'publicationStatus', 'productKind', 'exchangePolicy'].includes(base)) {
-      opener = setBasicCardOpen;
-    } else if (['price', 'basePrice', 'compareAtPrice', 'taxRate', 'hsnCode', 'lowStockThreshold', 'priceAdjustments'].includes(base)) {
-      opener = setPricingCardOpen;
-    } else if (base === 'discounts') {
-      opener = setDiscountsCardOpen;
-    } else if (['partner', 'weight', 'shippingWeight', 'dimensions', 'sizeChartId'].includes(base)) {
-      opener = setFulfillmentCardOpen;
-    } else if (base === 'attributes') {
-      opener = setAttributesCardOpen;
-    } else {
-      opener = setBasicCardOpen;
-    }
+    const { tab, card } = cardForField(base);
     setProductTab(tab);
-    opener?.(true);
+    if (card) cardOpeners[card](true);
     requestAnimationFrame(() => requestAnimationFrame(() => {
       const anchor = document.querySelector<HTMLElement>(`[data-field="${base}"]`);
       if (!anchor) return;

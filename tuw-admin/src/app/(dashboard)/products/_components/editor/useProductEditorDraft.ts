@@ -6,6 +6,8 @@ import type {
   ProductItem, ProductVariant, ProductAttribute, ProductDiscount,
   ProductGender, PhotoSettings,
 } from '@/lib/admin-dto';
+import { cardReducer, initialCardOpen } from './cards';
+import type { CardKey } from './cards';
 
 type Category = ProductItem['category'];
 type ChartRowDrafts = Record<string, string>;
@@ -58,32 +60,26 @@ export function useGeneralDraft(initialCategory: Category) {
 }
 
 export function useCardOpenState() {
-  const [basicCardOpen, setBasicCardOpen] = React.useState(false);
-  const [pricingCardOpen, setPricingCardOpen] = React.useState(false);
-  const [discountsCardOpen, setDiscountsCardOpen] = React.useState(false);
-  const [fulfillmentCardOpen, setFulfillmentCardOpen] = React.useState(false);
-  const [attributesCardOpen, setAttributesCardOpen] = React.useState(false);
-  const [specsDisplayCardOpen, setSpecsDisplayCardOpen] = React.useState(false);
-  const [specsClothingCardOpen, setSpecsClothingCardOpen] = React.useState(false);
-  const [specsSizeChartCardOpen, setSpecsSizeChartCardOpen] = React.useState(false);
-  const [specsMonogramCardOpen, setSpecsMonogramCardOpen] = React.useState(false);
-  const [mediaGalleryCardOpen, setMediaGalleryCardOpen] = React.useState(false);
-  const [mediaPresentationCardOpen, setMediaPresentationCardOpen] = React.useState(false);
-  const [variantsMatrixCardOpen, setVariantsMatrixCardOpen] = React.useState(true);
-  const [variantsPricingCardOpen, setVariantsPricingCardOpen] = React.useState(false);
-  const [variantsStockCardOpen, setVariantsStockCardOpen] = React.useState(false);
+  const [cards, dispatchCards] = React.useReducer(cardReducer, initialCardOpen);
+  const setter = (card: CardKey) => (open: boolean) => dispatchCards({ type: 'SET', card, open });
+  const resetCards = () => dispatchCards({ type: 'RESET' });
 
   return {
-    basicCardOpen, setBasicCardOpen, pricingCardOpen, setPricingCardOpen,
-    discountsCardOpen, setDiscountsCardOpen, fulfillmentCardOpen, setFulfillmentCardOpen,
-    attributesCardOpen, setAttributesCardOpen,
-    specsDisplayCardOpen, setSpecsDisplayCardOpen, specsClothingCardOpen, setSpecsClothingCardOpen,
-    specsSizeChartCardOpen, setSpecsSizeChartCardOpen, specsMonogramCardOpen, setSpecsMonogramCardOpen,
-    mediaGalleryCardOpen, setMediaGalleryCardOpen,
-    mediaPresentationCardOpen, setMediaPresentationCardOpen,
-    variantsMatrixCardOpen, setVariantsMatrixCardOpen,
-    variantsPricingCardOpen, setVariantsPricingCardOpen,
-    variantsStockCardOpen, setVariantsStockCardOpen,
+    basicCardOpen: cards.basic, setBasicCardOpen: setter('basic'),
+    pricingCardOpen: cards.pricing, setPricingCardOpen: setter('pricing'),
+    discountsCardOpen: cards.discounts, setDiscountsCardOpen: setter('discounts'),
+    fulfillmentCardOpen: cards.fulfillment, setFulfillmentCardOpen: setter('fulfillment'),
+    attributesCardOpen: cards.attributes, setAttributesCardOpen: setter('attributes'),
+    specsDisplayCardOpen: cards.specsDisplay, setSpecsDisplayCardOpen: setter('specsDisplay'),
+    specsClothingCardOpen: cards.specsClothing, setSpecsClothingCardOpen: setter('specsClothing'),
+    specsSizeChartCardOpen: cards.specsSizeChart, setSpecsSizeChartCardOpen: setter('specsSizeChart'),
+    specsMonogramCardOpen: cards.specsMonogram, setSpecsMonogramCardOpen: setter('specsMonogram'),
+    mediaGalleryCardOpen: cards.mediaGallery, setMediaGalleryCardOpen: setter('mediaGallery'),
+    mediaPresentationCardOpen: cards.mediaPresentation, setMediaPresentationCardOpen: setter('mediaPresentation'),
+    variantsMatrixCardOpen: cards.variantsMatrix, setVariantsMatrixCardOpen: setter('variantsMatrix'),
+    variantsPricingCardOpen: cards.variantsPricing, setVariantsPricingCardOpen: setter('variantsPricing'),
+    variantsStockCardOpen: cards.variantsStock, setVariantsStockCardOpen: setter('variantsStock'),
+    resetCards,
   };
 }
 

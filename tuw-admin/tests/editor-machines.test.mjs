@@ -10,6 +10,9 @@ import {
 import {
   importReducer, initialImportState, isImportModalOpen, isImporting, importPreviewOf,
 } from '../src/app/(dashboard)/products/_components/editor/importMachine.ts';
+import {
+  cardReducer, initialCardOpen, cardForField,
+} from '../src/app/(dashboard)/products/_components/editor/cards.ts';
 
 const product = { id: 'p1', name: 'Demo', publicationStatus: 'draft' };
 
@@ -84,4 +87,25 @@ test('import machine keeps the preview open during import and on failure', () =>
 
   assert.equal(importReducer(finished, { type: 'CANCEL' }).status, 'idle');
   assert.equal(importReducer(initialImportState, { type: 'START_IMPORT' }).status, 'idle');
+});
+
+test('card machine defaults and reset preserve the variant-matrix default', () => {
+  assert.equal(initialCardOpen.variantsMatrix, true);
+  assert.equal(initialCardOpen.basic, false);
+  const opened = cardReducer(initialCardOpen, { type: 'SET', card: 'pricing', open: true });
+  assert.equal(opened.pricing, true);
+  assert.equal(cardReducer(opened, { type: 'RESET' }).pricing, false);
+  assert.equal(cardReducer(opened, { type: 'RESET' }).variantsMatrix, true);
+});
+
+test('field-to-card mapping matches the previous revealField chain', () => {
+  assert.deepEqual(cardForField('variants.matrix'), { tab: 'variants' });
+  assert.deepEqual(cardForField('images[0]'), { tab: 'media' });
+  assert.deepEqual(cardForField('monogram'), { tab: 'specs', card: 'specsMonogram' });
+  assert.deepEqual(cardForField('care'), { tab: 'specs', card: 'specsClothing' });
+  assert.deepEqual(cardForField('hsnCode'), { tab: 'general', card: 'pricing' });
+  assert.deepEqual(cardForField('discounts'), { tab: 'general', card: 'discounts' });
+  assert.deepEqual(cardForField('partner'), { tab: 'general', card: 'fulfillment' });
+  assert.deepEqual(cardForField('attributes[0].name'), { tab: 'general', card: 'attributes' });
+  assert.deepEqual(cardForField('unknown'), { tab: 'general', card: 'basic' });
 });
