@@ -171,15 +171,16 @@ export async function updateClaim(input: {
     if ((input.status === 'approved' || input.status === 'resolved') && !input.resolution) {
       throw new AppError('VALIDATION_FAILED', 'Choose what the partner agreed to: reprint, wallet credit, refund or nothing.');
     }
+    const resolution = input.status === 'resolved' ? input.resolution! : input.resolution ?? null;
     await tx.execute(sql`UPDATE fulfillment_claims SET status = ${input.status},
-        resolution = COALESCE(${input.resolution ?? null}, resolution),
+        resolution = COALESCE(${resolution}, resolution),
         staff_note = COALESCE(${input.staffNote?.slice(0, 1000) ?? null}, staff_note),
         provider_ticket_ref = COALESCE(${input.providerTicketRef?.slice(0, 100) ?? null}, provider_ticket_ref),
         submitted_at = CASE WHEN ${input.status} = 'submitted' THEN COALESCE(submitted_at, now()) ELSE submitted_at END,
         resolved_at = CASE WHEN ${input.status} = 'resolved' THEN now() ELSE resolved_at END,
         updated_at = now()
       WHERE id = ${claim.id}`);
-    if (input.status === 'resolved' && input.resolution === 'wallet_credit') {
+    if (input.status === 'resolved' && resolution === 'wallet_credit') {
       if (!input.amountPaise || input.amountPaise <= 0) throw new AppError('VALIDATION_FAILED', 'Enter the credit the partner gave (in rupees).');
       await postWalletEntry(tx, {
         providerId: claim.provider_id, kind: 'claim_credit', direction: 'credit', amountPaise: input.amountPaise,

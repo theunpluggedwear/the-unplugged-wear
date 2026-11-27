@@ -33,7 +33,7 @@ test('payment status relation never reopens a settled payment', () => {
 
 test('refund terminal states cannot regress', () => {
   assert.deepEqual(REFUND_TRANSITIONS.completed, []);
-  assert.deepEqual(REFUND_TRANSITIONS.rejected, []);
   assert.equal(canTransitionRefund('completed', 'rejected'), false);
+  assert.equal(canTransitionRefund('rejected', 'completed'), true);
   assert.equal(canTransitionRefund('processing', 'completed'), true);
 });

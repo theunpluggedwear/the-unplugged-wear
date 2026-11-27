@@ -45,7 +45,7 @@ export function canTransitionOrderPayment(from: OrderPaymentStatus, to: OrderPay
 export const REFUND_TRANSITIONS: Record<string, readonly string[]> = {
   processing: ['completed', 'rejected'],
   completed: [],
-  rejected: [],
+  rejected: ['completed'],
 };
 
 export function canTransitionRefund(from: string, to: string): boolean {

@@ -84,9 +84,8 @@ export async function reverseForOrder(tx: Transaction, orderId: string, actor: s
   const { rows } = await tx.execute<{ id: string; gift_card_id: string; amount: string }>(sql`
     SELECT id, gift_card_id, amount FROM gift_card_transactions
     WHERE order_id = ${orderId}::uuid AND type = 'redeem'`);
-  if (!rows.length) return null;
   let total = 0;
-  let cardId = rows[0]!.gift_card_id;
+  let cardId = rows[0]?.gift_card_id ?? null;
   for (const r of rows) {
     const { rows: existing } = await tx.execute(sql`SELECT 1 FROM gift_card_transactions WHERE gift_card_id = ${r.gift_card_id}::uuid AND order_id = ${orderId}::uuid AND type = 'reversal'`);
     if (existing.length) continue;
@@ -98,6 +97,29 @@ export async function reverseForOrder(tx: Transaction, orderId: string, actor: s
     await tx.execute(sql`UPDATE gift_cards SET balance = ${toRupees(newBalancePaise)}, status = CASE WHEN status = 'depleted' THEN 'active' ELSE status END, updated_at = now() WHERE id = ${r.gift_card_id}::uuid`);
     await tx.execute(sql`INSERT INTO gift_card_transactions (id, gift_card_id, type, amount, balance_after, order_id, actor, note)
       VALUES (${uuidv7()}, ${r.gift_card_id}::uuid, 'reversal', ${toRupees(amt)}, ${toRupees(newBalancePaise)}, ${orderId}::uuid, ${actor}, 'Order cancelled')`);
+  }
+  const { rows: lines } = await tx.execute<{ id: string; qty: number }>(sql`
+    SELECT oi.id, oi.qty FROM order_items oi JOIN products p ON p.id = oi.product_id
+    WHERE oi.order_id = ${orderId}::uuid AND p.product_kind = 'gift_card'`);
+  for (const line of lines) {
+    for (let unit = 1; unit <= line.qty; unit++) {
+      const { rows: cards } = await tx.execute<{ id: string; balance: string }>(sql`
+        SELECT id, balance FROM gift_cards
+        WHERE purchased_order_item_id = ${line.id}::uuid AND purchased_unit_no = ${unit}`);
+      for (const card of cards) {
+        const { rows: existing } = await tx.execute(sql`
+          SELECT 1 FROM gift_card_transactions WHERE gift_card_id = ${card.id}::uuid
+            AND order_item_id = ${line.id}::uuid AND order_id = ${orderId}::uuid AND type = 'reversal'`);
+        if (existing.length) continue;
+        const amt = toPaise(card.balance);
+        if (amt <= 0) continue;
+        total += amt;
+        cardId = card.id;
+        await tx.execute(sql`UPDATE gift_cards SET balance = 0, status = 'disabled', updated_at = now() WHERE id = ${card.id}::uuid`);
+        await tx.execute(sql`INSERT INTO gift_card_transactions (id, gift_card_id, type, amount, balance_after, order_id, order_item_id, actor, note)
+          VALUES (${uuidv7()}, ${card.id}::uuid, 'reversal', ${toRupees(amt)}, 0, ${orderId}::uuid, ${line.id}::uuid, ${actor}, 'Order cancelled')`);
+      }
+    }
   }
   return total ? { cardId, amountPaise: total } : null;
 }
