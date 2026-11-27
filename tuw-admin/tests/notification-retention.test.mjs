@@ -18,5 +18,6 @@ test('the prune job is registered and scheduled', () => {
   assert.match(catalog, /name: 'notifications\.pruneOld'/);
   assert.match(catalog, /pruneNotifications\(\)/);
   const cron = JSON.parse(read('tuw-admin/vercel.json'));
-  assert.ok(cron.crons.some((entry) => entry.path === '/api/cron/notifications.pruneOld'));
+  assert.ok(cron.crons.some((entry) => entry.path === '/api/cron/platform.runDaily'));
+  assert.match(catalog, /'notifications\.pruneOld'/);
 });

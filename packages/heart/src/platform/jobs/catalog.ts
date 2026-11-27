@@ -104,6 +104,40 @@ export function loadJobs(): void {
       return { processed: result.created.length + result.dropped.length };
     },
   });
+
+  const DAILY = [
+    'platform.sweepIdempotencyKeys', 'platform.sweepRateLimits', 'inventory.notifyRestocked',
+    'fulfillment.submitDue', 'giftCards.expireDue', 'webhooks.retryFailed',
+    'analytics.detectAbandoned', 'analytics.rollupDaily', 'analytics.maintainPartitions',
+    'notifications.sendQueued', 'notifications.pruneOld',
+  ] as const;
+  const URGENT = [
+    'payments.reconcileRazorpay', 'invoices.reconcileDocuments', 'fulfillment.syncOpen',
+    'webhooks.retryFailed', 'notifications.sendQueued',
+  ] as const;
+
+  const runGroup = (names: readonly string[]) => async () => {
+    let processed = 0;
+    let failed = 0;
+    const errors: string[] = [];
+    for (const name of names) {
+      const result = await runJob(name);
+      processed += result.processed;
+      if (!result.ok) { failed += 1; errors.push(`${name}: ${result.error ?? 'failed'}`); }
+    }
+    return { processed, failed, note: errors.join('; ') || undefined };
+  };
+
+  registerJob({
+    name: 'platform.runDaily',
+    description: 'Run the daily job group in one scheduled invocation.',
+    run: runGroup(DAILY),
+  });
+  registerJob({
+    name: 'platform.runUrgent',
+    description: 'Run payment, invoice, webhook, parcel and mail catch-up jobs.',
+    run: runGroup(URGENT),
+  });
 }
 
 export { listJobs, runJob };
