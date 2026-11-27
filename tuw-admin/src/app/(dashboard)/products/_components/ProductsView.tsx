@@ -28,6 +28,10 @@ import VariantsTab from './editor/sections/VariantsTab';
 import SpecsTab from './editor/sections/SpecsTab';
 import ImportPreviewModal from './editor/sections/ImportPreviewModal';
 import { GENDER_OPTIONS, PUBLICATION_OPTIONS, DISCOUNT_TYPE_OPTIONS, PARTNER_OPTIONS, pairedFieldGrid, flatGroupStyle, attributeChipStyle, attributeMetaStyle, attributeGroupLabelStyle } from './editor/sections/constants';
+import {
+  editorReducer, initialEditorState, isEditorOpen, editorProduct, editorIsCreating, editorOpeningId,
+} from './editor/editorMachine';
+
 
 
 
@@ -43,7 +47,10 @@ export default function ProductsView({ initialProducts, categories, perms, store
   useEffect(() => setProducts(initialProducts), [initialProducts]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [saving, setSaving] = useState(false);
-  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [editorState, dispatchEditor] = React.useReducer(editorReducer, initialEditorState);
+  const editingProduct = editorProduct(editorState);
+  const isCreating = editorIsCreating(editorState);
+  const openingId = editorOpeningId(editorState);
 
   
   
@@ -161,9 +168,6 @@ export default function ProductsView({ initialProducts, categories, perms, store
   } = catalogVm;
 
   
-  const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
-
-  
   const draftVm = useProductEditorDraft(categories[0] ?? UNCATEGORIZED_CATEGORY);
   const {
     formName, setFormName, formSlug, setFormSlug, formCategory, setFormCategory,
@@ -204,16 +208,12 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const chartColumns = (chart: SizeChart) => chart.columns;
 
   
-  const [isCreating, setIsCreating] = useState(false);
-  
-  
   const addDiscountRef = useRef<HTMLDivElement>(null);
 
   const openCreateDrawer = () => {
     if (!can('product.create')) return refused('create products');
     releaseUploadPreviews();
-    setEditingProduct(null);
-    setIsCreating(true);
+    dispatchEditor({ type: 'OPEN_CREATE' });
     setBasicCardOpen(false);
     setPricingCardOpen(false);
     setDiscountsCardOpen(false);
@@ -362,8 +362,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const closeEditor = () => {
     flushChartTimers();
     releaseUploadPreviews();
-    setEditingProduct(null);
-    setIsCreating(false);
+    dispatchEditor({ type: 'CLOSE' });
     setBasicCardOpen(false);
     setPricingCardOpen(false);
     setDiscountsCardOpen(false);
@@ -867,21 +866,22 @@ export default function ProductsView({ initialProducts, categories, perms, store
     if (openingId) return;
     
     
-    setIsCreating(false);
-    setOpeningId(summary.id);
+    dispatchEditor({ type: 'OPEN_EDIT_START', id: summary.id });
     try {
       const result = await getProductAction({ id: summary.id });
       if (!result.ok) {
         showToast({ type: 'warning', title: 'Could Not Open Product', description: result.error.message });
+        dispatchEditor({ type: 'OPEN_EDIT_FAIL' });
         return;
       }
       const { movements, ...detail } = result.data;
+      const loaded = detail as unknown as ProductItem;
       setStockMovements(movements as StockMovement[]);
-      loadEditDrawer(detail as unknown as ProductItem);
+      loadEditDrawer(loaded);
+      dispatchEditor({ type: 'OPEN_EDIT_DONE', product: loaded });
     } catch {
       showToast({ type: 'warning', title: 'Could Not Open Product', description: 'The request failed. Please try again.' });
-    } finally {
-      setOpeningId(null);
+      dispatchEditor({ type: 'OPEN_EDIT_FAIL' });
     }
   };
 
@@ -899,8 +899,6 @@ export default function ProductsView({ initialProducts, categories, perms, store
     
     
     releaseUploadPreviews();
-    setIsCreating(false);
-    setEditingProduct(product);
     setBasicCardOpen(false);
     setPricingCardOpen(false);
     setDiscountsCardOpen(false);
@@ -1520,7 +1518,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
     if (!result.ok) return showToast({ type: 'warning', title: 'Not Updated', description: result.error.message });
     const done = new Set(result.data.updated);
     setProducts((list) => list.map((p) => (done.has(p.id) ? { ...p, publicationStatus: status } : p)));
-    if (editingProduct && done.has(editingProduct.id)) setEditingProduct({ ...editingProduct, publicationStatus: status });
+    if (editingProduct && done.has(editingProduct.id)) dispatchEditor({ type: 'PATCH_EDIT_PRODUCT', patch: { publicationStatus: status } });
     setPublicationFilter('all');
     setCurrentPage(1);
     const { refused: skipped } = result.data;
@@ -1982,7 +1980,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
 
       {}
       <Drawer
-        isOpen={Boolean(editingProduct) || isCreating}
+        isOpen={isEditorOpen(editorState)}
         onClose={closeEditor}
         title={editingProduct ? `Manage ${editingProduct.name}` : 'Add New Product'}
         subtitle={
