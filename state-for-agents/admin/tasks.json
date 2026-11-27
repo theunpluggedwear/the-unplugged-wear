@@ -15,7 +15,7 @@
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "19a9d9f",
+    "tip": "c89b27a",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -5242,7 +5242,7 @@
       "parent": "TL-INT-PHASE",
       "started": null,
       "finished": null,
-      "log": "Needs live API access from care@qikink.com and answers to the defect-claim email (sent 2026-11-10). Product mapping source: tuw-website/data/qikink-listing.json (qikinkId, style code, placements, base cost, HSN); store SKU + design links still to be confirmed.",
+      "log": "Needs live API access from care@qikink.com and answers to the defect-claim email (sent 2026-11-10). Product mapping source: tuw-website/data/qikink-listing.json (qikinkId, style code, placements, base cost, HSN); store SKU + design links still to be confirmed. 2026-11-28: real HTTP client and custom-design payload adapter landed; sandbox token call now returns 401 Invalid client_id or client_secret with the configured keys, so fresh sandbox keys are required before an end-to-end sandbox order can be verified. Public Qikink docs confirm design_link/mockup_link custom-design orders; no public catalogue/category API exists, so SKU import from the dashboard is the mapping source.",
       "design_match": "n/a",
       "key_decisions": [],
       "verified": false,
