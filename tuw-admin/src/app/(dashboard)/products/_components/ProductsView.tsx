@@ -19,6 +19,7 @@ import {
   cellAdjustment, cellPriceBreakdown, storefrontNote,
   deriveCategoryOptions, filterProducts, paginateProducts, catalogCounts,
 } from './editor/productEditorUtils';
+import { useProductEditorDraft } from './editor/useProductEditorDraft';
 
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'sub-' + String(p) });
 
@@ -259,72 +260,48 @@ export default function ProductsView({ initialProducts, categories, perms, store
   const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
 
   
-  const [formName, setFormName] = useState('');
-  const [formSlug, setFormSlug] = useState('');
-  const [formCategory, setFormCategory] = useState<ProductItem['category']>(categories[0] ?? UNCATEGORIZED_CATEGORY);
-  const [formPrice, setFormPrice] = useState('48.00');
-  const [formComparePrice, setFormComparePrice] = useState('');
-  const [formCompareError, setFormCompareError] = useState<string | null>(null);
-  const [formStock, setFormStock] = useState('30');
-  
-  const [formStyleCode, setFormStyleCode] = useState('');
-  const [formSerialNo, setFormSerialNo] = useState('');
-  const [formWeight, setFormWeight] = useState('');
-  const [formShipWeight, setFormShipWeight] = useState('');
-  const [formDims, setFormDims] = useState('');
-  const [formGender, setFormGender] = useState<ProductGender | ''>('');
-  const [formTax, setFormTax] = useState('');
-  const [formHsn, setFormHsn] = useState('');
-  
-  const [formDiscounts, setFormDiscounts] = useState<ProductDiscount[]>([]);
-  
-  
-  
-  
-  
-  const [formAttributes, setFormAttributes] = useState<ProductAttribute[]>([]);
+  const {
+    formName, setFormName, formSlug, setFormSlug, formCategory, setFormCategory,
+    formPrice, setFormPrice, formComparePrice, setFormComparePrice,
+    formCompareError, setFormCompareError, formStock, setFormStock,
+    formStyleCode, setFormStyleCode, formSerialNo, setFormSerialNo,
+    formWeight, setFormWeight, formShipWeight, setFormShipWeight, formDims, setFormDims,
+    formGender, setFormGender, formTax, setFormTax, formHsn, setFormHsn,
+    formDiscounts, setFormDiscounts, formAttributes, setFormAttributes,
+    attrDrafts, setAttrDrafts, newAttrName, setNewAttrName,
+    chartRowDrafts, setChartRowDrafts, newChartName, setNewChartName,
+    formSizeChartId, setFormSizeChartId, formPartner, setFormPartner,
+    formExchangePolicy, setFormExchangePolicy, formProductKind, setFormProductKind,
+    formLowStock, setFormLowStock, formStatus, setFormStatus, formDescription, setFormDescription,
+    basicCardOpen, setBasicCardOpen, pricingCardOpen, setPricingCardOpen,
+    discountsCardOpen, setDiscountsCardOpen, fulfillmentCardOpen, setFulfillmentCardOpen,
+    attributesCardOpen, setAttributesCardOpen,
+    specsDisplayCardOpen, setSpecsDisplayCardOpen, specsClothingCardOpen, setSpecsClothingCardOpen,
+    specsSizeChartCardOpen, setSpecsSizeChartCardOpen, specsMonogramCardOpen, setSpecsMonogramCardOpen,
+    mediaGalleryCardOpen, setMediaGalleryCardOpen, mediaPresentationCardOpen, setMediaPresentationCardOpen,
+    variantsMatrixCardOpen, setVariantsMatrixCardOpen, variantsPricingCardOpen, setVariantsPricingCardOpen,
+    variantsStockCardOpen, setVariantsStockCardOpen,
+    formPhoto, setFormPhoto, addImageUrl, setAddImageUrl, photoInputRef,
+    formImages, setFormImages, stageIndex, setStageIndex,
+    mediaWide, setMediaWide, mediaCards, setMediaCards,
+    dragActive, setDragActive, draggingId, setDraggingId, mediaWrapRef, dragIdRef,
+    formFabricGsm, setFormFabricGsm, formCut, setFormCut, formModelDims, setFormModelDims,
+    formCare, setFormCare, formMonogramEnabled, setFormMonogramEnabled,
+    formMonogramChars, setFormMonogramChars, formMonogramUpcharge, setFormMonogramUpcharge,
+    visibleSections, setVisibleSections,
+    formVariants, setFormVariants, formAdjustments, setFormAdjustments,
+    adjustmentDrafts, setAdjustmentDrafts, priceDrafts, setPriceDrafts,
+  } = useProductEditorDraft(categories[0] ?? UNCATEGORIZED_CATEGORY);
   const attrValues = (name: string) => formAttributes.find((a) => a.name === name)?.values ?? [];
   const colorValues = attrValues('Color');
   const sizeValues = attrValues('Size');
   
-  const [attrDrafts, setAttrDrafts] = useState<Record<string, string>>({});
-  const [newAttrName, setNewAttrName] = useState('');
-  
-  const [chartRowDrafts, setChartRowDrafts] = useState<Record<string, string>>({});
-  const [newChartName, setNewChartName] = useState('');
-  const [formSizeChartId, setFormSizeChartId] = useState('');
   const chartColumns = (chart: SizeChart) => chart.columns;
-  const [formPartner, setFormPartner] = useState<ProductItem['partner']>('Qikink Direct API');
-  const [formExchangePolicy, setFormExchangePolicy] = useState<NonNullable<ProductItem['exchangePolicy']>>('defects_only');
-  const [formProductKind, setFormProductKind] = useState<NonNullable<ProductItem['productKind']>>('physical');
-  const [formLowStock, setFormLowStock] = useState('');
-  const [formStatus, setFormStatus] = useState<ProductItem['publicationStatus']>('published');
-  const [formDescription, setFormDescription] = useState('Pre-shrunk premium heavyweight combed cotton with reinforced seams.');
 
   
   const [isCreating, setIsCreating] = useState(false);
   
   
-  const [basicCardOpen, setBasicCardOpen] = useState(false);
-  
-  const [pricingCardOpen, setPricingCardOpen] = useState(false);
-  
-  const [discountsCardOpen, setDiscountsCardOpen] = useState(false);
-  
-  const [fulfillmentCardOpen, setFulfillmentCardOpen] = useState(false);
-  
-  const [attributesCardOpen, setAttributesCardOpen] = useState(false);
-  
-  
-  const [specsDisplayCardOpen, setSpecsDisplayCardOpen] = useState(false);
-  const [specsClothingCardOpen, setSpecsClothingCardOpen] = useState(false);
-  const [specsSizeChartCardOpen, setSpecsSizeChartCardOpen] = useState(false);
-  const [specsMonogramCardOpen, setSpecsMonogramCardOpen] = useState(false);
-  const [mediaGalleryCardOpen, setMediaGalleryCardOpen] = useState(false);
-  const [mediaPresentationCardOpen, setMediaPresentationCardOpen] = useState(false);
-  const [variantsMatrixCardOpen, setVariantsMatrixCardOpen] = useState(true);
-  const [variantsPricingCardOpen, setVariantsPricingCardOpen] = useState(false);
-  const [variantsStockCardOpen, setVariantsStockCardOpen] = useState(false);
   const addDiscountRef = useRef<HTMLDivElement>(null);
 
   const openCreateDrawer = () => {
@@ -397,13 +374,7 @@ export default function ProductsView({ initialProducts, categories, perms, store
   
   const [productTab, setProductTab] = useState<'general' | 'media' | 'variants' | 'specs' | 'partner'>('general');
   
-  const [formPhoto, setFormPhoto] = useState<PhotoSettings>({ layout: 'carousel', ratio: '4:3', showPhotos: true });
   const photoAspect = formPhoto.ratio === '1:1' ? '1 / 1' : formPhoto.ratio === '16:9' ? '16 / 9' : '4 / 3';
-  
-  
-  
-  const [addImageUrl, setAddImageUrl] = useState('');
-  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const revokeUploads = (uploads: Array<{ url: string }>) => {
     uploads.forEach((u) => {
@@ -428,9 +399,6 @@ export default function ProductsView({ initialProducts, categories, perms, store
   
   
   const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
-  const [formImages, setFormImages] = useState<
-    Array<{ id: string; src: string; name: string; persisted: boolean }>
-  >([]);
 
   const setCoverImage = (id: string) => {
     setFormImages((prev) => {
@@ -456,13 +424,6 @@ export default function ProductsView({ initialProducts, categories, perms, store
 
   
   
-  const [stageIndex, setStageIndex] = useState(0);
-  const [mediaWide, setMediaWide] = useState(false);
-  const [mediaCards, setMediaCards] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const mediaWrapRef = useRef<HTMLDivElement>(null);
-  const dragIdRef = useRef<string | null>(null);
   React.useEffect(() => {
     const el = mediaWrapRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
@@ -551,15 +512,6 @@ export default function ProductsView({ initialProducts, categories, perms, store
     });
   };
   
-  const [formFabricGsm, setFormFabricGsm] = useState('');
-  const [formCut, setFormCut] = useState('');
-  const [formModelDims, setFormModelDims] = useState('');
-  const [formCare, setFormCare] = useState('');
-  const [formMonogramEnabled, setFormMonogramEnabled] = useState(false);
-  const [formMonogramChars, setFormMonogramChars] = useState('3');
-  const [formMonogramUpcharge, setFormMonogramUpcharge] = useState('12.00');
-  
-  const [visibleSections, setVisibleSections] = useState({ monogram: true });
   React.useEffect(() => {
     try {
       const raw = localStorage.getItem('tuw_admin_v2_product_editor');
@@ -580,20 +532,6 @@ export default function ProductsView({ initialProducts, categories, perms, store
   }, [visibleSections]);
   
   
-  const [formVariants, setFormVariants] = useState<ProductVariant[]>([]);
-  
-  
-  
-  const [formAdjustments, setFormAdjustments] = useState<Record<string, number>>({});
-  
-  
-  const [adjustmentDrafts, setAdjustmentDrafts] = useState<Record<string, string>>({});
-
-  
-  
-  
-  const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
-
   const setAdjustment = (key: string, amount: number | null) => {
     const nextAdj = { ...formAdjustments };
     if (amount === null) delete nextAdj[key];
