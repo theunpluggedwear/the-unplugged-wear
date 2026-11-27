@@ -362,3 +362,11 @@ Two distinct code bugs were found and fixed; no speculative changes were made to
 - [x] Added heart `createTicket` with a pure validator; it inserts a `contact_form` ticket and its first customer message in one transaction and rings staff with `customer.view` and a deep link to the thread.
 - [x] The storefront contact form now creates tickets instead of writing a demo outbox row. Local browser QA confirmed a submitted message appeared in `/support`, preselected via `?ticket=<id>`, with the order reference preserved in the thread.
 - [x] Admin suite 104/104 with three new validation tests; both production builds and the comment ratchet pass. QA tickets, notifications and admin were removed afterwards.
+
+### Product editor split and explicit state machines (2026-11-27)
+
+- [x] `ProductsView.tsx` reduced from ~4,047 to ~1,900 lines. Pure helpers, five draft hooks, catalog list/hooks and five editor tab sections live under `products/_components/editor/`; every extracted JSX block is byte-identical to the pre-split source and all `data-field` anchors are preserved.
+- [x] Explicit machines: `editorMachine` (closed/opening/create/edit), `asyncMachine` (save/bulk), `importMachine` (idle/preview/importing) and `cards` (14-key record). Reducers are pure; side effects stay in the event handlers.
+- [x] Browser QA on local `127.0.0.1:3024`: create drawer, edit drawer, save + "Product Updated", import preview + "Import Staged", HSN validation jump (focus `hsnCode`, pricing card auto-opened), card collapse persistence across tab switches, expand-once into Variants, deep link `?open=<uuid>`, bulk selection, search/filter and view toggle. No console errors; no horizontal overflow at 360/768/1024/1440.
+- [x] Gates: full typecheck, 124/124 admin tests, both production builds, comment ratchet 3136/3186.
+- [x] Diagnosed the "Operational Interface Interruption" report: a production server had been left running while `next build` replaced `.next`, so cached HTML requested a removed chunk (`1bvq_48zwald4.js` → 500) and the root error boundary rendered. Stop → build → restart restored all 13 chunk requests to 200 and a clean console; no code defect was involved. QA note: never rebuild under a live prod server.

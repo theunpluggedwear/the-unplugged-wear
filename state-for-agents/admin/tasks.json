@@ -15,7 +15,7 @@
   },
   "session": {
     "branch": "feat/dharmil-admin",
-    "tip": "da95086",
+    "tip": "916ae0c",
     "unpushed": [],
     "next_up": null,
     "pending_verifications": [
@@ -51,7 +51,7 @@
       "Workbook import (67bdf97): header-row detection, 155-group preview, one-commit staging, HSN validation, internal S.No display, Uncategorized category filter, edit/reload preservation, 305-variant product table, Reset Demo; 360/768/1024/1440 - browser pass pending",
       "PEDIT Clothing Specs cards (c86e718): Compact one card per row; Expanded/Full pairs Display options+Clothing specs and Size chart+Monogram at 1024/1440; Display options switch hides/shows the monogram card; independent collapse survives tab switches; size-chart table scrolls inside a half-width card; monogram pair collapses to one column at 360; chart add/remove + in-use guard feedback; Reset Demo; 360/768/1024/1440 - browser pass pending",
       "SQL dry-run (f9de18b + 04f31ec): psql is not installed; validate 002 + 010 against a real Postgres instance before the first migration run. The static schema guard (28eccec + 04f31ec) checks inventory/FK order/retired names/semantic columns but does not replace a real parser.",
-      "product editor split stages 1-4 (9a8df36..da95086): interactive 360/768/1024/1440 QA of create/edit/save/import, validation focus, compare-at, variants pin/draft, media, size charts — automated gates + smoke QA passed; exhaustive per-width pass pending"
+      "product editor split and FSM stages 1-6 (9a8df36..916ae0c): interactive QA of create/edit/save/import, validation focus, card persistence, expand-once, deep link, bulk actions completed; 360/768/1024/1440 overflow check passed"
     ],
     "last_updated": "2026-11-27",
     "updated_by": "agent (OpenCode)"
