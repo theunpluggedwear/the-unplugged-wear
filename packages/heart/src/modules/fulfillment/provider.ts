@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { getDb, type Transaction } from '../../platform/db/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
 import { toPaise } from '../../platform/money/index.ts';
+import { demoTemplateFor, designFieldsFromOrderItem, hasPersonalizationDesignFields } from '../personalization/index.ts';
 import { qikinkIsSimulated } from '../../integrations/fulfillment/index.ts';
 import type { FulfillmentOrderInput, FulfillmentOrderLine } from '../../integrations/fulfillment/index.ts';
 
@@ -81,6 +82,7 @@ type OrderSql = {
 type LineSql = {
   id: string; variant_id: string | null; sku: string; product_name: string; qty: number; unit_price: string;
   partner_provider: string | null; provider_sku: string | null; provider_payload: Record<string, unknown> | null; unit_cost: string | null;
+  personalization: Record<string, unknown> | null; preview_image_url: string | null; product_type: string | null;
 };
 
 /**
@@ -100,7 +102,8 @@ export async function planOrder(orderId: string, db: Db = getDb()): Promise<Plan
   }
   const { rows: lines } = await db.execute<LineSql>(sql`
     SELECT oi.id, oi.variant_id, oi.sku, oi.product_name, oi.qty, oi.unit_price,
-           p.partner_provider, m.provider_sku, m.provider_payload, m.unit_cost
+           p.partner_provider, p.product_type, oi.personalization, oi.preview_image_url,
+           m.provider_sku, m.provider_payload, m.unit_cost
     FROM order_items oi
     JOIN products p ON p.id = oi.product_id
     LEFT JOIN integration_providers ip ON ip.slug = p.partner_provider
@@ -124,9 +127,18 @@ export async function planOrder(orderId: string, db: Db = getDb()): Promise<Plan
     if (!sku && provider.slug === 'qikink' && simulated) { sku = line.sku; usedFallbackSku = true; }
     if (!sku) { skipped.push({ slug, reason: `${line.product_name} (${line.sku}) has no ${provider.name} partner SKU.` }); continue; }
     const group = groups.get(slug) ?? { provider, lines: [], costPaise: 0 };
+    const payload = { ...(line.provider_payload ?? {}) };
+    if (slug === 'qikink' && line.personalization && !hasPersonalizationDesignFields(payload)) {
+      Object.assign(payload, designFieldsFromOrderItem({
+        orderItemId: line.id,
+        personalization: line.personalization,
+        previewImageUrl: line.preview_image_url,
+        template: simulated ? demoTemplateFor(line.product_type) : null,
+      }));
+    }
     group.lines.push({
       orderItemId: line.id, productName: line.product_name, sku, quantity: line.qty,
-      unitPricePaise: toPaise(line.unit_price), payload: line.provider_payload ?? {}, usedFallbackSku,
+      unitPricePaise: toPaise(line.unit_price), payload, usedFallbackSku,
     });
     if (line.unit_cost === null) group.costPaise = null;
     else if (group.costPaise !== null) group.costPaise += toPaise(line.unit_cost) * line.qty;
