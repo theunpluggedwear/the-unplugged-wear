@@ -1,0 +1,568 @@
+[
+  {
+    "label": "Men",
+    "href": "/shop?audience=men",
+    "columns": [
+      {
+        "title": "Clothing",
+        "links": [
+          {
+            "label": "Hoodies & Sweats",
+            "href": "/shop?audience=men&category=hoodies",
+            "filter": {
+              "audience": "men",
+              "category": "hoodies"
+            }
+          },
+          {
+            "label": "T-shirts & Polos",
+            "href": "/shop?audience=men&category=tees",
+            "filter": {
+              "audience": "men",
+              "category": "tees"
+            }
+          },
+          {
+            "label": "Jackets",
+            "href": "/shop?audience=men&category=jackets",
+            "filter": {
+              "audience": "men",
+              "category": "jackets"
+            }
+          },
+          {
+            "label": "Joggers & Shorts",
+            "href": "/shop?audience=men&category=pants",
+            "filter": {
+              "audience": "men",
+              "category": "pants"
+            }
+          }
+        ]
+      },
+      {
+        "title": "Collections",
+        "links": [
+          {
+            "label": "Acid Wash",
+            "href": "/collections/acid-wash"
+          },
+          {
+            "label": "All-over print",
+            "href": "/shop?audience=men&q=AOP",
+            "filter": {
+              "audience": "men",
+              "q": [
+                "AOP"
+              ]
+            }
+          },
+          {
+            "label": "New in",
+            "href": "/shop?audience=men&new=1",
+            "filter": {
+              "audience": "men",
+              "isNew": true
+            }
+          }
+        ]
+      },
+      {
+        "title": "Help",
+        "links": [
+          {
+            "label": "Size guide",
+            "href": "/size-guide"
+          },
+          {
+            "label": "Shipping",
+            "href": "/policies/shipping"
+          },
+          {
+            "label": "Returns & exchanges",
+            "href": "/policies/returns"
+          }
+        ]
+      }
+    ],
+    "features": [
+      {
+        "productSlug": "everyday-pullover-hoodie"
+      },
+      {
+        "productSlug": "classic-polo"
+      }
+    ],
+    "shopAll": {
+      "label": "Shop all men",
+      "href": "/shop?audience=men",
+      "filter": {
+        "audience": "men"
+      }
+    }
+  },
+  {
+    "label": "Women",
+    "href": "/shop?audience=women",
+    "columns": [
+      {
+        "title": "Clothing",
+        "links": [
+          {
+            "label": "Hoodies & Sweats",
+            "href": "/shop?audience=women&category=hoodies",
+            "filter": {
+              "audience": "women",
+              "category": "hoodies"
+            }
+          },
+          {
+            "label": "Tees & Tops",
+            "href": "/shop?audience=women&category=tees&q=tee%2Ct-shirt%2Ctop%2Ctank%2Cpolo%2Cshirt",
+            "filter": {
+              "audience": "women",
+              "category": "tees",
+              "q": [
+                "tee",
+                "t-shirt",
+                "top",
+                "tank",
+                "polo",
+                "shirt"
+              ]
+            }
+          },
+          {
+            "label": "Dresses & Skirts",
+            "href": "/shop?audience=women&q=dress%2Cskirt%2Ckaftan",
+            "filter": {
+              "audience": "women",
+              "q": [
+                "dress",
+                "skirt",
+                "kaftan"
+              ]
+            }
+          },
+          {
+            "label": "Jackets",
+            "href": "/shop?audience=women&category=jackets",
+            "filter": {
+              "audience": "women",
+              "category": "jackets"
+            }
+          },
+          {
+            "label": "Joggers & Bottoms",
+            "href": "/shop?audience=women&category=pants",
+            "filter": {
+              "audience": "women",
+              "category": "pants"
+            }
+          }
+        ]
+      },
+      {
+        "title": "Collections",
+        "links": [
+          {
+            "label": "Acid Wash",
+            "href": "/collections/acid-wash"
+          },
+          {
+            "label": "All-over print",
+            "href": "/shop?audience=women&q=AOP",
+            "filter": {
+              "audience": "women",
+              "q": [
+                "AOP"
+              ]
+            }
+          },
+          {
+            "label": "New in",
+            "href": "/shop?audience=women&new=1",
+            "filter": {
+              "audience": "women",
+              "isNew": true
+            }
+          }
+        ]
+      },
+      {
+        "title": "Help",
+        "links": [
+          {
+            "label": "Size guide",
+            "href": "/size-guide"
+          },
+          {
+            "label": "Shipping",
+            "href": "/policies/shipping"
+          },
+          {
+            "label": "Returns & exchanges",
+            "href": "/policies/returns"
+          }
+        ]
+      }
+    ],
+    "features": [
+      {
+        "productSlug": "cropped-hoodie"
+      },
+      {
+        "productSlug": "everyday-crop-top",
+        "imagePosition": "50% 0%"
+      }
+    ],
+    "shopAll": {
+      "label": "Shop all women",
+      "href": "/shop?audience=women",
+      "filter": {
+        "audience": "women"
+      }
+    }
+  },
+  {
+    "label": "Kids",
+    "href": "/shop?audience=kids",
+    "columns": [
+      {
+        "title": "Clothing",
+        "links": [
+          {
+            "label": "T-shirts",
+            "href": "/shop?audience=kids&q=t-shirt%2Ctee",
+            "filter": {
+              "audience": "kids",
+              "q": [
+                "t-shirt",
+                "tee"
+              ]
+            }
+          },
+          {
+            "label": "Hoodies & Sweatshirts",
+            "href": "/shop?audience=kids&q=hoodie%2Csweatshirt",
+            "filter": {
+              "audience": "kids",
+              "q": [
+                "hoodie",
+                "sweatshirt"
+              ]
+            }
+          },
+          {
+            "label": "Jackets",
+            "href": "/shop?audience=kids&q=jacket",
+            "filter": {
+              "audience": "kids",
+              "q": [
+                "jacket"
+              ]
+            }
+          },
+          {
+            "label": "Shorts",
+            "href": "/shop?audience=kids&q=shorts",
+            "filter": {
+              "audience": "kids",
+              "q": [
+                "shorts"
+              ]
+            }
+          },
+          {
+            "label": "Rompers",
+            "href": "/shop?audience=kids&q=romper",
+            "filter": {
+              "audience": "kids",
+              "q": [
+                "romper"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "title": "Help",
+        "links": [
+          {
+            "label": "Size guide",
+            "href": "/size-guide"
+          },
+          {
+            "label": "Shipping",
+            "href": "/policies/shipping"
+          },
+          {
+            "label": "Returns & exchanges",
+            "href": "/policies/returns"
+          }
+        ]
+      }
+    ],
+    "features": [
+      {
+        "productSlug": "kids-pullover-hoodie"
+      }
+    ],
+    "shopAll": {
+      "label": "Shop all kids",
+      "href": "/shop?audience=kids",
+      "filter": {
+        "audience": "kids"
+      }
+    }
+  },
+  {
+    "label": "Objects",
+    "href": "/collections/objects",
+    "columns": [
+      {
+        "title": "For the home",
+        "links": [
+          {
+            "label": "Mugs & Bottles",
+            "href": "/shop?type=drinkware",
+            "filter": {
+              "type": "drinkware"
+            }
+          },
+          {
+            "label": "Wall art",
+            "href": "/shop?type=wall-art",
+            "filter": {
+              "type": "wall-art"
+            }
+          },
+          {
+            "label": "Home & table",
+            "href": "/shop?type=home",
+            "filter": {
+              "type": "home"
+            }
+          }
+        ]
+      },
+      {
+        "title": "Everyday carry",
+        "links": [
+          {
+            "label": "Bags & Totes",
+            "href": "/shop?type=bag",
+            "filter": {
+              "type": "bag"
+            }
+          },
+          {
+            "label": "Phone cases",
+            "href": "/shop?type=phone-case",
+            "filter": {
+              "type": "phone-case"
+            }
+          },
+          {
+            "label": "Stationery",
+            "href": "/shop?type=stationery",
+            "filter": {
+              "type": "stationery"
+            }
+          },
+          {
+            "label": "For pets",
+            "href": "/shop?type=pet",
+            "filter": {
+              "type": "pet"
+            }
+          }
+        ]
+      }
+    ],
+    "features": [
+      {
+        "productSlug": "black-coffee-mug"
+      },
+      {
+        "productSlug": "zip-tote-bag"
+      }
+    ],
+    "shopAll": {
+      "label": "Shop all objects",
+      "href": "/collections/objects"
+    }
+  },
+  {
+    "label": "Shop",
+    "href": "/shop",
+    "columns": [
+      {
+        "title": "Clothing",
+        "links": [
+          {
+            "label": "Hoodies & Sweats",
+            "href": "/shop?category=hoodies",
+            "filter": {
+              "category": "hoodies"
+            }
+          },
+          {
+            "label": "T-shirts & Tops",
+            "href": "/shop?category=tees",
+            "filter": {
+              "category": "tees"
+            }
+          },
+          {
+            "label": "Jackets",
+            "href": "/shop?category=jackets",
+            "filter": {
+              "category": "jackets"
+            }
+          },
+          {
+            "label": "Joggers & Bottoms",
+            "href": "/shop?category=pants",
+            "filter": {
+              "category": "pants"
+            }
+          },
+          {
+            "label": "Kids",
+            "href": "/shop?audience=kids",
+            "filter": {
+              "audience": "kids"
+            }
+          }
+        ]
+      },
+      {
+        "title": "Objects",
+        "links": [
+          {
+            "label": "Mugs & Bottles",
+            "href": "/shop?type=drinkware",
+            "filter": {
+              "type": "drinkware"
+            }
+          },
+          {
+            "label": "Bags & Totes",
+            "href": "/shop?type=bag",
+            "filter": {
+              "type": "bag"
+            }
+          },
+          {
+            "label": "Phone cases",
+            "href": "/shop?type=phone-case",
+            "filter": {
+              "type": "phone-case"
+            }
+          },
+          {
+            "label": "Wall art",
+            "href": "/shop?type=wall-art",
+            "filter": {
+              "type": "wall-art"
+            }
+          }
+        ]
+      },
+      {
+        "title": "Collections",
+        "links": [
+          {
+            "label": "Acid Wash",
+            "href": "/collections/acid-wash"
+          },
+          {
+            "label": "Everyday Tees",
+            "href": "/collections/everyday-tees"
+          },
+          {
+            "label": "All collections",
+            "href": "/collections"
+          },
+          {
+            "label": "New in",
+            "href": "/shop?new=1",
+            "filter": {
+              "isNew": true
+            }
+          }
+        ]
+      }
+    ],
+    "features": [
+      {
+        "productSlug": "everyday-pullover-hoodie"
+      },
+      {
+        "productSlug": "acid-wash-hoodie"
+      }
+    ],
+    "shopAll": {
+      "label": "Shop everything",
+      "href": "/shop"
+    }
+  },
+  {
+    "label": "About",
+    "href": "/about",
+    "columns": [
+      {
+        "title": "The brand",
+        "links": [
+          {
+            "label": "Our story",
+            "href": "/about"
+          },
+          {
+            "label": "How we make things",
+            "href": "/about/sustainability"
+          },
+          {
+            "label": "Journal",
+            "href": "/journal"
+          }
+        ]
+      },
+      {
+        "title": "Help",
+        "links": [
+          {
+            "label": "FAQs",
+            "href": "/faq"
+          },
+          {
+            "label": "Size guide",
+            "href": "/size-guide"
+          },
+          {
+            "label": "Shipping",
+            "href": "/policies/shipping"
+          },
+          {
+            "label": "Returns & exchanges",
+            "href": "/policies/returns"
+          },
+          {
+            "label": "Contact",
+            "href": "/contact"
+          }
+        ]
+      }
+    ],
+    "features": [
+      {
+        "image": "/images/about/hero-couple.avif",
+        "imagePosition": "50% 15%",
+        "title": "Our story",
+        "caption": "Why we print to order",
+        "href": "/about"
+      }
+    ]
+  }
+]

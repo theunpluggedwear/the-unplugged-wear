@@ -18,14 +18,18 @@ test('generated Drizzle types match the live schema', { skip: !hasDb && 'no DATA
       generated.set(cfg.name, cfg.columns.map((c) => c.name).sort());
     }
   }
+  const configured = await getPool().query<{ schemas: string[] | string }>('SELECT current_schemas(false) AS schemas');
+  const raw = configured.rows[0]?.schemas;
+  const listed = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.slice(1, -1).split(',').filter(Boolean) : [];
+  const schemas = listed.length ? listed : ['public'];
   const { rows } = await getPool().query<{ table_name: string; columns: string[] }>(`
     SELECT c.table_name, array_agg(c.column_name::text ORDER BY c.column_name) AS columns
       FROM information_schema.columns c
       JOIN pg_class k ON k.relname = c.table_name
       JOIN pg_namespace n ON n.oid = k.relnamespace AND n.nspname = c.table_schema
-     WHERE c.table_schema = ANY(current_schemas(false)) AND k.relkind = 'r' AND NOT k.relispartition
+     WHERE c.table_schema = ANY($1::text[]) AND k.relkind = 'r' AND NOT k.relispartition
        AND c.table_name <> 'schema_migrations'
-     GROUP BY c.table_name`);
+     GROUP BY c.table_name`, [schemas]);
   const live = new Map(rows.map((r) => [r.table_name, [...r.columns].sort()]));
   assert.deepEqual([...generated.keys()].sort(), [...live.keys()].sort(), 'table list differs — run pnpm db:types');
   for (const [name, cols] of live) assert.deepEqual(generated.get(name), cols, `${name} columns differ — run pnpm db:types`);
