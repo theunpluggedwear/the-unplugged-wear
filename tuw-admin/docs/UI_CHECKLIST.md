@@ -393,3 +393,11 @@ Two distinct code bugs were found and fixed; no speculative changes were made to
 - [x] Browser QA at 127.0.0.1:3007: PDP monogram panel, angle switch to Back, text `UK`, generated `/api/previews?...` URL, demo notice and Approve button all present; admin categories slots render without console errors.
 - [x] Load test (`pnpm load:check`, autocannon 9): 12 scenarios × 10 s at 1/10/50/100 connections across storefront home, preview API and admin products — 0 errors, 0 5xx. Preview API p99 190 ms at 100 connections; storefront home p99 4.7 s at 100 connections (cached prerender + Neon round trips).
 - [ ] **Blocked:** `pnpm qikink:sandbox` cannot create a sandbox order — `POST /api/token` returns `401 Invalid client_id or client_secret` from `https://sandbox.qikink.com`. The configured keys are present but stale or environment-mismatched. No order was sent, and no live API call was attempted. Owner must issue fresh sandbox keys before the end-to-end sandbox order can be verified.
+
+### Local preview photos and print zones (2026-11-28)
+
+- [x] Four supplied mock photos shipped inside `tuw-website/src/storefront/plugins/personalization/assets/` (Front/default, Back, Left Pocket) with a `.gitignore` negation; print zones map the existing artwork area so the monogram replaces it instead of printing below the garment.
+- [x] Browser check: Front preview shows `UK` on the shirt chest with the caption in a separate strip; Left Pocket preview shows `UK` inside the pocket area; both verified from screenshots at `127.0.0.1:3007`.
+- [x] Local-disk `ObjectStore` adapter in `packages/heart/src/integrations/storage/index.ts` sits behind the existing interface; uploads go to git-ignored `.data/personalization/`, served via `/api/personalization/assets/[key]`; swapping to R2 or a worker later requires one factory change.
+- [x] "Use your photo" upload control replaces the base mock image for the demo preview and states clearly that nothing is sent to a print provider. Real API orders still refuse local `/` URLs when keys are present.
+- [x] Gates: typecheck, full `pnpm test` (heart 259, admin 154, website 89), both builds, comment ratchet 3129/3186.
