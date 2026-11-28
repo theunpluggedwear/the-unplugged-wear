@@ -11,13 +11,14 @@ export interface PreviewCarouselProps {
   onAngleChange: (angle: PreviewAngle) => void;
   monogram: string;
   previewUrl?: string;
+  customImageUrl?: string;
   disabled?: boolean;
 }
 
 export default function PreviewCarousel({
-  family, angle, onAngleChange, monogram, previewUrl = '', disabled = false,
+  family, angle, onAngleChange, monogram, previewUrl = '', customImageUrl = '', disabled = false,
 }: PreviewCarouselProps) {
-  const angleImage = previewImageFor(family, angle);
+  const angleImage = customImageUrl || previewImageFor(family, angle);
   return (
     <div className="mt-4">
       <p className="text-xs font-medium uppercase tracking-wide text-store-text-secondary">Preview angle</p>
@@ -43,7 +44,11 @@ export default function PreviewCarousel({
           </span>
         ) : null}
       </div>
-      <p className="mt-2 text-xs text-store-text-secondary">Demo preview generated locally — no design file is uploaded.</p>
+      <p className="mt-2 text-xs text-store-text-secondary">
+        {customImageUrl
+          ? 'Your photo is stored locally for this demo preview only — nothing is sent to a print provider.'
+          : 'Demo preview generated locally — no design file is uploaded.'}
+      </p>
     </div>
   );
 }

@@ -39,14 +39,18 @@ test('product category picks a local image family', () => {
   for (const family of PREVIEW_FAMILIES) {
     for (const angle of PREVIEW_ANGLES) {
       const image = previewImageFor(family, angle);
-      assert.ok(image.startsWith('/images/pdp-figma/'));
-      assert.ok(readFileSync(join(here, '..', 'public', image.replace(/^\//, ''))).length > 0);
+      const isAsset = image.startsWith('/api/personalization/assets/');
+      assert.ok(isAsset || image.startsWith('/images/pdp-figma/'));
+      const file = isAsset
+        ? join(here, '..', 'src', 'storefront', 'plugins', 'personalization', 'assets', image.split('/').pop())
+        : join(here, '..', 'public', image.replace(/^\//, ''));
+      assert.ok(readFileSync(file).length > 0);
     }
   }
 });
 
 test('preview route composes onto a whitelisted angle image and rejects invalid paths', async () => {
-  assert.deepEqual([...PREVIEW_ANGLES], ['Front', 'Back', 'Side', 'Wrap']);
+  assert.deepEqual([...PREVIEW_ANGLES], ['Front', 'Back', 'Left Pocket', 'Side', 'Wrap']);
   assert.equal(isPreviewAngle('Diagonal'), false);
   const base = {
     p: 'p1', m: 'UK', mx: '3', a: 'Front', f: 'apparel',
@@ -57,7 +61,7 @@ test('preview route composes onto a whitelisted angle image and rejects invalid 
   assert.match(ok.headers.get('content-type') ?? '', /image\/svg\+xml/);
   assert.equal(ok.headers.get('cache-control'), 'no-store');
   const svg = await ok.text();
-  assert.match(svg, /data:image\/png;base64,/);
+  assert.match(svg, /data:image\/(png|jpeg);base64,/);
   assert.match(svg, />UK</);
   assert.match(svg, /Front · demo preview/);
 

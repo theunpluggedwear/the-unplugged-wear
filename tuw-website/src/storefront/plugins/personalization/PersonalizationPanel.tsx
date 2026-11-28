@@ -11,6 +11,7 @@ import {
   previewUrlFor, previewFamilyFor, previewImageFor, validateMonogram, type PreviewAngle,
 } from './preview-url';
 import PreviewCarousel from './PreviewCarousel';
+import { uploadPersonalizationImageAction } from '@/server/personalization-actions';
 
 export interface PersonalizationPanelProps {
   productId: string;
@@ -34,6 +35,10 @@ export default function PersonalizationPanel({
   const { addPersonalisedToCart, approvePreviewFor, setIsCartDrawerOpen } = useStore();
   const [state, dispatch] = useReducer(personalizationReducer, initialPersonalizationState);
   const [angle, setAngle] = useState<PreviewAngle>('Front');
+  const [uploadedUrl, setUploadedUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
   const addingRef = useRef(false);
   const active = state.kind !== 'inactive';
   useEffect(() => { onActiveChange?.(active); }, [active, onActiveChange]);
@@ -44,6 +49,30 @@ export default function PersonalizationPanel({
   const family = previewFamilyFor({ category, productType, name: productName, image });
   const angleImage = previewImageFor(family, angle);
 
+  const onFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setUploading(true);
+    setUploadError('');
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
+        reader.onerror = () => reject(new Error('Could not read that image.'));
+        reader.readAsDataURL(file);
+      });
+      const result = await uploadPersonalizationImageAction({ contentType: file.type, base64 });
+      if (!result.ok) { setUploadError(result.error.message); return; }
+      setUploadedUrl(result.data.url);
+      if (state.kind !== 'editing') dispatch({ type: 'RESET' });
+    } catch (cause) {
+      setUploadError(cause instanceof Error ? cause.message : 'Could not upload that image.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (state.kind !== 'editing' && state.kind !== 'error') return;
@@ -51,7 +80,7 @@ export default function PersonalizationPanel({
     if (error) { dispatch({ type: 'INVALID', message: error }); return; }
     const previewUrl = previewUrlFor({
       productId, color, size, monogram: state.monogram,
-      placement: state.placement || areas[0], maxChars, angle, family, imageUrl: angleImage,
+      placement: state.placement || areas[0], maxChars, angle, family, imageUrl: uploadedUrl || angleImage,
     });
     dispatch({ type: 'RENDER', previewUrl });
   };
@@ -118,12 +147,29 @@ export default function PersonalizationPanel({
             {areas.map((area) => <option key={area} value={area}>{area}</option>)}
           </select>
 
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              aria-label="Replace preview photo"
+              className="hidden"
+              onChange={onFile}
+            />
+            <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
+              {uploading ? 'Uploading…' : uploadedUrl ? 'Replace your photo' : 'Use your photo'}
+            </Button>
+            {uploadedUrl ? <span className="text-xs text-store-text-secondary">Your photo replaces the sample.</span> : null}
+          </div>
+          {uploadError ? <p role="alert" className="text-sm text-store-error">{uploadError}</p> : null}
+
           <PreviewCarousel
             family={family}
             angle={angle}
             onAngleChange={setAngle}
             monogram={monogram}
             previewUrl={previewUrl}
+            customImageUrl={uploadedUrl}
             disabled={state.kind !== 'editing' && state.kind !== 'error'}
           />
 
