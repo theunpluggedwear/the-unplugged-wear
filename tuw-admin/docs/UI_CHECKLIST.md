@@ -401,3 +401,9 @@ Two distinct code bugs were found and fixed; no speculative changes were made to
 - [x] Local-disk `ObjectStore` adapter in `packages/heart/src/integrations/storage/index.ts` sits behind the existing interface; uploads go to git-ignored `.data/personalization/`, served via `/api/personalization/assets/[key]`; swapping to R2 or a worker later requires one factory change.
 - [x] "Use your photo" upload control replaces the base mock image for the demo preview and states clearly that nothing is sent to a print provider. Real API orders still refuse local `/` URLs when keys are present.
 - [x] Gates: typecheck, full `pnpm test` (heart 259, admin 154, website 89), both builds, comment ratchet 3129/3186.
+
+### CI drift guard fix (2026-11-28)
+
+- [x] Root cause of all failing `CI / verify` runs: `drift.test.ts` hard-coded `table_schema = 'public'`, but CI migrates into a per-run temporary schema via `search_path`, so the live table query returned `[]`. Changed the predicate to `c.table_schema = ANY(current_schemas(false))`. Verified with a throwaway non-public schema (the exact CI condition) and the normal public schema — both pass, 98/98 tables.
+- [x] Reconciled real drift the guard exposed once it could see the CI schema: generated types were missing `state_transitions` (037), `gift_card_transactions.order_item_id` (038), and the four `payment_intents.provider_invoice_*` columns. Added forward migration 042 for the payment-intent columns; no down migrations or resets.
+- [x] Local dev DB brought forward with migrations 037–042; local `pnpm test` 259/259 green. CI run #11 (push) and #12 (pull request #6) both report **Success**; only the Node 20 runner deprecation warning remains.
