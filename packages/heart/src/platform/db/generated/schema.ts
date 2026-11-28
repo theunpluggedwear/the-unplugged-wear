@@ -1680,6 +1680,7 @@ export const giftCardTransactions = pgTable("gift_card_transactions", {
 	amount: numeric({ precision: 12, scale:  2 }).notNull(),
 	balanceAfter: numeric("balance_after", { precision: 12, scale:  2 }).notNull(),
 	orderId: uuid("order_id"),
+	orderItemId: uuid("order_item_id"),
 	actor: varchar({ length: 50 }).notNull(),
 	note: varchar({ length: 255 }),
 	idempotencyKey: varchar("idempotency_key", { length: 255 }),
@@ -2694,4 +2695,12 @@ export const stylingCoPurchase = pgTable("styling_co_purchase", {
 	check("styling_co_purchase_check", sql`product_a_id <> product_b_id`),
 	check("styling_co_purchase_orders_count_check", sql`orders_count >= 0`),
 	check("styling_co_purchase_score_check", sql`(score >= 0) AND (score <= 100)`),
+]);
+
+export const stateTransitions = pgTable("state_transitions", {
+	machine: varchar({ length: 30 }).notNull(),
+	fromState: varchar("from_state", { length: 30 }).notNull(),
+	toState: varchar("to_state", { length: 30 }).notNull(),
+}, (table) => [
+	primaryKey({ columns: [table.machine, table.fromState, table.toState], name: "state_transitions_pkey" }),
 ]);

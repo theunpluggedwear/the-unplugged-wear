@@ -23,7 +23,7 @@ test('generated Drizzle types match the live schema', { skip: !hasDb && 'no DATA
       FROM information_schema.columns c
       JOIN pg_class k ON k.relname = c.table_name
       JOIN pg_namespace n ON n.oid = k.relnamespace AND n.nspname = c.table_schema
-     WHERE c.table_schema = 'public' AND k.relkind = 'r' AND NOT k.relispartition
+     WHERE c.table_schema = ANY(current_schemas(false)) AND k.relkind = 'r' AND NOT k.relispartition
        AND c.table_name <> 'schema_migrations'
      GROUP BY c.table_name`);
   const live = new Map(rows.map((r) => [r.table_name, [...r.columns].sort()]));
