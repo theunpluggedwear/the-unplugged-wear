@@ -25,7 +25,7 @@ export default function SustainabilityPage() {
           <span className="text-xs uppercase font-medium tracking-widest text-store-gold block">
             Environmental Accountability
           </span>
-          <h1 className="text-[clamp(1.75rem,4vw+0.5rem,3rem)] font-heading font-medium tracking-tight text-store-charcoal">
+          <h1 className="tuw-h1 text-store-charcoal">
             Sustainability Through Intentional Production
           </h1>
           <p className="text-sm sm:text-base text-store-text-secondary leading-relaxed">

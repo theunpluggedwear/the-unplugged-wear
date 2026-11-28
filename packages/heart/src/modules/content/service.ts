@@ -3,6 +3,10 @@ import { sql } from 'drizzle-orm';
 import { getDb, withTransaction } from '../../platform/db/index.ts';
 import { uuidv7 } from '../../platform/ids/index.ts';
 import { AppError } from '../../platform/errors/index.ts';
+import { menu } from './schemas.ts';
+import { mergeLegacyMenu, sanitizeMenu, type MenuItem } from './menu-merge.ts';
+
+export type { MenuItem } from './menu-merge.ts';
 
 export const CMS_TAGS = {
   home: 'cms:home',
@@ -63,6 +67,20 @@ export async function saveNavigation(navbar: Record<string, unknown>, actorId: s
       ON CONFLICT (scope) DO UPDATE SET navbar = EXCLUDED.navbar, updated_at = now()`);
   });
   return navbar;
+}
+
+export async function getStorefrontMenu(): Promise<MenuItem[]> {
+  const navbar = await getNavigation();
+  if (navbar.menu !== undefined) {
+    return sanitizeMenu(navbar.menu);
+  }
+  return mergeLegacyMenu(navbar.mobile, navbar.desktop);
+}
+
+export async function saveMenu(items: MenuItem[], actorId: string): Promise<MenuItem[]> {
+  const navbar = await getNavigation();
+  await saveNavigation({ ...navbar, menu: items }, actorId);
+  return items;
 }
 
 export async function getTheme(): Promise<{ theme: Record<string, unknown>; version: number }> {

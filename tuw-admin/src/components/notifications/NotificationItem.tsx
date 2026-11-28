@@ -29,12 +29,12 @@ const TONE_STYLES: Record<NotificationTone, { wash: string; ink: string; dot: st
 interface NotificationItemProps {
   item: Notification;
   read: boolean;
-  onOpen: (item: Notification) => void;
+  onOpen: (item: Notification) => void | Promise<void>;
 }
 
-// One notification row (N2): unread renders in its tone wash with a dot
-// (crash/error = red highlight div); read renders white with a border.
-// Dumb and data-fed — tones come from tokens, content from props.
+
+
+
 export function NotificationItem({ item, read, onOpen }: NotificationItemProps) {
   const tone = TONE_STYLES[item.tone];
   return (

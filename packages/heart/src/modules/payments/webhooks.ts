@@ -5,6 +5,8 @@ import { uuidv7 } from '../../platform/ids/index.ts';
 import { getWebhookProvider, type NormalizedWebhookEvent } from '../../integrations/webhooks/index.ts';
 import { confirmPaidOrder, markPaymentFailed as markPaymentFailedOrder } from '../orders/payment-confirmation.ts';
 import { markInvoiceExpired, markInvoicePaid } from '../invoices/service.ts';
+import { settleIfFullyRefunded } from './service.ts';
+import { canTransitionRefund } from '../../platform/status/index.ts';
 
 export interface IngestResult {
   status: 200 | 401 | 400 | 500;
@@ -100,21 +102,13 @@ async function reconcileRefund(tx: Parameters<Parameters<typeof withTransaction>
     SELECT id, status, order_id FROM refunds WHERE payout_reference=${event.providerRefundId} FOR UPDATE`);
   const refund = rows[0];
   if (!refund) return; // auto-refund or unknown: audit row is enough
-  if (event.kind === 'refund_processed' && refund.status === 'processing') {
+  if (event.kind === 'refund_processed') {
+    const from = refund.status === 'rejected' ? 'processing' : refund.status;
+    if (!canTransitionRefund(from, 'completed')) return;
     await tx.execute(sql`UPDATE refunds SET status='completed', updated_at=now() WHERE id=${refund.id}::uuid`);
     await settleIfFullyRefunded(tx, refund.order_id);
   } else if (event.kind === 'refund_failed') {
+    if (!canTransitionRefund(refund.status, 'rejected')) return;
     await tx.execute(sql`UPDATE refunds SET status='rejected', updated_at=now() WHERE id=${refund.id}::uuid`);
-  }
-}
-
-async function settleIfFullyRefunded(tx: Parameters<Parameters<typeof withTransaction>[0]>[0], orderId: string): Promise<void> {
-  const { rows: [totals] } = await tx.execute<{ captured: string | null; refunded: string | null }>(sql`
-    SELECT (SELECT sum(amount) FROM payments WHERE order_id=${orderId}::uuid AND status IN ('captured','refunded')) AS captured,
-           (SELECT sum(amount) FROM refunds WHERE order_id=${orderId}::uuid AND status='completed') AS refunded`);
-  const captured = Math.round(Number(totals?.captured ?? 0) * 100);
-  const refunded = Math.round(Number(totals?.refunded ?? 0) * 100);
-  if (captured > 0 && refunded >= captured) {
-    await tx.execute(sql`UPDATE payments SET status='refunded', updated_at=now() WHERE order_id=${orderId}::uuid AND status='captured'`);
   }
 }

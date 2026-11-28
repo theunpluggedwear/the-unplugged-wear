@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { ContentCard, StatCard, Badge, Button, Input, Select, Modal, Drawer, Pagination, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, PageHeader } from '@/components/ui';
 import { UserPlus, Search, Trash2, AlertTriangle, RotateCcw } from 'lucide-react';
 import { inviteStaffAction, revokeInviteAction, setStaffRoleAction, setStaffStatusAction } from '@/server/auth-actions';
@@ -61,19 +60,25 @@ export default function TeamView({ members, invites, currentUserId }: TeamViewPr
   const run = async (work: () => Promise<{ ok: boolean; error?: { message: string } }>, success?: string) => {
     if (pending) return false;
     setPending(true);
-    const result = await work();
-    setPending(false);
-    if (!result.ok) {
-      setMessage({ tone: 'error', text: result.error?.message ?? 'Something went wrong.' });
+    try {
+      const result = await work();
+      if (!result.ok) {
+        setMessage({ tone: 'error', text: result.error?.message ?? 'Something went wrong.' });
+        return false;
+      }
+      if (success) setMessage({ tone: 'info', text: success });
+      router.refresh();
+      return true;
+    } catch {
+      setMessage({ tone: 'error', text: 'The request failed. Please try again.' });
       return false;
+    } finally {
+      setPending(false);
     }
-    if (success) setMessage({ tone: 'info', text: success });
-    router.refresh();
-    return true;
   };
 
   const openInvite = () => {
-    setInviteKey(crypto.randomUUID()); // one key per invite attempt: retries never send twice
+    setInviteKey(crypto.randomUUID()); 
     setMessage(null);
     setIsInviteOpen(true);
   };
@@ -82,20 +87,25 @@ export default function TeamView({ members, invites, currentUserId }: TeamViewPr
     e.preventDefault();
     if (pending) return;
     setPending(true);
-    const result = await inviteStaffAction({ email: formEmail, role: formRole, idempotencyKey: inviteKey });
-    setPending(false);
-    if (!result.ok) {
-      setMessage({ tone: 'error', text: result.error.message }); // drawer stays open, values kept
-      return;
+    try {
+      const result = await inviteStaffAction({ email: formEmail, role: formRole, idempotencyKey: inviteKey });
+      if (!result.ok) {
+        setMessage({ tone: 'error', text: result.error.message }); 
+        return;
+      }
+      setIsInviteOpen(false);
+      setFormEmail('');
+      setMessage({
+        tone: 'info',
+        text: result.data.devLink ? `Invitation created for ${formEmail}. Email delivery is not connected yet (development):` : `Invitation sent to ${formEmail}.`,
+        link: result.data.devLink ?? undefined,
+      });
+      router.refresh();
+    } catch {
+      setMessage({ tone: 'error', text: 'The invitation could not be sent. Please try again.' });
+    } finally {
+      setPending(false);
     }
-    setIsInviteOpen(false);
-    setFormEmail('');
-    setMessage({
-      tone: 'info',
-      text: result.data.devLink ? `Invitation created for ${formEmail}. Email delivery is not connected yet (development):` : `Invitation sent to ${formEmail}.`,
-      link: result.data.devLink ?? undefined,
-    });
-    router.refresh();
   };
 
   const handleConfirmRemoval = async () => {
@@ -107,7 +117,7 @@ export default function TeamView({ members, invites, currentUserId }: TeamViewPr
   };
 
   return (
-    <DashboardShell pageTitle="Team & Permissions">
+    <>
       <PageHeader
         title="Team & Permissions"
         actions={
@@ -265,6 +275,6 @@ export default function TeamView({ members, invites, currentUserId }: TeamViewPr
           </div>
         )}
       </Modal>
-    </DashboardShell>
+    </>
   );
 }

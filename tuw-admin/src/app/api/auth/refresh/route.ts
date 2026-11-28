@@ -1,4 +1,7 @@
+import { limitAuthAttempt, clientIp } from '@/server/auth-rate-limit';
 import { session } from '@/server/session';
 
-// proxy.ts sends expired staff sessions here; rotates the refresh token and returns.
-export const GET = (request: Request) => session.refreshRoute(request);
+export async function GET(request: Request) {
+  await limitAuthAttempt('refresh', clientIp(request));
+  return session.refreshRoute(request);
+}

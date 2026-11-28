@@ -1,9 +1,10 @@
+export const instant = false;
 import { listRefunds } from '@tuw/heart/modules/orders';
 import { session } from '@/server/session';
 import RefundsView from './_components/RefundsView';
 
-// Server Component: refunds come from the database. ?order=<number> opens the
-// refund form for that order (linked from Orders and Payments).
+
+
 export default async function RefundsPage({ searchParams }: { searchParams: Promise<{ order?: string }> }) {
   const claims = await session.requireStaff('order.view', '/refunds');
   const [initial, params] = await Promise.all([listRefunds({ perPage: 10 }), searchParams]);

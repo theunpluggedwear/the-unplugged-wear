@@ -9,6 +9,7 @@ import { toRupees, toPaise } from '../../platform/money/index.ts';
 import { containsQaDemoSku, onlyQaDemoSku, qaDemoShippingRates, qaDemoTotals } from '../../platform/qa-demo-product/index.ts';
 import { getPaymentGateway } from '../../integrations/payments/index.ts';
 import { signReceipt } from '../auth/tokens.ts';
+import { markAbandonedConverted } from '../analytics/index.ts';
 import { checkoutBlockers, lockForCheckout, markConverted, type CartOwner } from '../cart/index.ts';
 import { orderLineFacts } from '../catalog/index.ts';
 import { getMyHousehold, profileIdForUser } from '../customers/index.ts';
@@ -201,6 +202,7 @@ export async function placeOrder(buyer: Buyer, input: PlaceOrderInput): Promise<
       await tx.execute(sql`INSERT INTO order_status_history (id, order_id, from_status, to_status, note, actor)
         VALUES (${uuidv7()}, ${orderId}, NULL, 'pending', ${payment.captured ? 'Paid; free to cancel until the window ends' : 'Cash on delivery; free to cancel until the window ends'}, ${userId ?? 'guest'})`);
       await markConverted(tx, bag.id);
+      await markAbandonedConverted(tx, bag.id);
       return { orderId, orderNumber, receipt: signReceipt(orderId), totals, cancellableUntil, replayed: false };
     });
     if (!placed.replayed) void emit('order.placed', { orderId: placed.orderId, orderNumber: placed.orderNumber, paid: input.method !== 'cod' });
@@ -328,6 +330,7 @@ export async function createPendingOrder(buyer: Buyer, input: PlaceOrderInput): 
     await tx.execute(sql`INSERT INTO order_status_history (id, order_id, from_status, to_status, note, actor)
       VALUES (${uuidv7()}, ${orderId}::uuid, NULL, 'pending', 'Order placed; awaiting payment', ${userId ?? 'guest'})`);
     await markConverted(tx, bag.id);
+    await markAbandonedConverted(tx, bag.id);
     return {
       order: { orderId, orderNumber, receipt: signReceipt(orderId), amountPaise: payablePaise, totals: { ...totals, giftCardPaise }, cancellableUntil, replayed: false },
       intentId: intents[0]!.id,

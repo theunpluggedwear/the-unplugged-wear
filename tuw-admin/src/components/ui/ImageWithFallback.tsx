@@ -1,32 +1,54 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { ImageOff } from 'lucide-react';
 
 export interface ImageWithFallbackProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallbackSrc?: string;
   fallbackText?: string;
-  /** Failure-face treatment. neutral keeps the current grey wash; info uses a light-blue wash with error text. */
   fallbackTone?: 'neutral' | 'info';
+  optimized?: boolean;
+  fill?: boolean;
+  sizes?: string;
 }
 
-/**
- * ImageWithFallback component that gracefully displays a fallback when images fail to load.
- */
 export default function ImageWithFallback({
   src,
   alt = '',
   fallbackSrc,
   fallbackText = 'Image not available',
   fallbackTone = 'neutral',
+  optimized = false,
+  fill = false,
+  sizes,
+  width,
+  height,
   className = '',
   style = {},
+  onLoad,
+  onError,
   ...props
 }: ImageWithFallbackProps) {
-  const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(true);
+  type ImageStatus = 'loading' | 'loaded' | 'errored';
+  const [status, setStatus] = useState<ImageStatus>('loading');
+  const error = status === 'errored';
+  const loading = status === 'loading';
 
-  if (error || !src) {
+  const handleLoad = (event: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    setStatus('loaded');
+    onLoad?.(event);
+  };
+
+  const handleError = (event: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    setStatus('errored');
+    onError?.(event);
+  };
+
+  const optimizedWidth = typeof width === 'number' ? width : width ? Number(width) : undefined;
+  const optimizedHeight = typeof height === 'number' ? height : height ? Number(height) : undefined;
+
+  if (error || !src || typeof src !== 'string') {
     if (fallbackSrc) {
       return (
         <img
@@ -71,21 +93,63 @@ export default function ImageWithFallback({
     );
   }
 
+  const imageStyle: React.CSSProperties = {
+    transition: 'opacity 0.2s ease',
+    opacity: loading ? 0.7 : 1,
+    ...style,
+  };
+
+  if (optimized && fill) {
+    return (
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes={sizes}
+        unoptimized
+        onLoad={handleLoad}
+        onError={handleError}
+        className={className}
+        style={imageStyle}
+        {...props}
+      />
+    );
+  }
+
+  if (
+    optimized &&
+    optimizedWidth !== undefined &&
+    optimizedHeight !== undefined &&
+    Number.isFinite(optimizedWidth) &&
+    Number.isFinite(optimizedHeight)
+  ) {
+    return (
+      <Image
+        src={src}
+        alt={alt}
+        width={optimizedWidth}
+        height={optimizedHeight}
+        sizes={sizes}
+        unoptimized
+        onLoad={handleLoad}
+        onError={handleError}
+        className={className}
+        style={imageStyle}
+        {...props}
+      />
+    );
+  }
+
   return (
     <img
       src={src}
       alt={alt}
-      onLoad={() => setLoading(false)}
-      onError={() => {
-        setError(true);
-        setLoading(false);
-      }}
+      width={width}
+      height={height}
+      onLoad={handleLoad}
+      onError={handleError}
       className={className}
-      style={{
-        transition: 'opacity 0.2s ease',
-        opacity: loading ? 0.7 : 1,
-        ...style,
-      }}
+      style={imageStyle}
       {...props}
     />
   );

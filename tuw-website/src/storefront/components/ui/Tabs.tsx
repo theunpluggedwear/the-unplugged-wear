@@ -63,8 +63,8 @@ export default function Tabs({
             onClick={() => onChange(tab.id)}
             className={`pb-3 px-2 text-sm font-semibold tracking-wide transition-all relative whitespace-nowrap cursor-pointer ${
               isActive
-                ? 'text-[#1A1A1A] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#1A1A1A]'
-                : 'text-[#8A8A8A] hover:text-[#1A1A1A]'
+                ? 'text-store-charcoal after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#1A1A1A]'
+                : 'text-[#8A8A8A] hover:text-store-charcoal'
             }`}
           >
             {tab.label}

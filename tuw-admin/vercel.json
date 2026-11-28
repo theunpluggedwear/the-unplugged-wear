@@ -1,42 +1,17 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
+  "git": {
+    "deploymentEnabled": false
+  },
   "crons": [
     {
-      "path": "/api/cron/platform.sweepIdempotencyKeys",
-      "schedule": "30 21 * * *"
+      "path": "/api/cron/platform.runDaily",
+      "schedule": "30 1 * * *"
     },
     {
-      "path": "/api/cron/inventory.notifyRestocked",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron/platform.sweepRateLimits",
-      "schedule": "45 21 * * *"
-    },
-    {
-      "path": "/api/cron/fulfillment.submitDue",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron/fulfillment.syncOpen",
-      "schedule": "30 3 * * *"
-    },
-    {
-      "path": "/api/cron/giftCards.expireDue",
-      "schedule": "0 4 * * *"
-    },
-    {
-      "path": "/api/cron/webhooks.retryFailed",
-      "schedule": "30 4 * * *"
-    },
-    {
-      "path": "/api/cron/payments.reconcileRazorpay",
-      "schedule": "45 4 * * *"
-    },
-    {
-      "path": "/api/cron/invoices.reconcileDocuments",
-      "schedule": "50 4 * * *"
+      "path": "/api/cron/platform.runUrgent",
+      "schedule": "30 13 * * *"
     }
   ]
 }

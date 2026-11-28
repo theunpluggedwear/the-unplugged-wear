@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Download, Search, Eye, RotateCcw, Clock, Printer, ChevronDown } from 'lucide-react';
 import type { AdminOrderDetail, AdminOrderRow, AdminOrderStats, AdminOrderTab, OrderStatus } from '@tuw/heart/modules/orders';
-import DashboardShell from '@/components/layout/DashboardShell';
 import {
   StatCard,
   ContentCard,
@@ -27,12 +26,12 @@ import {
   DrawerSection,
   ItemsRow,
 } from '@/components/ui';
-import { useAdminState } from '@/mocks/state';
+import { useToast } from '@/components/providers/ToastProvider';
 import { getOrderAction, listOrdersAction, setOrderStatusAction, setOrdersStatusAction } from '@/server/order-actions';
 
-// Orders from the database (TL-BE-08). The server filters, searches and
-// pages; every status change is checked there and written with its history.
-// Refunds live on /refunds (TL-BE-09); partner sync arrives with TL-BE-11.
+
+
+
 
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'sub-' + String(p) });
 
@@ -42,7 +41,7 @@ const rupees = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN', { 
 const when = (iso: string) => new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' });
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
-  pending: 'Pending', confirmed: 'Confirmed', processing: 'Printing', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled', failed: 'Partner sync failed', refunded: 'Refunded',
+  pending: 'Pending', confirmed: 'Confirmed', processing: 'Processing', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled', failed: 'Partner sync failed', refunded: 'Refunded',
 };
 const STATUS_BADGE: Record<OrderStatus, 'success' | 'warning' | 'info' | 'danger' | 'neutral'> = {
   pending: 'warning', confirmed: 'neutral', processing: 'warning', shipped: 'success', delivered: 'info', cancelled: 'neutral', failed: 'danger', refunded: 'neutral',
@@ -50,8 +49,8 @@ const STATUS_BADGE: Record<OrderStatus, 'success' | 'warning' | 'info' | 'danger
 const PAYMENT_LABEL: Record<AdminOrderRow['paymentStatus'], string> = { paid: 'Paid', pending: 'Pending', failed: 'Failed', refunded: 'Refunded' };
 const PAYMENT_BADGE: Record<AdminOrderRow['paymentStatus'], 'success' | 'warning' | 'danger' | 'neutral'> = { paid: 'success', pending: 'warning', failed: 'danger', refunded: 'neutral' };
 const METHOD_LABEL: Record<string, string> = { card: 'Card', upi: 'UPI', cod: 'Cash on delivery', netbanking: 'Netbanking', wallet: 'Wallet' };
-/** What the button says for each move a staff member can make. */
-const MOVE_LABEL: Partial<Record<OrderStatus, string>> = { confirmed: 'Confirm order', processing: 'Mark printing', shipped: 'Mark shipped', delivered: 'Mark delivered', cancelled: 'Cancel order' };
+
+const MOVE_LABEL: Partial<Record<OrderStatus, string>> = { confirmed: 'Confirm order', processing: 'Mark processing', shipped: 'Mark shipped', delivered: 'Mark delivered', cancelled: 'Cancel order' };
 
 export default function OrdersView({ initial, perms, openOrder: openFromLink, query, tab, page: pageParam, perPage }: {
   initial: ListResult;
@@ -62,7 +61,7 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
   page: number;
   perPage: number;
 }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -70,9 +69,9 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
   const canUpdate = perms.includes('order.update_status');
   const canRefund = perms.includes('order.refund');
 
-  // The server page owns the list. q/tab/page live in the URL so the first
-  // render arrives with the HTML and filter changes re-render the Server
-  // Component — no duplicate client-side list fetch after hydration.
+  
+  
+  
   const list = initial;
   const [searchTerm, setSearchTerm] = useState(query);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -83,8 +82,8 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [moving, setMoving] = useState(false);
 
-  // A debounced search may fire after a tab/page change; always patch the
-  // latest URL rather than the one captured when the timer was scheduled.
+  
+  
   const paramsRef = useRef(params);
   useEffect(() => { paramsRef.current = params; }, [params]);
   const setParams = (patch: Record<string, string | number | null>) => {
@@ -96,12 +95,12 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
     startTransition(() => router.replace(`${pathname}?${next.toString()}`, { scroll: false }));
   };
 
-  // Debounced server-side search — the URL drives the Server Component read.
+  
   useEffect(() => {
     if (searchTerm === query) return;
     const t = setTimeout(() => setParams({ q: searchTerm || null, page: null }), 300);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [searchTerm, query]);
 
   const rows = list.rows;
@@ -137,10 +136,10 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
     }
   };
 
-  // Spotlight deep link (?open=<order number>): open that order on arrival.
+  
   useEffect(() => {
     if (openFromLink) void openOrder(openFromLink);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [openFromLink]);
 
   const move = async (to: OrderStatus) => {
@@ -173,7 +172,7 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
     link.href = url;
     link.download = `tuw_orders_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
-    // Let the download start before releasing the blob URL.
+    
     setTimeout(() => URL.revokeObjectURL(url), 0);
   };
   const handleExportCSV = async () => {
@@ -224,7 +223,7 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
   const cancelNeedsRefund = detail ? detail.paymentStatus === 'paid' : false;
 
   return (
-    <DashboardShell pageTitle="Orders" activeNav="orders">
+    <>
       <PageHeader
         title="Order Management"
         actions={
@@ -236,7 +235,7 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
 
       <div className={styles.statGrid}>
         <StatCard label="Total Revenue" value={rupees(stats.revenuePaise)} trend={`${stats.total} orders recorded`} trendType="up" hoverable />
-        <StatCard label="Active Queue" value={String(stats.activeQueue)} subtitle="Pending, confirmed & printing" trendType="neutral" hoverable />
+        <StatCard label="Active Queue" value={String(stats.activeQueue)} subtitle="Pending, confirmed & processing" trendType="neutral" hoverable />
         <StatCard label="Delivered" value={String(stats.delivered)} trend="Successful completions" trendType="up" hoverable />
         <StatCard label="Operational Issues" value={String(stats.issues)} subtitle={stats.issues > 0 ? 'Partner sync failed — retry' : 'No sync errors'} trendType={stats.issues > 0 ? 'down' : 'up'} hoverable />
       </div>
@@ -298,7 +297,7 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
                         }
                         items={[
                           { value: 'confirmed', label: 'Confirmed' },
-                          { value: 'processing', label: 'Printing' },
+                          { value: 'processing', label: 'Processing' },
                           { value: 'shipped', label: 'Shipped' },
                           { value: 'delivered', label: 'Delivered' },
                           { value: 'cancelled', label: 'Cancel orders', danger: true },
@@ -525,6 +524,6 @@ export default function OrdersView({ initial, perms, openOrder: openFromLink, qu
           </div>
         )}
       </Drawer>
-    </DashboardShell>
+    </>
   );
 }

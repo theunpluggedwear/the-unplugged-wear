@@ -6,25 +6,7 @@ import Link from 'next/link';
 import { useStore } from '@storefront/mocks/store';
 
 export default function AnnouncementBar() {
-  const { freeShippingRemaining, freeShippingThreshold, cartSubtotal, simulatedError, retryConnection } = useStore();
-
-  if (simulatedError) {
-    return (
-      <div className="bg-[#C91818] text-white py-2 px-4 text-xs font-semibold flex items-center justify-between gap-4 select-none">
-        <div className="flex items-center gap-2">
-          <span>⚠️</span>
-          <span>{simulatedError}</span>
-        </div>
-        <button
-          type="button"
-          onClick={retryConnection}
-          className="bg-white text-[#C91818] px-2.5 py-0.5 rounded text-xs font-bold hover:bg-[#F3F4F6] transition-colors"
-        >
-          Retry Connection
-        </button>
-      </div>
-    );
-  }
+  const { freeShippingRemaining, freeShippingThreshold, cartSubtotal } = useStore();
 
   return (
     <div className="bg-[#1A1A1A] text-white py-2 px-4 text-center text-xs tracking-wider uppercase font-medium flex items-center justify-center gap-2 select-none">

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useReducer, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Header from '@storefront/components/layout/Header';
@@ -10,43 +10,45 @@ import Input from '@storefront/components/ui/Input';
 import Button from '@storefront/components/ui/Button';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { resetPasswordAction } from '@/server/auth-actions';
+import { asyncReducer, initialAsync } from '@storefront/lib/async-state';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [request, dispatchRequest] = useReducer(asyncReducer<string | null>, initialAsync);
+  const success = request.kind === 'success';
+  const error = request.kind === 'error' ? request.message : null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 8) {
-      setError('Password must contain at least 8 characters.');
+      dispatchRequest({ type: 'FAIL', message: 'Password must contain at least 8 characters.' });
       return;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      dispatchRequest({ type: 'FAIL', message: 'Passwords do not match.' });
       return;
     }
 
     const token = new URLSearchParams(window.location.search).get('token');
     if (!token) {
-      setError('Open the reset link from your email to set a new password.');
+      dispatchRequest({ type: 'FAIL', message: 'Open the reset link from your email to set a new password.' });
       return;
     }
-    setError(null);
-    setIsSubmitting(true);
-    void resetPasswordAction({ token, password }).then((result) => {
-      setIsSubmitting(false);
+    dispatchRequest({ type: 'START' });
+    try {
+      const result = await resetPasswordAction({ token, password });
       if (!result.ok) {
-        setError(result.error.message); // typed passwords are kept
+        dispatchRequest({ type: 'FAIL', message: result.error.message });
         return;
       }
       setPassword('');
       setConfirmPassword('');
-      setSuccess(true);
-    });
+      dispatchRequest({ type: 'SUCCESS', data: null });
+    } catch (cause) {
+      dispatchRequest({ type: 'FAIL', message: cause instanceof Error ? cause.message : 'Could not reset the password.' });
+    }
   };
 
   return (
@@ -63,7 +65,7 @@ export default function ResetPasswordPage() {
 
         <div className="bg-white rounded-3xl border border-[#E2DDCF] p-8 shadow-xs my-6 space-y-6">
           <div className="space-y-1 text-center">
-            <h1 className="text-2xl font-extrabold tracking-tight text-[#1A1A1A]">
+            <h1 className="tuw-h1 text-store-charcoal">
               Set New Password
             </h1>
             <p className="text-xs text-[#666]">
@@ -83,7 +85,7 @@ export default function ResetPasswordPage() {
               <div className="w-14 h-14 rounded-full bg-[#F0FDF4] text-[#15803D] flex items-center justify-center mx-auto">
                 <CheckCircle2 size={28} />
               </div>
-              <h3 className="text-base font-bold text-[#1A1A1A]">Password Successfully Updated</h3>
+              <h3 className="text-base font-bold text-store-charcoal">Password Successfully Updated</h3>
               <p className="text-xs text-[#666] leading-relaxed">
                 Your credentials have been updated in this simulated session.
               </p>
@@ -116,7 +118,7 @@ export default function ResetPasswordPage() {
                 size="lg"
                 fullWidth
                 type="submit"
-                isLoading={isSubmitting}
+                isLoading={request.kind === 'loading'}
               >
                 Update Password
               </Button>

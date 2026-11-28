@@ -1,4 +1,4 @@
-import DashboardShell from '@/components/layout/DashboardShell';
+export const instant = false;
 import { adminListFaqs } from '@tuw/heart/modules/content';
 import { adminListCategories, getStorefrontCatalog } from '@tuw/heart/modules/catalog';
 import { session } from '@/server/session';
@@ -12,12 +12,12 @@ export default async function ContentFaqsPage() {
     adminListCategories(),
   ]);
   return (
-    <DashboardShell>
+    <>
       <FaqsManager
         initial={faqs}
         products={catalog.products.map((p) => ({ id: p.productId, title: p.title }))}
         categories={categories.map((c) => ({ id: c.id, name: c.name }))}
       />
-    </DashboardShell>
+    </>
   );
 }

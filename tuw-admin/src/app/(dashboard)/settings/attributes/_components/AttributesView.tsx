@@ -2,10 +2,9 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { ContentCard, SurfaceCard, Badge, Button, Input, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, PageHeader, Switch, UpliftSurface, DropdownMenu } from '@/components/ui';
 import { Plus, Trash2, ArrowLeft, ChevronDown, X } from 'lucide-react';
-import { useAdminState } from '@/mocks/state';
+import { useToast } from '@/components/providers/ToastProvider';
 import type { LibraryAttribute } from '@tuw/heart/modules/catalog';
 import { addAttributeValueAction, createAttributeAction, deleteAttributeAction, removeAttributeValueAction, updateAttributeAction } from '@/server/catalog-actions';
 import {
@@ -71,15 +70,15 @@ function ValuePreview({ attr, value }: { attr: LibraryAttribute; value: string }
   );
 }
 
-// Attribute library (settings manager): global starter definitions that
-// product drafts copy values from. Copy semantics — drafts diverge after
-// copy. Delete guards read persisted products; disable always allowed.
+
+
+
 export default function AttributesView({ initialLibrary, canManage }: { initialLibrary: LibraryAttribute[]; canManage: boolean }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const [libraryAttributes, setLibrary] = useState(initialLibrary);
   const [busy, setBusy] = useState(false);
 
-  /** Runs one guarded action; the server's answer replaces the list. */
+  
   const apply = async (work: () => Promise<{ ok: true; data: LibraryAttribute[] } | { ok: false; error: { message: string } }>): Promise<boolean> => {
     if (!canManage) {
       showToast({ type: 'warning', title: 'Action Restricted', description: 'You do not have permission to change the attribute library.' });
@@ -87,14 +86,20 @@ export default function AttributesView({ initialLibrary, canManage }: { initialL
     }
     if (busy) return false;
     setBusy(true);
-    const result = await work();
-    setBusy(false);
-    if (!result.ok) {
-      showToast({ type: 'warning', title: 'Not Saved', description: result.error.message });
+    try {
+      const result = await work();
+      if (!result.ok) {
+        showToast({ type: 'warning', title: 'Not Saved', description: result.error.message });
+        return false;
+      }
+      setLibrary(result.data);
+      return true;
+    } catch {
+      showToast({ type: 'warning', title: 'Not Saved', description: 'The request failed. Please try again.' });
       return false;
+    } finally {
+      setBusy(false);
     }
-    setLibrary(result.data);
-    return true;
   };
   const createLibraryAttribute = (name: string, displayType: AttributeDisplayType) => name.trim() ? apply(() => createAttributeAction({ name, displayType })) : Promise.resolve(false);
   const deleteLibraryAttribute = (id: string) => void apply(() => deleteAttributeAction({ id }));
@@ -114,7 +119,7 @@ export default function AttributesView({ initialLibrary, canManage }: { initialL
   );
 
   return (
-    <DashboardShell pageTitle="Attribute Library" activeNav="settings">
+    <>
       <PageHeader
         title="Attribute Library"
         eyebrow={
@@ -375,6 +380,6 @@ export default function AttributesView({ initialLibrary, canManage }: { initialL
           )}
         </div>
       </ContentCard>
-    </DashboardShell>
+    </>
   );
 }

@@ -3,18 +3,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PackagePlus, Search, Truck } from 'lucide-react';
 import type { AdminShipmentRow, ShipmentStatusValue } from '@tuw/heart/modules/fulfillment';
-import DashboardShell from '@/components/layout/DashboardShell';
 import {
   Badge, Button, ContentCard, Drawer, DrawerSection, EmptyState, FilterPills, Input, ItemsRow,
   Modal, PageHeader, Pagination, PanelLayout, Select, Table, TableBody, TableCell, TableHead,
   TableHeader, TableRow, Textarea,
 } from '@/components/ui';
-import { useAdminState } from '@/mocks/state';
+import { useToast } from '@/components/providers/ToastProvider';
 import { addTrackingAction, getShipmentAction, listShipmentsAction, setShipmentStatusAction } from '@/server/fulfillment-actions';
+import { MONO_ID_STYLE } from '@/lib/format';
 
-// Parcels (TL-BE-11). Provider-synced parcels appear here on their own; a
-// Custom Atelier or off-platform courier is added by hand. Either way the
-// timeline the customer sees is the one written from this screen or the poll.
+
+
+
 
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' }) : '—');
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }) : '—');
@@ -35,7 +35,7 @@ type Detail = {
 };
 
 export default function ShipmentsView({ initial, perms }: { initial: ListResult; perms: string[] }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const canManage = perms.includes('shipment.manage');
 
   const [list, setList] = useState<ListResult>(initial);
@@ -77,7 +77,7 @@ export default function ShipmentsView({ initial, perms }: { initial: ListResult;
     if (first.current) { first.current = false; return; }
     const t = setTimeout(() => void load(), searchTerm ? 300 : 0);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [status, searchTerm, page, perPage]);
   useEffect(() => { setPage(1); }, [status, searchTerm]);
 
@@ -159,7 +159,7 @@ export default function ShipmentsView({ initial, perms }: { initial: ListResult;
   const totalPages = Math.max(1, Math.ceil(list.total / perPage));
 
   return (
-    <DashboardShell pageTitle="Shipments" activeNav="shipments">
+    <>
       <PageHeader
         title="Shipments"
         actions={
@@ -227,7 +227,7 @@ export default function ShipmentsView({ initial, perms }: { initial: ListResult;
                     <TableCell style={{ fontWeight: 600 }}>{row.orderNumber}</TableCell>
                     <TableCell>{row.customerName}</TableCell>
                     <TableCell>{row.carrier ?? '—'}</TableCell>
-                    <TableCell style={{ fontFamily: 'var(--tuw-font-mono, monospace)', fontSize: 12 }}>{row.trackingNumber ?? '—'}</TableCell>
+                    <TableCell style={{ ...MONO_ID_STYLE, fontSize: 12 }}>{row.trackingNumber ?? '—'}</TableCell>
                     <TableCell><Badge variant={STATUS_BADGE[row.status]}>{STATUS_LABEL[row.status]}</Badge></TableCell>
                     <TableCell>{day(row.shippedAt)}</TableCell>
                     <TableCell>{day(row.estimatedDeliveryAt)}</TableCell>
@@ -336,6 +336,6 @@ export default function ShipmentsView({ initial, perms }: { initial: ListResult;
           </p>
         </div>
       </Modal>
-    </DashboardShell>
+    </>
   );
 }

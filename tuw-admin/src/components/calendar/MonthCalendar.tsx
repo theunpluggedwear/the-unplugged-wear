@@ -28,10 +28,10 @@ function dayState(day: Date, range: DateRange): 'start' | 'end' | 'single' | 'in
   return 'idle';
 }
 
-/**
- * One month grid (Monday-first). In-range band is continuous (gapless grid);
- * endpoints render as solid pills capping the band.
- */
+
+
+
+
 export default function MonthCalendar({ year, month, range, showPrev, showNext, onPrev, onNext, onPick }: MonthCalendarProps) {
   const cells = monthCells(year, month);
   return (

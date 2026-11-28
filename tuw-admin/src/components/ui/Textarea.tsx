@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 
 export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
@@ -15,8 +17,11 @@ export default function Textarea({
   className = '',
   style = {},
   disabled,
+  onFocus,
+  onBlur,
   ...props
 }: TextareaProps) {
+  const [focused, setFocused] = useState(false);
   return (
     <div
       style={{
@@ -41,6 +46,8 @@ export default function Textarea({
 
       <textarea
         disabled={disabled}
+        onFocus={(event) => { setFocused(true); onFocus?.(event); }}
+        onBlur={(event) => { setFocused(false); onBlur?.(event); }}
         style={{
           width: '100%',
           padding: '10px 14px',
@@ -48,8 +55,15 @@ export default function Textarea({
           border: `1px solid ${
             error
               ? 'var(--tuw-text-error, #C91818)'
+              : focused
+              ? 'var(--tuw-action-primary, #7539FF)'
               : 'var(--tuw-border-control, #D1D5DB)'
           }`,
+          boxShadow: error
+            ? '0 0 0 3px rgba(201, 24, 24, 0.12)'
+            : focused
+            ? '0 0 0 3px rgba(117, 57, 255, 0.12)'
+            : 'none',
           backgroundColor: disabled ? 'var(--tuw-bg-canvas, #F7F8F9)' : 'var(--tuw-bg-surface, #FFFFFF)',
           color: 'var(--tuw-text-primary, #262626)',
           fontSize: '14px',

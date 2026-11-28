@@ -31,15 +31,20 @@ test('lists the seeded providers with adapter state; demo gateway is the active 
   assert.equal(mock.isActive, true);
   assert.equal(mock.hasAdapter, true);
   assert.equal(mock.liveReady, false);
-  assert.equal(list.find((p) => p.slug === 'razorpay')!.hasAdapter, false);
+  const razorpay = list.find((p) => p.slug === 'razorpay')!;
+  assert.equal(razorpay.hasAdapter, true);
+  assert.equal(razorpay.liveReady, false);
   assert.equal((await payments.getPaymentGateway()).slug, 'mock');
 });
 
 test('no adapter → cannot switch on; no live keys → cannot go live; unknown → NOT_FOUND', { skip }, async () => {
-  assert.equal(await code(r.updateProvider('razorpay', { isActive: true }, adminId)), 'RULE_VIOLATION');
+  assert.equal(await code(r.updateProvider('razorpay', { isActive: true }, adminId)), 'ok');
+  assert.equal(await code(r.updateProvider('razorpay', { environment: 'live' }, adminId)), 'RULE_VIOLATION');
+  assert.equal(await code(r.updateProvider('stripe', { isActive: true }, adminId)), 'RULE_VIOLATION');
   assert.equal(await code(r.updateProvider('mock', { environment: 'live' }, adminId)), 'RULE_VIOLATION');
   assert.equal(await code(r.updateProvider('qikink', { environment: 'live' }, adminId)), 'RULE_VIOLATION');
   assert.equal(await code(r.updateProvider('nope', { isActive: true }, adminId)), 'NOT_FOUND');
+  assert.equal(await code(r.updateProvider('mock', { isActive: true }, adminId)), 'ok');
   assert.deepEqual(await active('payment'), ['mock']);
 });
 

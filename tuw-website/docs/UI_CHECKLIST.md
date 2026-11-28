@@ -76,3 +76,38 @@
 - [x] The storefront no longer contains a Qikink client or a fulfilment API route: submission and status polling live in the admin app against the real provider (no cross-app imports).
 - [x] `npx tsc --noEmit` and `npx next build` pass (`DATABASE_URL` must be exported for the build).
 - [ ] Browser pass of the tracking page with a shipped parcel at 360/768/1024/1440. User verification pending — the demo database has no delivered parcel with scans yet.
+
+## Store navigation from the CMS (2026-11-27)
+
+- [x] `getNavigation()` now reads the shared `getStorefrontMenu()` from `@tuw/heart/modules/content` and maps it into the storefront `NavItem` shape, falling back to `NAV_ITEMS` when no CMS menu has been saved. The cached read is tagged with `NAV_TAG`, `PRODUCTS_TAG` and `CMS_TAGS.nav`, and `cms:nav` was added to the revalidate route's immediate set so an admin save refreshes it at once.
+- [x] `nav-from-cms.ts` whitelists `ShopFilter` keys and preserves the stored href, features and shop-all link; malformed filters are dropped rather than trusted. Three unit tests cover filter coercion, full mapping and empty collections.
+- [x] `StoreProvider` exposes `menuItems`; the desktop mega-menu and mobile drawer both consume it through `Header`, so one CMS document drives both.
+- [x] End-to-end browser QA: created a menu in admin (CMS Men → Clothing → Hoodies CMS), saved it, and confirmed the storefront at 8446 rendered "CMS Men" and "Hoodies CMS" in the desktop mega-menu after revalidation. No page overflow was introduced by the nav.
+- [x] Admin save copy now states the storefront shows the menu after the cache refresh instead of claiming it still uses the built-in menu.
+- [x] Gates: full typecheck, website build, new mapper tests 3/3, comment ratchet pass. The storefront test suite still has four pre-existing failures (two missing Qikink files, a broken catalog test path, a homepage pause-control assertion) unrelated to this change.
+
+## Contact form → support ticket (2026-11-27)
+
+- [x] `POST /api/contact` no longer uses the demo email outbox. It validates the payload, throttles by IP and email, requires an `Idempotency-Key`, calls heart `createTicket`, and replays stored responses for a retried key.
+- [x] Heart `createTicket` writes a `contact_form` support ticket plus its first customer message in one transaction and notifies staff with `customer.view`, deep-linking to `/support?ticket=<id>`.
+- [x] The contact page now POSTs to the real endpoint with a generated idempotency key, keeps all entered values when the request fails, shows a `role="alert"` error, and replaced demo success copy with an honest "saved to our support inbox" message. No automated reply or email is claimed.
+- [x] Three unit tests cover ticket input validation (valid, missing/malformed, overlong). Admin suite is 104/104.
+- [x] Local browser QA (no Tailnet): submitted the form at `http://127.0.0.1:3007/contact`; success block appeared, Postgres held the ticket with `source='contact_form'`, the order reference in the first message, and a staff notification; admin `/support?ticket=<id>` preselected the thread. Replaying the same idempotency key returned the same ticket without creating a duplicate.
+- [x] Gates: full typecheck, both production builds, 104/104 admin tests, comment ratchet pass. Static pages (`/about`, `/about/sustainability`, `/policies/*`) were deliberately left unchanged.
+
+### Required order picker on the contact form (2026-11-27)
+
+- [x] For **An order** and **Returns & exchanges**, an order reference is now required; other topics stay order-free. A pure helper `requiresOrderRef` plus two unit tests define which subjects need it.
+- [x] Signed-in shoppers get a dropdown populated by `myOrdersAction` showing their own orders (`number · date · status`); guests get a required manual order-number input. Signed-in shoppers with no orders also fall back to manual entry.
+- [x] The route rejects an empty/overlong order reference for order topics and verifies a signed-in shopper's number with `getOrderForViewer`; a tampered foreign number returns 400. Guest numbers remain free text as agreed.
+- [x] Local browser QA: guest empty order showed the inline error and saved nothing; guest with number succeeded; signed-in dropdown listed only `QA-ORDER-1`, empty selection was blocked, selection succeeded; a direct tampered request returned 400; Size & fit showed no order field. Postgres confirmed both tickets carried the correct order reference and ownership.
+- [x] Gates re-run: typecheck, website build, 104/104 admin tests, 2/2 new helper tests, comment ratchet pass. QA user, order, tickets and notifications removed.
+
+## Demo-state cleanup (2026-11-27)
+
+- [x] Removed the dead demo state from `storefront/mocks/store.tsx`: scenario simulation, `simulatedError`/`retryConnection`, localStorage `v5_orders`, `orders`, `createOrder`, `getOrderById`, `getOrderByNumber` and `resetStoreData`. `StoreProvider` is kept for the data still in use — catalog projection, CMS nav, size charts, DB bag/wishlist, free-shipping thresholds, promo state and toasts.
+- [x] `AnnouncementBar` no longer renders the unreachable simulated-error banner. `AccountShell` no longer shows "Reset demo data" or the misleading "Demo store" copy.
+- [x] `lib/invoice.ts` and QA-only demo routes are untouched; replacing the PDF with the GST invoice remains blocked on `TL-INT-GST-INVOICES`.
+- [x] End-to-end QA locally at 360/768/1024/1440 across `/`, `/cart`, `/checkout`, `/account`, `/account/orders`, `/size-guide`, `/about` and `/contact`: all loaded with correct titles, no reset control, no console errors. The 360px page width of 384px is a pre-existing footer button overflow, unchanged by this work.
+- [x] Stress test: 12 rapid cart-drawer toggles, five add-to-bag submissions (badge reached 5), five invalid promo attempts (inline error each time), and 12 rapid route navigations — no console errors, no broken state. Removing `tuw_website_v5_orders` from localStorage and reloading left it absent, confirming the provider no longer writes it.
+- [x] Gates: full typecheck, website build, 104/104 admin tests, comment ratchet 3150/3186. QA user and bag items removed.

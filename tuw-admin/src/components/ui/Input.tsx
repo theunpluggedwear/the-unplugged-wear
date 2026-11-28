@@ -5,9 +5,9 @@ import InfoTooltip from './InfoTooltip';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
-  /** Optional label-size override. DrawerCard field labels inherit 14px from the card body. */
+  
   labelSize?: number;
-  /** Supplementary label hint rendered as an info icon + tooltip. */
+  
   labelTooltip?: string;
   error?: string;
   helperText?: string;
@@ -42,9 +42,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
   ) => {
     const [isFocused, setIsFocused] = useState(false);
     const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
-    // VPRICE-4: numeric inputs auto-suppress the native step arrows — one
-    // central kill instead of per-call-site classes, so hover no longer
-    // overlays/offsets the digits. Keyboard ↑/↓ stepping is unaffected.
+    
+    
+    
     const inputClassName = type === 'number' ? `${className} tuw-no-spinner`.trim() : className;
 
     const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {

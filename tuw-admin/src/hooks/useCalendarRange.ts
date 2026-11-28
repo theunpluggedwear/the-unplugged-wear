@@ -46,7 +46,7 @@ export function formatShortRange(range: DateRange, fallback = 'Today'): string {
   return `${formatDMY(range.start)} - ${formatDMY(range.end)}`;
 }
 
-/** Month grid cells (Monday-first). null = blank slot. */
+
 export function monthCells(year: number, month: number): (Date | null)[] {
   const first = new Date(year, month, 1);
   const lead = (first.getDay() + 6) % 7;
@@ -64,14 +64,14 @@ export function sameDay(a: Date | null, b: Date | null): boolean {
   return !!a && !!b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-/**
- * Range-selection state machine. Presets commit instantly to draft; manual
- * picking is start -> end -> restart. Apply commits, Cancel reverts.
- */
+
+
+
+
 export function useCalendarRange(today: Date = new Date()) {
   const now = useMemo(() => startOfDay(today), [today.getTime()]);
-  // Independent panel months (right starts one ahead). Navigating a panel past
-  // its sibling pushes the sibling along so the two never meet or cross.
+  
+  
   const [left, setLeft] = useState(() => {
     const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     return { year: prev.getFullYear(), month: prev.getMonth() };

@@ -143,7 +143,7 @@ export default function NewReturnView({ initialOrderNumber }: { initialOrderNumb
           { label: 'New request' },
         ]} />
 
-        <h1 className="mt-8 font-heading text-[clamp(1.75rem,2.5vw+1rem,2.5rem)] font-medium tracking-tight">Exchange or replacement</h1>
+        <h1 className="tuw-h1 mt-8 text-store-charcoal">Exchange or replacement</h1>
         <p className="mt-2 text-sm text-store-text-secondary max-w-xl">
           Tell us what happened and what you would like instead. A photo helps; a person reads every request.
         </p>

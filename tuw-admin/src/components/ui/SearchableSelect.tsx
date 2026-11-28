@@ -15,11 +15,11 @@ import Checkbox from './Checkbox';
 export interface SearchableSelectOption {
   value: string;
   label: string;
-  /** Second line inside the option row (category, short hint). */
+  
   description?: string;
-  /** Right-aligned hint inside the option row (e.g. price). */
+  
   meta?: string;
-  /** Extra search terms that are not rendered. */
+  
   keywords?: string;
   disabled?: boolean;
 }
@@ -29,18 +29,18 @@ interface CommonProps {
   label?: string;
   helperText?: string;
   error?: string;
-  /** Marks the label and exposes aria-required on the combobox. */
+  
   required?: boolean;
   placeholder?: string;
-  /** Placeholder while the field itself is acting as the search box. */
+  
   searchPlaceholder?: string;
   emptyText?: string;
-  /** Typing in the field filters the list (the field is the search box). */
+  
   searchable?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
   ariaLabel?: string;
-  /** Scrollable option-list height. Default 280. */
+  
   maxListHeight?: number;
 }
 
@@ -142,8 +142,8 @@ function SearchableSelectCore({
     );
   }, [options, deferredQuery, queryDirty]);
 
-  // Keep the active row inside the filtered list and reset it when the query
-  // changes (fresh results start at the top).
+  
+  
   useEffect(() => {
     setActiveIndex(0);
   }, [queryDirty, deferredQuery]);
@@ -152,25 +152,25 @@ function SearchableSelectCore({
     setActiveIndex((index) => Math.min(Math.max(0, index), Math.max(0, filtered.length - 1)));
   }, [filtered.length]);
 
-  // A value change from the parent while the popover is open must also update
-  // the text in the field; otherwise the previous label stays on screen.
+  
+  
   const selectedKey = selected.join('\u0000');
   useEffect(() => {
     if (!open || !searchable || multiple) return;
     setQuery(selectedOptions[0]?.label ?? '');
     setQueryDirty(false);
-    // Re-seed only when the selected value actually changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
+    
   }, [selectedKey]);
 
-  // A narrower filter renders fewer rows; drop refs left over from the
-  // previous list so keyboard navigation cannot target a stale option.
+  
+  
   useEffect(() => {
     optionRefs.current.length = filtered.length;
   }, [filtered.length]);
 
-  // Close the fixed popover when the page moves under it — but never when the
-  // scroll happens inside the popover itself (the option list).
+  
+  
   useEffect(() => {
     if (!anim.visible) return;
     const handleScroll = (event: Event) => {
@@ -187,8 +187,8 @@ function SearchableSelectCore({
     };
   }, [anim.visible]);
 
-  // Focus the field on open. A seeded label is pre-selected so the first
-  // keystroke replaces it; typed opens keep the caret where it was.
+  
+  
   useEffect(() => {
     if (!anim.visible) return;
     const frame = requestAnimationFrame(() => {
@@ -201,7 +201,7 @@ function SearchableSelectCore({
     return () => cancelAnimationFrame(frame);
   }, [anim.visible]);
 
-  // Keep the keyboard-active option visible.
+  
   useEffect(() => {
     if (!anim.visible) return;
     optionRefs.current[activeIndex]?.scrollIntoView({ block: 'nearest' });
@@ -220,8 +220,8 @@ function SearchableSelectCore({
       vw: window.innerWidth,
       vh: window.innerHeight,
     });
-    // Single-select seeds the field with the current label (pre-selected so
-    // the first keystroke replaces it); multi starts empty after its chips.
+    
+    
     const seed = !multiple && searchable ? selectedOptions[0]?.label ?? '' : '';
     selectAllOnOpen.current = seed !== '';
     setQuery(seed);
@@ -255,8 +255,8 @@ function SearchableSelectCore({
     if (event.key === 'Escape') {
       if (open) {
         event.preventDefault();
-        // Close the listbox first; the surrounding Drawer also listens for
-        // Escape on window and must not close while a menu is open.
+        
+        
         event.stopPropagation();
         setOpen(false);
       }
@@ -267,7 +267,7 @@ function SearchableSelectCore({
       const printable =
         event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey;
       if (searchable && printable) {
-        // Typing on the closed field opens it with the keystroke as the query.
+        
         event.preventDefault();
         openPopover();
         selectAllOnOpen.current = false;

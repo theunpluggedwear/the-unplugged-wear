@@ -8,13 +8,13 @@ import { ArrowLeft, Compass } from 'lucide-react';
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF9F6] text-[#1A1A1A]">
+    <div className="min-h-screen flex flex-col bg-[#FAF9F6] text-store-charcoal">
       <AnnouncementBar />
       <Header />
 
       <main className="flex-1 flex items-center justify-center py-24 px-4 sm:px-6 lg:px-8 text-center">
         <div className="max-w-lg space-y-6">
-          <div className="w-16 h-16 mx-auto rounded-full bg-[#EAE6DF] flex items-center justify-center text-[#1A1A1A]">
+          <div className="w-16 h-16 mx-auto rounded-full bg-[#EAE6DF] flex items-center justify-center text-store-charcoal">
             <Compass size={28} />
           </div>
 
@@ -22,7 +22,7 @@ export default function NotFound() {
             <span className="text-xs uppercase tracking-widest text-[#707070] font-semibold">
               404 — Form Beyond Horizon
             </span>
-            <h1 className="text-[clamp(1.75rem,3vw+0.5rem,2.25rem)] font-semibold tracking-tight text-[#1A1A1A]">
+            <h1 className="tuw-h1 text-store-charcoal">
               Page Not Found
             </h1>
             <p className="text-sm text-[#5D6772] leading-relaxed pt-2">

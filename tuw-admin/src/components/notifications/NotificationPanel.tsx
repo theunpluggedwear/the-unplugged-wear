@@ -11,20 +11,35 @@ interface NotificationPanelProps {
   onNavigate: (href: string) => void;
 }
 
-// Notification center panel (N2): header count + mark-all-read, category
-// rail tabs, tone-washed item cards. Plug-and-play: drop it anywhere with
-// a repository; mock items today, database feed tomorrow.
+
+
+
 export function NotificationPanel({ repo, onNavigate }: NotificationPanelProps) {
   const [category, setCategory] = React.useState<NotificationCategory>(() => {
     const firstUnread = repo.all.find((n) => !repo.isRead(n.id));
     return firstUnread ? firstUnread.category : 'orders';
   });
+  const [error, setError] = React.useState<string | null>(null);
   const visible = repo.all.filter((n) => n.category === category);
   const unreadLabel = repo.unreadCount === 1 ? '1 new' : `${repo.unreadCount} new`;
 
-  const handleOpen = (item: Notification) => {
-    repo.markRead(item.id);
-    if (item.href) onNavigate(item.href);
+  const handleOpen = async (item: Notification) => {
+    setError(null);
+    try {
+      await repo.markRead(item.id);
+      if (item.href) onNavigate(item.href);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not mark this notification as read.');
+    }
+  };
+
+  const handleMarkAll = async () => {
+    setError(null);
+    try {
+      await repo.markAllRead();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not mark all notifications as read.');
+    }
   };
 
   return (
@@ -57,7 +72,7 @@ export function NotificationPanel({ repo, onNavigate }: NotificationPanelProps) 
         {repo.unreadCount > 0 && (
           <button
             type="button"
-            onClick={() => repo.markAllRead()}
+            onClick={() => void handleMarkAll()}
             style={{
               background: 'transparent',
               border: '1px solid var(--tuw-border-subtle, #E9E9E9)',
@@ -75,13 +90,19 @@ export function NotificationPanel({ repo, onNavigate }: NotificationPanelProps) 
         )}
       </div>
 
-      <FilterPills
-        variant="rail"
-        ariaLabel="Notification categories"
-        options={NOTIFICATION_CATEGORIES.filter((c) => c.value !== 'all')}
-        value={category}
-        onChange={(v) => setCategory(v as NotificationCategory)}
-      />
+      {error ? (
+        <p role="alert" style={{ fontSize: 13, color: 'var(--tuw-text-error, #C91818)' }}>{error}</p>
+      ) : null}
+
+      <div className="notificationFilters">
+        <FilterPills
+          variant="rail"
+          ariaLabel="Notification categories"
+          options={NOTIFICATION_CATEGORIES.filter((c) => c.value !== 'all')}
+          value={category}
+          onChange={(v) => setCategory(v as NotificationCategory)}
+        />
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '380px', overflowY: 'auto' }}>
         {visible.length === 0 ? (

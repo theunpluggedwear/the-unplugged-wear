@@ -71,6 +71,7 @@ export const SETTING_KEYS = {
   'store.support_email': def({ group: 'general', public: true, schema: email, fallback: 'care@theunpluggedwear.com' }),
   'store.currency': def({ group: 'general', public: true, readOnly: true, schema: z.literal('INR'), fallback: 'INR' as const }),
   'store.timezone': def({ group: 'general', public: true, schema: timezone, fallback: 'Asia/Kolkata' }),
+  'features.personalization': def({ group: 'general', public: true, schema: bool, fallback: false }),
   'brand.tagline': def({ group: 'brand', public: true, schema: z.string().trim().max(160, 'Keep the tagline under 160 characters'), fallback: '' }),
   // Admin accent only — the storefront never uses it on purchase buttons.
   'brand.color': def({ group: 'brand', public: false, schema: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, 'Use a 6-digit hex colour, e.g. #7539FF').transform((v) => v.toUpperCase()), fallback: '#7539FF' }),

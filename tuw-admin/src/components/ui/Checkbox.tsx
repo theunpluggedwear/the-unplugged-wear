@@ -6,15 +6,15 @@ import { Check, Minus } from 'lucide-react';
 export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string;
   description?: string;
-  /** Box-only render (no label/text wrapper), centered — table cells and inline attach points. */
+  
   bare?: boolean;
-  /** Tri-state dash for header select-all. Takes visual precedence over checked. */
+  
   indeterminate?: boolean;
-  /**
-   * 'multi' toggles freely. 'single' is radio-like: clicking the checked box
-   * will not toggle it off. Group exclusivity stays caller-owned
-   * (e.g. setSelectedId(id)); the table track uses 'multi'.
-   */
+  
+
+
+
+
   mode?: 'multi' | 'single';
 }
 
@@ -102,9 +102,9 @@ export default function Checkbox({
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          // Immune to baseline-synthesis shifts (icon mount moves the synthesized
-          // baseline under vertical-align:baseline parents like TableHead).
-          // Margin box is a fixed 18px in all states, so this is rendering-identical.
+          
+          
+          
           verticalAlign: 'middle',
           cursor: disabled ? 'not-allowed' : 'pointer',
           userSelect: 'none',

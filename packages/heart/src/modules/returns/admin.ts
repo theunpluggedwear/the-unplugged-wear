@@ -13,6 +13,7 @@ import { nextOrderNumber } from '../orders/index.ts';
 import { createRefund, type RefundMethod } from '../payments/index.ts';
 import { notifyStaff } from '../notifications/index.ts';
 import type { Disposition, ReturnStatus } from './schemas.ts';
+import { RETURN_TRANSITIONS } from '../../platform/status/index.ts';
 
 // Staff side of returns (DOC/backend/06, 13). Approving an exchange creates
 // the follow-up order and charges (or refunds) the price difference; approving
@@ -20,18 +21,7 @@ import type { Disposition, ReturnStatus } from './schemas.ts';
 // warehouse marks a line restocked.
 
 /** Who may move a request where. Refunds do not move the pipeline. */
-export const NEXT_RETURN_STATUS: Record<ReturnStatus, ReturnStatus[]> = {
-  requested: ['approved', 'rejected', 'cancelled'],
-  approved: ['pickup_scheduled', 'in_transit', 'completed', 'cancelled'],
-  pickup_scheduled: ['in_transit', 'cancelled'],
-  in_transit: ['received', 'cancelled'],
-  received: ['inspected', 'completed'],
-  inspected: ['completed', 'disputed'],
-  disputed: ['completed'],
-  completed: [],
-  rejected: [],
-  cancelled: [],
-};
+export const NEXT_RETURN_STATUS: Record<ReturnStatus, ReturnStatus[]> = RETURN_TRANSITIONS as Record<ReturnStatus, ReturnStatus[]>;
 
 const paise = (v: string | number | null) => (v === null ? 0 : Math.round(Number(v) * 100));
 const like = (q?: string) => (q?.trim() ? `%${q.trim().replace(/[\\%_]/g, (c) => `\\${c}`)}%` : null);
@@ -196,8 +186,12 @@ async function lockReturn(tx: Transaction, returnId: string): Promise<LockedRetu
   return r;
 }
 
+export function followUpDueImmediately(grandTotalPaise: number): boolean {
+  return grandTotalPaise === 0;
+}
+
 /** The follow-up order an approval creates: an exchange (pay the difference) or a free reprint. */
-async function createFollowUpOrder(tx: Transaction, ret: LockedReturn, actorId: string): Promise<{ orderId: string; orderNumber: string }> {
+export async function createFollowUpOrder(tx: Transaction, ret: LockedReturn, actorId: string): Promise<{ orderId: string; orderNumber: string }> {
   if (ret.replacement_order_id) return { orderId: ret.replacement_order_id, orderNumber: '' };
   if (!ret.ordered_by) throw new AppError('RULE_VIOLATION', 'A replacement order needs a customer account on the original order.');
   const { rows: lines } = await tx.execute<{ order_item_id: string; product_id: string; variant_id: string | null; product_name: string; sku: string; options: Record<string, string> | null; qty: number; unit_price: string; exchange_variant_id: string | null; variant_price: string | null; variant_sku: string | null }>(sql`
@@ -219,6 +213,7 @@ async function createFollowUpOrder(tx: Transaction, ret: LockedReturn, actorId: 
   });
   const subtotalPaise = items.reduce((n, i) => n + i.unit * i.qty, 0);
   const grandTotalPaise = Math.max(0, differencePaise);
+  const dueImmediately = followUpDueImmediately(grandTotalPaise);
   // The difference the customer pays is shown as a discount on the full value,
   // so subtotal − discount = grand_total always holds (reports stay honest).
   const discountPaise = subtotalPaise - grandTotalPaise;
@@ -230,8 +225,8 @@ async function createFollowUpOrder(tx: Transaction, ret: LockedReturn, actorId: 
       idempotency_key, cancellable_until)
     VALUES (${orderId}, ${ret.ordered_by}, ${ret.for_profile_id}, ${ret.for_household_id}, ${orderNumber}, ${ret.type}, 'pending',
       ${toRupees(subtotalPaise)}, 0, 0, ${toRupees(Math.max(0, discountPaise))}, 0, ${toRupees(grandTotalPaise)},
-      ${grandTotalPaise > 0 ? 'pending' : 'paid'}, ${ret.shipping_address}::jsonb, ${ret.billing_address}::jsonb,
-      ${`return:${ret.rma_number}`}, ${grandTotalPaise > 0 ? sql`NULL` : sql`now()`})`);
+      ${dueImmediately ? 'paid' : 'pending'}, ${ret.shipping_address}::jsonb, ${ret.billing_address}::jsonb,
+      ${`return:${ret.rma_number}`}, ${dueImmediately ? sql`now()` : sql`NULL`})`);
   for (const item of items) {
     await tx.execute(sql`INSERT INTO order_items (id, order_id, product_id, variant_id, product_name, sku, unit_price, qty, line_total, options, exchange_policy)
       VALUES (${item.id}, ${orderId}, ${item.productId}, ${item.variantId}, ${item.name}, ${item.sku}, ${toRupees(item.unit)}, ${item.qty}, ${toRupees(item.unit * item.qty)}, ${JSON.stringify(item.options)}::jsonb, 'none')`);

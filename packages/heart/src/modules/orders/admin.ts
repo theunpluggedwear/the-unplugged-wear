@@ -6,6 +6,7 @@ import { uuidv7 } from '../../platform/ids/index.ts';
 import { getPaymentGateway } from '../../integrations/payments/index.ts';
 import { afterCancel } from './checkout.ts';
 import type { OrderStatus } from './read.ts';
+import { ORDER_TRANSITIONS } from '../../platform/status/index.ts';
 
 // Staff side of orders (DOC/backend/06). Lists are filtered and paged in SQL,
 // so the screen stays fast however many orders there are. A status change is
@@ -15,16 +16,7 @@ import type { OrderStatus } from './read.ts';
 export type AdminOrderTab = 'all' | 'unfulfilled' | 'unpaid' | 'cancelled' | 'finished';
 
 /** Who may move an order where. Refunds and fulfilment sync drive the rest. */
-export const NEXT_STATUS: Record<OrderStatus, OrderStatus[]> = {
-  pending: ['confirmed', 'cancelled'],
-  confirmed: ['processing', 'cancelled'],
-  processing: ['shipped', 'cancelled'],
-  shipped: ['delivered'],
-  delivered: [],
-  cancelled: [],
-  failed: ['confirmed', 'cancelled'],
-  refunded: [],
-};
+export const NEXT_STATUS: Record<OrderStatus, OrderStatus[]> = ORDER_TRANSITIONS as Record<OrderStatus, OrderStatus[]>;
 
 export interface AdminOrderRow {
   orderNumber: string;
@@ -170,7 +162,8 @@ export async function adminSetOrderStatus(change: StatusChange, actorId: string,
       throw new AppError('FORBIDDEN', 'Cancelling a paid order refunds it, and you do not have permission to refund.');
     }
     const note = change.note?.trim().slice(0, 500) || null;
-    await tx.execute(sql`UPDATE orders SET status = ${change.to}, updated_at = now() WHERE id = ${order.id} AND status = ${order.status}`);
+    const moved = await tx.execute(sql`UPDATE orders SET status = ${change.to}, updated_at = now() WHERE id = ${order.id} AND status = ${order.status}`);
+    if (moved.rowCount !== 1) throw new AppError('CONFLICT', 'This order changed while you were deciding. Reload and try again.', [{ field: 'status', message: 'Concurrent status change.' }]);
     if (change.to === 'cancelled') {
       await afterCancel(tx, gateway!, { orderId: order.id, actorId, from: order.status, note: note ?? 'Cancelled by staff' });
     } else {

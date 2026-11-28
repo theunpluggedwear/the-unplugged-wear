@@ -7,8 +7,8 @@ import { PRODUCTS_TAG } from '@tuw/heart/modules/catalog';
 import { guards } from './session';
 import { refreshStorefront } from './storefront-cache';
 
-// Discount codes and product discount schedules (/discounts). Every write
-// needs discount.manage and is audited in the service.
+
+
 
 export const createDiscountAction = guards.action({ permission: 'discount.manage', input: s.discountCreate }, async ({ input, ctx }) => orders.adminCreateDiscount(input, ctx.user!.id));
 

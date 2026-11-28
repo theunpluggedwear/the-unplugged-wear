@@ -1,15 +1,19 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useReducer, useRef, useState } from 'react';
 import { useSiteSettings } from '@storefront/lib/site-settings';
 import Link from 'next/link';
 import Header from '@storefront/components/layout/Header';
 import Footer from '@storefront/components/layout/Footer';
 import Breadcrumb from '@storefront/components/ui/Breadcrumb';
 import Input from '@storefront/components/ui/Input';
+import Select from '@storefront/components/ui/Select';
 import Textarea from '@storefront/components/ui/Textarea';
+import { myOrdersAction } from '@/server/order-actions';
+import type { OrderView } from '@tuw/heart/modules/orders';
 import { useSession } from '@storefront/lib/session';
 import { site } from '@storefront/lib/site';
+import { asyncReducer, initialAsync } from '@storefront/lib/async-state';
 import { ArrowRight, Check, Clock, Info, Mail, MapPin } from 'lucide-react';
 
 
@@ -43,10 +47,15 @@ export default function ContactPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [orderRef, setOrderRef] = useState('');
+  const [orders, setOrders] = useState<OrderView[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [topic, setTopic] = useState<Topic>('order');
   const [message, setMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [request, dispatchRequest] = useReducer(asyncReducer<string | null>, initialAsync);
+  const idempotencyRef = useRef<string | null>(null);
+  if (!idempotencyRef.current) idempotencyRef.current = crypto.randomUUID();
+  const submitted = request.kind === 'success';
+  const submitError = request.kind === 'error' ? request.message : null;
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Signed-in shoppers don't retype their details (only fills empty fields).
@@ -56,23 +65,56 @@ export default function ContactPage() {
     setEmail((e) => e || session.email);
   }, [session]);
 
+  useEffect(() => {
+    if (!session) return;
+    let live = true;
+    setOrdersLoading(true);
+    void myOrdersAction({})
+      .then((result) => { if (live && result.ok) setOrders(result.data); })
+      .finally(() => { if (live) setOrdersLoading(false); });
+    return () => { live = false; };
+  }, [session]);
+
   const validate = () => {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = 'Please add your name';
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) errs.email = 'Please enter a valid email address';
+    if ((topic === 'order' || topic === 'returns') && !orderRef.trim()) {
+      errs.orderRef = 'Please choose or enter your order number';
+    }
     if (message.trim().length < 10) errs.message = 'Please tell us a little more (at least 10 characters)';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitted(true);
-    }, 600);
+    dispatchRequest({ type: 'START' });
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyRef.current!,
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          subject: TOPICS.find((entry) => entry.value === topic)?.label ?? 'General inquiry',
+          message,
+          orderRef,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        dispatchRequest({ type: 'FAIL', message: result.error ?? 'Could not save your message. Please try again.' });
+        return;
+      }
+      dispatchRequest({ type: 'SUCCESS', data: null });
+    } catch {
+      dispatchRequest({ type: 'FAIL', message: 'Could not save your message. Please try again.' });
+    }
   };
 
   return (
@@ -83,7 +125,7 @@ export default function ContactPage() {
         <Breadcrumb items={[{ label: 'Home', href: '/' }, { label: 'Contact' }]} />
 
         <header className="mt-8 mb-10 max-w-2xl">
-          <h1 className="font-heading text-[clamp(2rem,3vw+1rem,3rem)] font-medium tracking-tight text-store-charcoal">
+          <h1 className="tuw-h1 text-store-charcoal">
             Get in touch
           </h1>
           <p className="mt-3 text-base sm:text-lg text-store-text-secondary leading-relaxed">
@@ -120,13 +162,14 @@ export default function ContactPage() {
                 </span>
                 <h2 className="font-heading text-2xl font-medium text-store-charcoal">Thanks, {name.split(' ')[0]}</h2>
                 <p className="text-sm text-store-text-secondary max-w-md mx-auto leading-relaxed">
-                  We’d reply to <strong className="font-medium text-store-charcoal">{email}</strong> within one business day.
+                  Your message is in our support inbox. Our team can reply to <strong className="font-medium text-store-charcoal">{email}</strong> there.
                 </p>
-                <p className="text-xs text-store-text-secondary">Demo form — no message was actually sent.</p>
+                <p className="text-xs text-store-text-secondary">No automated reply or email is sent from this form.</p>
                 <button
                   type="button"
                   onClick={() => {
-                    setSubmitted(false);
+                    idempotencyRef.current = crypto.randomUUID();
+                    dispatchRequest({ type: 'RESET' });
                     setMessage('');
                     setOrderRef('');
                   }}
@@ -176,12 +219,38 @@ export default function ContactPage() {
                 </div>
 
                 {(topic === 'order' || topic === 'returns') && (
-                  <Input
-                    label="Order number (optional)"
-                    placeholder="e.g. TUW-9042"
-                    value={orderRef}
-                    onChange={(e) => setOrderRef(e.target.value.toUpperCase())}
-                  />
+                  <div className="space-y-1.5">
+                    {session && orders.length > 0 ? (
+                      <Select
+                        label="Your order"
+                        value={orderRef}
+                        onChange={setOrderRef}
+                        error={errors.orderRef}
+                        helperText="Choose the order your message is about."
+                        required
+                        options={[
+                          { value: '', label: 'Select an order' },
+                          ...orders.map((order) => ({
+                            value: order.orderNumber,
+                            label: `${order.orderNumber} · ${new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · ${order.status}`,
+                          })),
+                        ]}
+                      />
+                    ) : (
+                      <Input
+                        label="Order number"
+                        placeholder="e.g. TUW-9042"
+                        value={orderRef}
+                        onChange={(e) => setOrderRef(e.target.value.toUpperCase())}
+                        error={errors.orderRef}
+                        required
+                      />
+                    )}
+                    {ordersLoading ? <p className="text-xs text-store-text-secondary">Loading your orders…</p> : null}
+                    {session && !ordersLoading && orders.length === 0 ? (
+                      <p className="text-xs text-store-text-secondary">You have no orders yet — enter your order number above.</p>
+                    ) : null}
+                  </div>
                 )}
 
                 <Textarea
@@ -194,17 +263,21 @@ export default function ContactPage() {
                   required
                 />
 
+                {submitError ? (
+                  <p role="alert" className="text-sm text-[#EF4444] font-medium">{submitError}</p>
+                ) : null}
+
                 <p className="flex items-start gap-2 text-xs text-store-text-secondary">
                   <Info size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
-                  Demo form — nothing is sent yet. Live messages arrive once the store launches.
+                  Saved to our support inbox — no automated reply or email is sent.
                 </p>
 
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={request.kind === 'loading'}
                   className="w-full h-12 rounded-full bg-[#111111] text-white text-sm font-medium hover:bg-black transition-colors cursor-pointer disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold focus-visible:ring-offset-2"
                 >
-                  {isSubmitting ? 'Sending…' : 'Send message'}
+                  {request.kind === 'loading' ? 'Sending…' : 'Send message'}
                 </button>
               </form>
             )}

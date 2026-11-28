@@ -12,9 +12,9 @@ export interface UnsavedNoticeProps {
   message?: string;
 }
 
-/**
- * Floating bar alerting the user of unsaved changes in forms and settings
- */
+
+
+
 export default function UnsavedNotice({
   show,
   onSave,

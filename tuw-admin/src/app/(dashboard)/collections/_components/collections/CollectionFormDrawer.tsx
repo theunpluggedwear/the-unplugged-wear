@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Drawer, Input, SearchableMultiSelect, SearchableSelect, Textarea } from '@/components/ui';
 import type { SearchableSelectOption } from '@/components/ui';
-import type { CollectionItem, ProductItem } from '@/mocks/fixtures';
+import type { CollectionItem, ProductItem } from '@/lib/admin-dto';
 import {
   draftFromCollection,
   draftToPayload,
@@ -23,10 +23,10 @@ const visibilityOptions: SearchableSelectOption[] = [
 
 export interface CollectionFormDrawerProps {
   isOpen: boolean;
-  /** null = create mode; a collection = edit mode (prefilled). */
+  
   collection: CollectionItem | null;
   onClose: () => void;
-  /** Fired after a successful edit save with the collection id. */
+  
   onSaved?: (id: string) => void;
   collections: CollectionItem[];
   products: ProductItem[];
@@ -75,19 +75,24 @@ export default function CollectionFormDrawer({
     if (Object.keys(nextErrors).length > 0) return;
 
     const payload = draftToPayload(draft);
-    // A refused save keeps this drawer open with every input preserved —
-    // only a real success closes it.
+    
+    
     setSaving(true);
-    const saved = await onSave(collection?.id, payload);
-    setSaving(false);
-    if (!saved.ok) {
-      if (saved.field === 'slug' || saved.field === 'name' || saved.field === 'publishedAt') setErrors({ [saved.field]: saved.message });
-      else setFormError(saved.message);
-      return;
-    }
+    try {
+      const saved = await onSave(collection?.id, payload);
+      if (!saved.ok) {
+        if (saved.field === 'slug' || saved.field === 'name' || saved.field === 'publishedAt') setErrors({ [saved.field]: saved.message });
+        else setFormError(saved.message);
+        return;
+      }
 
-    if (collection) onSaved?.(collection.id);
-    onClose();
+      if (collection) onSaved?.(collection.id);
+      onClose();
+    } catch {
+      setFormError('The collection could not be saved. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

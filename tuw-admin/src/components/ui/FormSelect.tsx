@@ -1,27 +1,29 @@
 'use client';
 
-import React, { useId } from 'react';
+import React, { useId, useState } from 'react';
 import InfoTooltip from './InfoTooltip';
 
 export interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
-  /** Label above the control. Inside DrawerCard it inherits 14/600; legacy default 13/500. */
+  
   label?: string;
-  /** Supplementary label hint rendered as an info icon + tooltip. */
+  
   labelTooltip?: string;
-  /** Helper copy below the control (12/18/secondary). */
+  
   helperText?: React.ReactNode;
-  /** Control font size. Sites use 13 (default) or 14. */
+  
   fontSize?: number;
-  /** Horizontal padding. Sites use 10 (default) or 12. */
+  
   padX?: number;
+  
+  error?: string;
 }
 
-// 40px native-select treatment (DW0): the exact metrics raw <select>s use
-// across drawers and modals (height 40, radius 8, control border). Deliberately
-// distinct from ui/Select (42px) — each keeps its consumers pixel-identical.
-// Border resolves through the shared token, so fallback variance in old
-// call sites collapses to one value. Cards that pair selects with 44px Inputs
-// may override height through style so labels and helper copy stay aligned.
+
+
+
+
+
+
 export default function FormSelect({
   label,
   labelTooltip,
@@ -31,14 +33,19 @@ export default function FormSelect({
   style = {},
   id,
   required,
+  error,
   'aria-describedby': ariaDescribedBy,
+  onFocus,
+  onBlur,
   children,
   ...props
 }: FormSelectProps) {
   const generatedId = useId();
+  const [focused, setFocused] = useState(false);
   const selectId = id ?? generatedId;
   const helperId = helperText ? `${selectId}-help` : undefined;
-  const describedBy = [ariaDescribedBy, helperId].filter(Boolean).join(' ') || undefined;
+  const errorId = error ? `${selectId}-error` : undefined;
+  const describedBy = [ariaDescribedBy, helperId, errorId].filter(Boolean).join(' ') || undefined;
 
   return (
     <div>
@@ -87,12 +94,27 @@ export default function FormSelect({
       <select
         id={selectId}
         aria-describedby={describedBy}
+        aria-invalid={error ? true : undefined}
         required={required}
+        onFocus={(event) => { setFocused(true); onFocus?.(event); }}
+        onBlur={(event) => { setFocused(false); onBlur?.(event); }}
         style={{
           width: '100%',
           height: 40,
           borderRadius: 8,
-          border: '1px solid var(--tuw-border-control, #D1D5DB)',
+          border: `1px solid ${
+            error
+              ? 'var(--tuw-text-error, #C91818)'
+              : focused
+              ? 'var(--tuw-action-primary, #7539FF)'
+              : 'var(--tuw-border-control, #D1D5DB)'
+          }`,
+          boxShadow: error
+            ? '0 0 0 3px rgba(201, 24, 24, 0.12)'
+            : focused
+            ? '0 0 0 3px rgba(117, 57, 255, 0.12)'
+            : 'none',
+          transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
           padding: `0 ${padX}px`,
           fontSize,
           fontFamily: 'var(--font-main)',
@@ -104,7 +126,20 @@ export default function FormSelect({
       >
         {children}
       </select>
-      {helperText ? (
+      {error ? (
+        <p
+          id={errorId}
+          style={{
+            margin: '8px 0 0',
+            fontSize: 12,
+            lineHeight: '18px',
+            color: 'var(--tuw-text-error, #C91818)',
+            fontFamily: 'var(--font-main)',
+          }}
+        >
+          {error}
+        </p>
+      ) : helperText ? (
         <p
           id={helperId}
           style={{

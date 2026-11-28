@@ -24,8 +24,8 @@ export default function Modal({
   maxWidth = '560px',
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
-  // Shared, ref-counted body scroll lock: overlapping overlays keep scrolling
-  // locked until the last one closes, and the prior overflow is restored.
+  
+  
   useBodyScrollLock(isOpen);
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export default function Modal({
           animation: 'scaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
-        {/* Header */}
+        {}
         <div
           style={{
             padding: '20px 24px',
@@ -144,7 +144,7 @@ export default function Modal({
           </button>
         </div>
 
-        {/* Body */}
+        {}
         <div
           style={{
             padding: '24px',
@@ -157,7 +157,7 @@ export default function Modal({
           {children}
         </div>
 
-        {/* Footer */}
+        {}
         {footer && (
           <div
             style={{

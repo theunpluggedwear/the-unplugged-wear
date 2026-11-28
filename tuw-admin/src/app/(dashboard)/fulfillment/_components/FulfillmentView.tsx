@@ -10,13 +10,12 @@ import type {
   ClaimRow,
   FulfillmentStatusValue,
 } from '@tuw/heart/modules/fulfillment';
-import DashboardShell from '@/components/layout/DashboardShell';
 import {
   Badge, Button, ContentCard, Drawer, DrawerSection, EmptyState, FilterPills, Input, ItemsRow,
   PageHeader, Pagination, PanelLayout, Select, StatCard, Table, TableBody, TableCell, TableHead,
   TableHeader, TableRow, Textarea,
 } from '@/components/ui';
-import { useAdminState } from '@/mocks/state';
+import { useToast } from '@/components/providers/ToastProvider';
 import {
   cancelFulfillmentAction, createClaimAction, getFulfillmentAction, listFulfillmentAction,
   reshipAction, retryFulfillmentAction, setProviderStateAction, submitWaitingAction,
@@ -25,10 +24,10 @@ import {
 import WalletPanel from './WalletPanel';
 import CodPanel from './CodPanel';
 
-// Fulfilment board (TL-BE-11). The provider is only ever spoken to through the
-// server: submit, retry, sync, cancel, re-ship and claims all round-trip.
-// While Qikink has no API keys the adapter is the simulator, and the page says
-// so in the footer instead of pretending a parcel really moved.
+
+
+
+
 
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'sub-' + String(p) });
 
@@ -37,10 +36,10 @@ const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-IN'
 
 const STATUS_LABEL: Record<'waiting' | FulfillmentStatusValue, string> = {
   waiting: 'Waiting for the window',
-  pending: 'Queued',
+  pending: 'Pending',
   submitted: 'Accepted by partner',
   on_hold: 'On hold',
-  in_production: 'Printing',
+  in_production: 'In production',
   shipped: 'Shipped',
   delivery_exception: 'Delivery exception',
   delivered: 'Delivered',
@@ -67,7 +66,7 @@ const TABS: { value: BoardTab; label: string }[] = [
   { value: 'waiting', label: 'Waiting' },
   { value: 'queue', label: 'Partner queue' },
   { value: 'hold', label: 'On hold' },
-  { value: 'in_production', label: 'Printing' },
+  { value: 'in_production', label: 'In production' },
   { value: 'shipped', label: 'In transit' },
   { value: 'issues', label: 'Issues' },
 ];
@@ -78,7 +77,7 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
   autoSubmit: boolean;
   health: { configured: boolean; baseUrl: string; simulated: boolean };
 }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const canManage = perms.includes('shipment.manage');
 
   const [mode, setMode] = useState<'board' | 'wallet' | 'cod'>('board');
@@ -124,7 +123,7 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
     if (first.current) { first.current = false; return; }
     const t = setTimeout(() => void load(), searchTerm ? 300 : 0);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [tab, searchTerm, page, perPage]);
   useEffect(() => { setPage(1); }, [tab, searchTerm]);
 
@@ -139,8 +138,8 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
   const openRequest = useRef(0);
   const openingInFlight = useRef(false);
 
-  // The decision draft belongs to one claim. Switching claims starts clean so
-  // an earlier resolution or credit cannot leak into the next decision.
+  
+  
   const chooseDecisionClaim = (claimId: string | null) => {
     setDecisionClaim(claimId);
     if (claimId !== null) {
@@ -180,7 +179,7 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
 
   const closeDrawer = () => { setOpenRow(null); setDetail(null); };
 
-  // A rejected server call must not leave every action stuck on "Sending…".
+  
   const withBusy = async <T,>(run: () => Promise<T>, failureTitle: string): Promise<T | null> => {
     setBusy(true);
     try {
@@ -228,7 +227,7 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
         description: `${sent} sent · ${failed} refused. ${failed ? 'Open a refused order to read the partner message.' : ''}`.trim(),
       });
       await load();
-    }, 'Batch Submission Failed');
+    }, 'Batch sync failed');
   };
 
   const retry = async () => {
@@ -328,7 +327,7 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
     a.href = url;
     a.download = `fulfillment-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
-    // Give the browser a tick to start the download before releasing the URL.
+    
     setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
@@ -340,7 +339,7 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
   const reshippable = detail ? ['shipped', 'delivery_exception', 'delivered', 'rto_initiated', 'returned'].includes(detail.row.status) : false;
 
   return (
-    <DashboardShell pageTitle="Fulfillment" activeNav="fulfillment">
+    <>
       <PageHeader
         title="Fulfilment & Shipping"
         actions={
@@ -365,7 +364,7 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
         <>
           <div className={styles.statGrid}>
             <StatCard label="Waiting" value={String(stats.waiting)} subtitle="Window closed → sent by the job" trendType={stats.waiting ? 'down' : 'up'} hoverable />
-            <StatCard label="At The Partner" value={String(stats.queue + stats.inProduction)} subtitle={`${stats.hold} on hold · ${stats.inProduction} printing`} trendType="neutral" hoverable />
+            <StatCard label="At The Partner" value={String(stats.queue + stats.inProduction)} subtitle={`${stats.hold} on hold · ${stats.inProduction} in production`} trendType="neutral" hoverable />
             <StatCard label="In Transit" value={String(stats.shipped)} subtitle={`${stats.delivered30d} delivered in 30 days`} trendType="up" hoverable />
             <StatCard label="Needs A Human" value={String(stats.issues)} subtitle={stats.codPendingPaise ? `${inr(stats.codPendingPaise)} COD unremitted` : 'No provider errors'} trendType={stats.issues ? 'down' : 'up'} hoverable />
           </div>
@@ -560,7 +559,7 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
                       value={manualState}
                       onChange={(e) => setManualState(e.target.value as FulfillmentStatusValue)}
                       options={[
-                        { value: 'in_production', label: 'Printing' },
+                        { value: 'in_production', label: 'In production' },
                         { value: 'shipped', label: 'Shipped' },
                         { value: 'delivered', label: 'Delivered' },
                         { value: 'returned', label: 'Returned' },
@@ -696,6 +695,6 @@ export default function FulfillmentView({ initial, perms, autoSubmit, health }: 
           </div>
         ) : null}
       </Drawer>
-    </DashboardShell>
+    </>
   );
 }

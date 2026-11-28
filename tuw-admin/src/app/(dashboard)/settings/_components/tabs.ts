@@ -1,5 +1,5 @@
-// Settings tabs = real routes (/settings/<tab>), so each has its own URL,
-// loading state and guard. Store-setting tabs map 1:1 to settings groups.
+
+
 export const SETTINGS_TABS = [
   { id: 'general', label: 'General' },
   { id: 'brand', label: 'Brand' },

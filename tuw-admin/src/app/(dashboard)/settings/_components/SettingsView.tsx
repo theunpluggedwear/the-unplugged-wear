@@ -2,28 +2,25 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Save, Check, AlertCircle, RefreshCw, Library, ShieldCheck } from 'lucide-react';
-import DashboardShell from '@/components/layout/DashboardShell';
+import { Save, Check, AlertCircle, Library, ShieldCheck } from 'lucide-react';
 import { Button, Input, Textarea, Select, Switch, ContentCard, Badge, PageHeader, LinkButton } from '@/components/ui';
 import type { SettingsValues, SettingKey } from '@tuw/heart/modules/settings';
 import type { Provider } from '@tuw/heart/integrations/registry';
-import { useAdminState } from '@/mocks/state';
 import { saveSettingsAction, updateProviderAction } from '@/server/settings-actions';
 import { SETTINGS_TABS, type SettingsTab } from './tabs';
+import { toDraft, type Draft, type DraftField } from './draft';
 
-// Store settings on real data (TL-BE-04). Each tab is a route; this view
-// renders the tab's fields from the database values, saves through the
-// guarded action and reports truthfully whether the storefront refreshed.
 
-type FieldKind = 'text' | 'email' | 'money' | 'int' | 'bool' | 'select' | 'color' | 'textarea' | 'fixed';
-interface Field {
+
+
+
+type Field = DraftField & {
   key: SettingKey;
   label: string;
-  kind: FieldKind;
   helper?: string;
   options?: string[];
   fixedText?: string;
-}
+};
 
 const TIMEZONES = ['Asia/Kolkata', 'UTC', 'Asia/Dubai', 'Asia/Singapore', 'Europe/London', 'America/New_York'];
 
@@ -36,6 +33,7 @@ const FIELDS: Partial<Record<SettingsTab, { title: string; intro?: string; field
       { key: 'store.support_email', label: 'Customer support email', kind: 'email', helper: 'Shown on the contact and policy pages' },
       { key: 'store.timezone', label: 'Time zone', kind: 'select', options: TIMEZONES, helper: 'Order dates and reports use this zone' },
       { key: 'store.currency', label: 'Currency', kind: 'fixed', fixedText: 'INR (₹) — Indian Rupee', helper: 'Single-currency store — prices are stored and shown in INR' },
+      { key: 'features.personalization', label: 'Monogram previews', kind: 'bool', helper: 'Show the monogram option on product pages and require preview approval before checkout. Turn off to hide the whole feature.' },
     ],
   },
   brand: {
@@ -93,17 +91,6 @@ const FIELDS: Partial<Record<SettingsTab, { title: string; intro?: string; field
   },
 };
 
-const paiseToRupees = (p: number) => `${Math.floor(p / 100)}.${String(p % 100).padStart(2, '0')}`;
-
-type Draft = Record<string, string | boolean>;
-function toDraft(fields: Field[], values: SettingsValues): Draft {
-  const draft: Draft = {};
-  for (const f of fields) {
-    const v = values[f.key] as unknown;
-    draft[f.key] = f.kind === 'bool' ? Boolean(v) : f.kind === 'money' ? paiseToRupees(v as number) : v == null ? '' : String(v);
-  }
-  return draft;
-}
 
 const PROVIDER_NOTES: Record<string, string> = {
   mock: 'Demo gateway — no money is collected.',
@@ -115,7 +102,6 @@ const PROVIDER_NOTES: Record<string, string> = {
 interface Notice { tone: 'ok' | 'warn' | 'error'; text: string }
 
 export default function SettingsView({ tab, values, providers: initialProviders }: { tab: SettingsTab; values: SettingsValues; providers: Provider[] }) {
-  const { resetDemoData } = useAdminState();
   const section = FIELDS[tab];
   const fields = useMemo(() => section?.fields ?? [], [section]);
   const [saved, setSaved] = useState(values);
@@ -130,7 +116,7 @@ export default function SettingsView({ tab, values, providers: initialProviders 
 
   const isDirty = fields.some((f) => draft[f.key] !== initial[f.key]);
 
-  // Unsaved input survives nothing outside this page — warn before leaving.
+  
   useEffect(() => {
     if (!isDirty) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
@@ -147,35 +133,45 @@ export default function SettingsView({ tab, values, providers: initialProviders 
     e?.preventDefault();
     if (saving || !section) return;
     setSaving(true);
-    const result = await saveSettingsAction({ group: tab as Exclude<SettingsTab, 'payments' | 'fulfillment'>, values: draft });
-    setSaving(false);
-    if (!result.ok) {
-      // Values stay as typed; each field shows its own problem.
-      setFieldErrors(Object.fromEntries(result.error.details.filter((d) => d.field).map((d) => [d.field!, d.message])));
-      setNotice({ tone: 'error', text: result.error.message });
-      return;
+    try {
+      const result = await saveSettingsAction({ group: tab as Exclude<SettingsTab, 'payments' | 'fulfillment'>, values: draft });
+      if (!result.ok) {
+        
+        setFieldErrors(Object.fromEntries(result.error.details.filter((d) => d.field).map((d) => [d.field!, d.message])));
+        setNotice({ tone: 'error', text: result.error.message });
+        return;
+      }
+      const next = { ...saved, ...result.data.values } as SettingsValues;
+      setSaved(next);
+      setDraft(toDraft(fields, next));
+      setFieldErrors({});
+      const { changed, storefront } = result.data;
+      setNotice(
+        changed.length === 0 ? { tone: 'ok', text: 'Nothing changed — the values were already saved.' }
+          : storefront === null ? { tone: 'ok', text: 'Saved.' }
+          : storefront.ok ? { tone: 'ok', text: 'Saved — the storefront now shows the new values.' }
+          : { tone: 'warn', text: `Saved. ${storefront.reason} Shoppers will see the change within the hour.` },
+      );
+    } catch {
+      setNotice({ tone: 'error', text: 'The settings could not be saved. Please try again.' });
+    } finally {
+      setSaving(false);
     }
-    const next = { ...saved, ...result.data.values } as SettingsValues;
-    setSaved(next);
-    setDraft(toDraft(fields, next));
-    setFieldErrors({});
-    const { changed, storefront } = result.data;
-    setNotice(
-      changed.length === 0 ? { tone: 'ok', text: 'Nothing changed — the values were already saved.' }
-        : storefront === null ? { tone: 'ok', text: 'Saved.' }
-        : storefront.ok ? { tone: 'ok', text: 'Saved — the storefront now shows the new values.' }
-        : { tone: 'warn', text: `Saved. ${storefront.reason} Shoppers will see the change within the hour.` },
-    );
   };
 
   const toggleProvider = async (p: Provider, patch: { isActive?: boolean; environment?: 'sandbox' | 'live' }) => {
     if (providerBusy) return;
     setProviderBusy(p.slug);
     setProviderError(null);
-    const result = await updateProviderAction({ slug: p.slug, ...patch });
-    setProviderBusy(null);
-    if (!result.ok) return setProviderError({ slug: p.slug, text: result.error.message });
-    setProviders((list) => list.map((x) => result.data.find((u) => u.slug === x.slug) ?? x));
+    try {
+      const result = await updateProviderAction({ slug: p.slug, ...patch });
+      if (!result.ok) return setProviderError({ slug: p.slug, text: result.error.message });
+      setProviders((list) => list.map((x) => result.data.find((u) => u.slug === x.slug) ?? x));
+    } catch {
+      setProviderError({ slug: p.slug, text: 'The provider could not be updated. Please try again.' });
+    } finally {
+      setProviderBusy(null);
+    }
   };
 
   const confirmLeave = (e: React.MouseEvent) => {
@@ -249,7 +245,7 @@ export default function SettingsView({ tab, values, providers: initialProviders 
   const providerGroups = tab === 'payments' ? [['payment', 'Payment gateways']] : tab === 'fulfillment' ? [['fulfillment', 'Print partners'], ['shipping', 'Couriers']] : [];
 
   return (
-    <DashboardShell pageTitle="Settings" activeNav="settings">
+    <>
       <PageHeader
         title="Store Settings"
         actions={section ? (
@@ -266,7 +262,7 @@ export default function SettingsView({ tab, values, providers: initialProviders 
         </div>
       )}
 
-      {/* Errors stay visible while the typed values are being fixed; success notes clear on the next edit. */}
+      {}
       {notice && (notice.tone !== 'ok' || !isDirty) && (
         <div role={notice.tone === 'error' ? 'alert' : 'status'} style={{ padding: '12px 16px', borderRadius: 8, fontSize: 13, background: notice.tone === 'error' ? 'var(--tuw-bg-error, #FEF4F4)' : notice.tone === 'warn' ? 'var(--tuw-bg-warning, #FEFBF5)' : 'var(--tuw-bg-success, #F3FAF6)', color: notice.tone === 'error' ? 'var(--tuw-text-error, #C91818)' : notice.tone === 'warn' ? 'var(--tuw-text-warning, #856300)' : 'var(--tuw-text-success, #187343)' }}>
           {notice.text}
@@ -307,15 +303,6 @@ export default function SettingsView({ tab, values, providers: initialProviders 
                   </div>
                   <LinkButton href="/settings/attributes" variant="secondary" size="sm" icon={<Library size={14} />}>Open Attribute Library</LinkButton>
                 </div>
-                <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--tuw-border-subtle, #E2E4E6)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                  <div>
-                    <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--tuw-text-primary, #262626)', margin: 0 }}>Demo screens</h3>
-                    <p style={{ fontSize: 13, color: 'var(--tuw-text-secondary, #5D6772)', margin: '4px 0 0' }}>Reset the screens that still run on demo data (orders, products, content…) to their baseline. Settings, customers and team are real and are not affected.</p>
-                  </div>
-                  <Button variant="secondary" size="sm" icon={<RefreshCw size={14} />} onClick={() => { if (window.confirm('Reset the demo screens back to baseline fixtures?')) resetDemoData(); }}>
-                    Reset Demo State
-                  </Button>
-                </div>
               </>
             )}
           </ContentCard>
@@ -335,6 +322,6 @@ export default function SettingsView({ tab, values, providers: initialProviders 
           </ContentCard>
         ))}
       </div>
-    </DashboardShell>
+    </>
   );
 }

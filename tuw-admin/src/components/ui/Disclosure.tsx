@@ -16,9 +16,9 @@ export interface DisclosureProps {
   style?: React.CSSProperties;
 }
 
-/**
- * Accessible Disclosure / Accordion item component conforming to TUW Design System
- */
+
+
+
 export default function Disclosure({
   title,
   subtitle,

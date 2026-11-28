@@ -1,7 +1,8 @@
 'use client';
 import { formatRupees } from '@storefront/lib/format';
+import { asyncReducer, initialAsync } from '@storefront/lib/async-state';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useReducer, useRef, useState } from 'react';
 import {
   CreditCard,
   QrCode,
@@ -29,8 +30,9 @@ export default function PaymentSimulationPanel({
 }: PaymentSimulationPanelProps) {
   const [selectedMethod, setSelectedMethod] = useState<'Card' | 'UPI' | 'COD (Demo)'>('Card');
   const [simulatedScenario, setSimulatedScenario] = useState<'success' | 'failure' | 'timeout'>('success');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [payment, dispatchPayment] = useReducer(asyncReducer<string | null>, initialAsync);
+  const isProcessing = payment.kind === 'loading';
+  const errorMessage = payment.kind === 'error' ? payment.message : null;
 
   // Card Form State
   const [cardNumber, setCardNumber] = useState('4242 •••• •••• 4242');
@@ -51,13 +53,11 @@ export default function PaymentSimulationPanel({
   }, []);
 
   const handleSimulatePayment = () => {
-    if (timer.current) clearTimeout(timer.current);
-    setIsProcessing(true);
-    setErrorMessage(null);
+    if (timer.current) return;
+    dispatchPayment({ type: 'START' });
 
     timer.current = setTimeout(() => {
       timer.current = null;
-      setIsProcessing(false);
 
       if (simulatedScenario === 'failure') {
         const msg =
@@ -66,13 +66,14 @@ export default function PaymentSimulationPanel({
             : selectedMethod === 'Card'
             ? 'Simulated card authorization declined (insufficient demo funds).'
             : 'COD service temporarily unavailable for this postal code.';
-        setErrorMessage(msg);
+        dispatchPayment({ type: 'FAIL', message: msg });
         onPaymentFail(msg);
       } else if (simulatedScenario === 'timeout') {
         const msg = 'Gateway connection timed out after 30 seconds. No amount was deducted.';
-        setErrorMessage(msg);
+        dispatchPayment({ type: 'FAIL', message: msg });
         onPaymentFail(msg);
       } else {
+        dispatchPayment({ type: 'SUCCESS', data: null });
         onPaymentSuccess(selectedMethod);
       }
     }, 1200);

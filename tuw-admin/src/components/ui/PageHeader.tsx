@@ -2,23 +2,23 @@ import React from 'react';
 
 export interface PageHeaderProps {
   title: string;
-  /** Optional descriptive copy or live meta (today: only the dashboard date line passes one). Omitted everywhere else. */
+  
   subtitle?: React.ReactNode;
-  /** Right-side controls, passed verbatim (existing Buttons stay caller-owned). */
+  
   actions?: React.ReactNode;
-  /** Slot rendered above the title (back-links on content/* + settings/* subpages). */
+  
   eyebrow?: React.ReactNode;
-  /**
-   * 'page': standard h2 28/600 management header. 'doc': h1 via the
-   * tuw-type-heading-page token class — sole consumer is the design-system
-   * page, whose 32px title must stay pixel-identical.
-   */
+  
+
+
+
+
   variant?: 'page' | 'doc';
 }
 
-// Shared page header (PH1): dumb, props-fed, mock/live agnostic. Absorbs the
-// title row every (dashboard) page hand-writes today. Standardizes on the
-// shell-gap rhythm (margin 0 — the 8px .sub-pageHeader bottom margin is retired).
+
+
+
 export default function PageHeader({
   title,
   subtitle,

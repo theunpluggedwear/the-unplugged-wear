@@ -1,4 +1,3 @@
-export { buildNotifications } from './feed';
 export { useNotifications } from './useNotifications';
 export { useStaffAlerts } from './useStaffAlerts';
 export { NotificationItem } from './NotificationItem';

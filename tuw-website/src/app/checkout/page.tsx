@@ -7,6 +7,7 @@ import Header from '@storefront/components/layout/Header';
 import Footer from '@storefront/components/layout/Footer';
 import { PaymentSimulationPanel } from '@storefront/components/commerce';
 import LivePaymentPanel from '@storefront/components/commerce/LivePaymentPanel';
+import { BagPreview } from '@storefront/plugins/personalization';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
 import Listbox from '@storefront/components/ui/Listbox';
 import { useStore } from '@storefront/mocks/store';
@@ -16,11 +17,12 @@ import { previewGiftCardAction } from '@/server/gift-card-actions';
 import { getCheckoutQuoteAction } from '@/server/payment-actions';
 import { createInvoiceCheckoutAction } from '@/server/invoice-actions';
 import { usePaymentConfig } from '@storefront/lib/payment-config';
+import { placementReducer, initialPlacement, type PlacementState, type PlacementEvent } from '@storefront/lib/checkout-machine';
 import { useSession } from '@storefront/lib/session';
 import { useAccount } from '@storefront/lib/account';
 import { RETURN_WINDOW_DAYS, deliveryEstimate, variantLabelOf } from '@storefront/lib/product';
-import { formatRupees, formatShortDate } from '@storefront/lib/format';
-import { Address, Order } from '@storefront/lib/types';
+import { formatPaise, formatRupees, formatShortDate } from '@storefront/lib/format';
+import { Address, CartItem, Order } from '@storefront/lib/types';
 import {
   ShieldCheck,
   Truck,
@@ -38,6 +40,8 @@ import {
 } from 'lucide-react';
 
 type CheckoutQuote = { payablePaise: number; totalPaise: number; discountPaise: number; giftCardPaise: number };
+
+const linePaise = (item: CartItem) => item.priceMinorINR ?? item.priceINR * 100;
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -62,14 +66,20 @@ export default function CheckoutPage() {
     products,
   } = useStore();
   const EXPRESS_FEE = useSiteSettings().shipping.expressFeePaise / 100;
+  const previewBlockers = cart.filter((item) => Boolean(item.previewImageUrl) && !item.previewApproved && item.productKind !== 'gift_card');
+  const checkoutBlocked = previewBlockers.length > 0;
   // One key per checkout attempt: a retried or double-clicked payment returns the same order.
   const [checkoutKey, setCheckoutKey] = useState(() => crypto.randomUUID());
-  const [placeError, setPlaceError] = useState<string | null>(null);
-  const [retryablePayment, setRetryablePayment] = useState(false);
-  const [placing, setPlacing] = useState(false);
-  // Synchronous guard: state updates are not applied until the next render, so a
-  // double click in the same tick would otherwise open two Razorpay flows (WEB-004).
-  const placingRef = useRef(false);
+  const [placement, setPlacement] = useState<PlacementState>(initialPlacement);
+  const placementRef = useRef(placement);
+  const dispatchPlacement = (event: PlacementEvent) => {
+    const next = placementReducer(placementRef.current, event);
+    placementRef.current = next;
+    setPlacement(next);
+  };
+  const placing = placement.kind === 'creating';
+  const placeError = placement.kind === 'retryable' || placement.kind === 'failed' ? placement.message : null;
+  const retryablePayment = placement.kind === 'retryable';
   // Read on the server in checkout/layout.tsx and streamed down as a plain
   // value (CLN-NXT-006): no hydration effect, no "Loading payment options…"
   // gap, and the live-gateway / COD-sandbox branches below stay unchanged.
@@ -245,24 +255,22 @@ export default function CheckoutPage() {
   };
 
   const handleProceedToDetails = () => {
-    if (placing) return;
+    if (placing || checkoutBlocked) return;
     if (cart.length > 0) setStep(2);
   };
 
   const handleProceedToPayment = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (placing) return;
+    if (placing || checkoutBlocked) return;
     if (validateDetails()) {
       setStep(3);
     }
   };
 
   const handlePaymentSuccess = async (paymentMethod: 'UPI' | 'Card' | 'COD (Demo)') => {
-    // Ref guard is synchronous so two same-tick clicks cannot both proceed (WEB-004).
-    if (placing || placingRef.current) return;
-    placingRef.current = true;
-    setPlacing(true);
-    setPlaceError(null);
+    if (checkoutBlocked) return;
+    if (placementRef.current.kind === 'creating' || placementRef.current.kind === 'awaiting_gateway') return;
+    dispatchPlacement({ type: 'START' });
     try {
       const method = paymentMethod === 'Card' ? 'card' : paymentMethod === 'UPI' ? 'upi' : 'cod';
       const orderInput = {
@@ -283,43 +291,39 @@ export default function CheckoutPage() {
         const invoice = await createInvoiceCheckoutAction(orderInput);
         if (!invoice.ok) throw new Error(invoice.error.message);
         if (invoice.data.retryable || !invoice.data.invoiceUrl) {
-          setRetryablePayment(true);
-          setPlaceError('The previous payment attempt could not be created. Start a new attempt.');
+          dispatchPlacement({ type: 'RETRYABLE', message: 'The previous payment attempt could not be created. Start a new attempt.' });
           return;
         }
-        setRetryablePayment(false);
         // Keep the order/receipt in the URL so a customer who returns can open
         // the streaming success page even if the hosted provider has no return URL.
         sessionStorage.setItem('tuw_last_checkout', JSON.stringify({
           orderNumber: invoice.data.orderNumber,
           receipt: invoice.data.receipt,
         }));
+        dispatchPlacement({ type: 'GATEWAY', orderNumber: invoice.data.orderNumber, receipt: invoice.data.receipt });
         window.location.assign(invoice.data.invoiceUrl);
         return;
       }
 
       const result = await placeOrderAction(orderInput);
       if (!result.ok) {
-        setPlaceError(result.error.details[0]?.message && result.error.code === 'VALIDATION_FAILED' ? `${result.error.message} ${result.error.details[0].message}` : result.error.message);
+        dispatchPlacement({ type: 'FAIL', message: result.error.details[0]?.message && result.error.code === 'VALIDATION_FAILED' ? `${result.error.message} ${result.error.details[0].message}` : result.error.message });
         return;
       }
       removePromo();
       setGiftCard(null);
       setGiftCardMessage(null);
+      dispatchPlacement({ type: 'PLACED' });
       router.push(`/checkout/success?order=${encodeURIComponent(result.data.orderNumber)}&t=${encodeURIComponent(result.data.receipt)}`);
       setTimeout(() => void refreshBag(), 500);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Payment could not be completed.';
       // Provider details are logged server-side; shoppers get a clear retry path.
       if (/Razorpay|invoice|provider/i.test(message)) {
-        setRetryablePayment(true);
-        setPlaceError('We could not start the secure payment. Please try again.');
+        dispatchPlacement({ type: 'RETRYABLE', message: 'We could not start the secure payment. Please try again.' });
       } else {
-        setPlaceError(message);
+        dispatchPlacement({ type: 'FAIL', message });
       }
-    } finally {
-      placingRef.current = false;
-      setPlacing(false);
     }
   };
 
@@ -341,7 +345,7 @@ export default function CheckoutPage() {
       <div className="min-h-screen flex flex-col bg-store-canvas">
         <Header />
         <main className="flex-1 max-w-7xl mx-auto px-4 py-24 text-center" role="alert">
-          <h1 className="text-2xl font-bold font-heading text-store-charcoal">We couldn’t load your bag</h1>
+          <h1 className="tuw-h1 text-store-charcoal">We couldn’t load your bag</h1>
           <p className="text-sm text-store-muted mt-2">{bagError}</p>
           <div className="mt-6">
             <button
@@ -367,7 +371,7 @@ export default function CheckoutPage() {
           <div className="w-16 h-16 rounded-full bg-store-cream flex items-center justify-center text-store-muted mx-auto mb-4">
             <ShoppingBag size={28} />
           </div>
-          <h1 className="text-2xl font-bold font-heading text-store-charcoal">Your Bag is Empty</h1>
+          <h1 className="tuw-h1 text-store-charcoal">Your Bag is Empty</h1>
           <p className="text-sm text-store-muted mt-2">
             Please add items to your shopping bag before proceeding to checkout.
           </p>
@@ -400,13 +404,33 @@ export default function CheckoutPage() {
           </div>
         ) : null}
 
+        {bagError && (
+          <div role="alert" className="mb-6 rounded-xl border border-store-border bg-store-cream px-4 py-3 text-sm text-store-text-primary">
+            We could not refresh your bag: {bagError}
+            <button type="button" onClick={() => void refreshBag()} className="ml-2 underline underline-offset-4 hover:text-store-charcoal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold">
+              Try again
+            </button>
+          </div>
+        )}
+
+        {checkoutBlocked && (
+          <div role="alert" className="mb-6 rounded-xl border border-store-gold/50 bg-store-cream px-4 py-3 text-sm text-store-text-primary">
+            <p className="font-medium">Approve each print preview before you continue.</p>
+            <ul className="mt-2 list-disc pl-5 text-store-text-secondary">
+              {previewBlockers.map((item) => (
+                <li key={item.id}>{item.title} — preview not approved yet. Use “Approve preview” on the item below.</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* ======================================================== */}
         {/* TOP ROW: Header Title (L) + Floating 3-Step Indicator (R)*/}
         {/* Byte-identical to Figma media_1793276765072_2f83cc78.png */}
         {/* ======================================================== */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold font-heading text-store-charcoal tracking-tight">
+            <h1 className="tuw-h1 text-store-charcoal">
               {step === 1 && `Your cart`}
               {step === 2 && `Your details`}
               {step === 3 && `Payment`}
@@ -450,10 +474,11 @@ export default function CheckoutPage() {
             <button
               type="button"
               onClick={() => {
-                if (placing) return;
+                if (placing || checkoutBlocked) return;
                 if (cart.length > 0) setStep(2);
               }}
-              className="flex items-center cursor-pointer group"
+              disabled={checkoutBlocked}
+              className="flex items-center cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span
                 className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all ${
@@ -484,13 +509,14 @@ export default function CheckoutPage() {
             <button
               type="button"
               onClick={() => {
-                if (placing) return;
+                if (placing || checkoutBlocked) return;
                 // Payment may only be entered from the Details step; from Cart
                 // the fields are unmounted, so validating them is a no-op (WEB-001).
                 if (step !== 2) return;
                 if (validateDetails()) setStep(3);
               }}
-              className="flex items-center cursor-pointer group"
+              disabled={checkoutBlocked}
+              className="flex items-center cursor-pointer group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span
                 className={`w-6 h-6 rounded-full flex items-center justify-center text-xs transition-all ${
@@ -572,6 +598,10 @@ export default function CheckoutPage() {
                               ₹{item.priceINR.toLocaleString('en-IN')} each · printed for you in 2–3 days
                               {product?.priceIsDraft ? ' · draft price, to be confirmed' : ''}
                             </p>
+                            <BagPreview item={item} />
+                            {item.previewImageUrl && !item.previewApproved && item.productKind !== 'gift_card' ? (
+                              <p className="text-xs text-store-terracotta">Preview approval is required before checkout.</p>
+                            ) : null}
 
                             {/* Colour and size can be changed right here */}
                             <div className="flex flex-wrap items-center gap-2">
@@ -667,7 +697,9 @@ export default function CheckoutPage() {
                   <button
                     type="button"
                     onClick={handleProceedToDetails}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-store-checkout-gold hover:bg-store-checkout-gold-hover text-store-charcoal font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
+                    disabled={checkoutBlocked}
+                    title={checkoutBlocked ? 'Approve the pending print previews first' : undefined}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-store-checkout-gold hover:bg-store-checkout-gold-hover text-store-charcoal font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span>Proceed to details</span>
                     <ArrowRight size={14} />
@@ -1013,8 +1045,7 @@ export default function CheckoutPage() {
                         type="button"
                         onClick={() => {
                           setCheckoutKey(crypto.randomUUID());
-                          setRetryablePayment(false);
-                          setPlaceError(null);
+                          dispatchPlacement({ type: 'RESET' });
                         }}
                         className="mt-3 inline-flex items-center justify-center px-4 py-2 rounded-full border border-red-800 text-xs font-semibold uppercase tracking-wider hover:bg-red-100 cursor-pointer"
                       >
@@ -1042,7 +1073,7 @@ export default function CheckoutPage() {
                   <PaymentSimulationPanel
                     totalAmount={displayPayable}
                     onPaymentSuccess={handlePaymentSuccess}
-                    onPaymentFail={(reason) => setPlaceError(reason)}
+                    onPaymentFail={(reason) => dispatchPlacement({ type: 'FAIL', message: reason })}
                     onCancel={() => { if (placing) return; setStep(2); }}
                   />
                 )}
@@ -1117,7 +1148,7 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                       <span className="font-semibold text-white shrink-0">
-                        {formatRupees((item.priceINR * item.quantity))}
+                        {formatPaise(linePaise(item) * item.quantity)}
                       </span>
                     </div>
                   ))}

@@ -1,6 +1,7 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
-import { getPool } from '../db/index.ts';
+import { sql } from 'drizzle-orm';
+import { withTransaction } from '../db/index.ts';
 import { AppError } from '../errors/index.ts';
 
 // Layer-1 retry guard (DOC/backend/21 §2). claim() decides whether a request
@@ -8,7 +9,7 @@ import { AppError } from '../errors/index.ts';
 // (scope, actor_ref, key), so one caller can never replay another's response.
 
 export type Claim =
-  | { kind: 'execute'; id: string }
+  | { kind: 'execute'; id: string; ownerToken: string }
   | { kind: 'replay'; status: number; body: unknown };
 
 export interface ClaimInput {
@@ -37,6 +38,10 @@ export function canonicalJson(value: unknown): string {
   return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(',')}}`;
 }
 
+function leaseToken(value: unknown): string {
+  return value instanceof Date ? value.toISOString() : String(value);
+}
+
 export async function claim(input: ClaimInput): Promise<Claim> {
   if (!KEY_PATTERN.test(input.key)) {
     throw new AppError('VALIDATION_FAILED', 'A valid Idempotency-Key is required.', [{ field: 'idempotencyKey', message: 'Missing or malformed key' }]);
@@ -44,61 +49,66 @@ export async function claim(input: ClaimInput): Promise<Claim> {
   if (!/^[0-9a-f]{64}$/.test(input.requestHash)) throw new TypeError('requestHash must be a sha256 hex digest (use hashRequest)');
   const ttl = input.ttlHours ?? 168;
   const lease = input.leaseSeconds ?? 60;
-  const pool = getPool();
 
-  const inserted = await pool.query<{ id: string }>(
-    `INSERT INTO idempotency_keys (id, scope, actor_ref, key, user_id, request_hash, status, locked_until, expires_at)
-     VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, 'in_progress', now() + make_interval(secs => $6), now() + make_interval(hours => $7))
-     ON CONFLICT (scope, actor_ref, key) DO NOTHING
-     RETURNING id`,
-    [input.scope, input.actorRef, input.key, input.userId ?? null, input.requestHash, lease, ttl],
-  );
-  if (inserted.rows[0]) return { kind: 'execute', id: inserted.rows[0].id };
+  return withTransaction(async (tx) => {
+    const inserted = await tx.execute<{ id: string; locked_until: unknown }>(sql`
+      INSERT INTO idempotency_keys (id, scope, actor_ref, key, user_id, request_hash, status, locked_until, expires_at)
+      VALUES (gen_random_uuid(), ${input.scope}, ${input.actorRef}, ${input.key}, ${input.userId ?? null}, ${input.requestHash}, 'in_progress', now() + make_interval(secs => ${lease}), now() + make_interval(hours => ${ttl}))
+      ON CONFLICT (scope, actor_ref, key) DO NOTHING
+      RETURNING id, locked_until`);
+    if (inserted.rows[0]) return { kind: 'execute' as const, id: inserted.rows[0].id, ownerToken: leaseToken(inserted.rows[0].locked_until) };
 
-  const { rows } = await pool.query<{ id: string; status: string; request_hash: string; response_code: number | null; response_body: unknown; lease_live: boolean }>(
-    `SELECT id, status, request_hash, response_code, response_body, (locked_until > now()) AS lease_live
-       FROM idempotency_keys WHERE scope = $1 AND actor_ref = $2 AND key = $3`,
-    [input.scope, input.actorRef, input.key],
-  );
-  const row = rows[0];
-  if (!row) throw new AppError('IDEMPOTENCY_CONFLICT', 'Please retry the request.');
-  if (row.request_hash !== input.requestHash) {
-    throw new AppError('IDEMPOTENCY_KEY_REUSED', 'This request key was already used for a different request.');
-  }
-  if (row.status === 'completed') return { kind: 'replay', status: row.response_code ?? 200, body: row.response_body };
-  if (row.status === 'in_progress' && row.lease_live) {
-    throw new AppError('REQUEST_IN_PROGRESS', 'This request is already being processed.');
-  }
-  // Failed, or an in-progress lease that expired: take it over.
-  const taken = await pool.query(
-    `UPDATE idempotency_keys SET status = 'in_progress', locked_until = now() + make_interval(secs => $2)
-      WHERE id = $1 AND (status = 'failed' OR locked_until <= now())`,
-    [row.id, lease],
-  );
-  if (taken.rowCount === 0) throw new AppError('REQUEST_IN_PROGRESS', 'This request is already being processed.');
-  return { kind: 'execute', id: row.id };
+    const { rows } = await tx.execute<{ id: string; status: string; request_hash: string; response_code: number | null; response_body: unknown; lease_live: boolean; locked_until: unknown }>(sql`
+      SELECT id, status, request_hash, response_code, response_body, (locked_until > now()) AS lease_live, locked_until
+        FROM idempotency_keys WHERE scope = ${input.scope} AND actor_ref = ${input.actorRef} AND key = ${input.key} FOR UPDATE`);
+    const row = rows[0];
+    if (!row) throw new AppError('IDEMPOTENCY_CONFLICT', 'Please retry the request.');
+    if (row.request_hash !== input.requestHash) {
+      throw new AppError('IDEMPOTENCY_KEY_REUSED', 'This request key was already used for a different request.');
+    }
+    if (row.status === 'completed') return { kind: 'replay' as const, status: row.response_code ?? 200, body: row.response_body };
+    if (row.status === 'in_progress' && row.lease_live) {
+      throw new AppError('REQUEST_IN_PROGRESS', 'This request is already being processed.');
+    }
+    const taken = await tx.execute<{ locked_until: unknown }>(sql`
+      UPDATE idempotency_keys SET status = 'in_progress', locked_until = now() + make_interval(secs => ${lease})
+      WHERE id = ${row.id}::uuid AND (status = 'failed' OR locked_until <= now())
+      RETURNING locked_until`);
+    if (!taken.rows[0]) throw new AppError('REQUEST_IN_PROGRESS', 'This request is already being processed.');
+    return { kind: 'execute' as const, id: row.id, ownerToken: leaseToken(taken.rows[0].locked_until) };
+  });
 }
 
-export async function complete(id: string, status: number, body: unknown, resource?: { table: string; id: string }): Promise<void> {
-  await getPool().query(
-    `UPDATE idempotency_keys SET status = 'completed', response_code = $2, response_body = $3,
-            resource_table = $4, resource_id = $5, completed_at = now(), locked_until = NULL
-      WHERE id = $1`,
-    [id, status, JSON.stringify(body ?? null), resource?.table ?? null, resource?.id ?? null],
-  );
+export async function complete(id: string, status: number, body: unknown, resource?: { table: string; id: string }, ownerToken?: string): Promise<void> {
+  await withTransaction(async (tx) => {
+    await tx.execute(sql`
+      UPDATE idempotency_keys SET status = 'completed', response_code = ${status}, response_body = ${JSON.stringify(body ?? null)}::jsonb,
+              resource_table = ${resource?.table ?? null}, resource_id = ${resource?.id ?? null}, completed_at = now(), locked_until = NULL
+        WHERE id = ${id}::uuid AND status = 'in_progress' AND locked_until > now()
+          AND (${ownerToken ?? null}::timestamptz IS NULL OR locked_until = ${ownerToken ?? null}::timestamptz)`);
+  });
 }
 
 /** 5xx / unexpected failures stay retryable; terminal 4xx are stored and replayed. */
-export async function fail(id: string, status: number, body: unknown): Promise<void> {
+export async function fail(id: string, status: number, body: unknown, ownerToken?: string): Promise<void> {
   if (status >= 500) {
-    await getPool().query(`UPDATE idempotency_keys SET status = 'failed', locked_until = NULL WHERE id = $1`, [id]);
+    await withTransaction(async (tx) => {
+      await tx.execute(sql`
+        UPDATE idempotency_keys SET status = 'failed', locked_until = NULL
+        WHERE id = ${id}::uuid AND status = 'in_progress' AND locked_until > now()
+          AND (${ownerToken ?? null}::timestamptz IS NULL OR locked_until = ${ownerToken ?? null}::timestamptz)`);
+    });
   } else {
-    await complete(id, status, body);
+    await complete(id, status, body, undefined, ownerToken);
   }
 }
 
 /** Housekeeping job: drop expired keys. */
 export async function sweepExpired(): Promise<number> {
-  const { rowCount } = await getPool().query(`DELETE FROM idempotency_keys WHERE expires_at < now()`);
-  return rowCount ?? 0;
+  return withTransaction(async (tx) => {
+    const { rowCount } = await tx.execute(sql`
+      DELETE FROM idempotency_keys WHERE expires_at < now()
+        AND (locked_until IS NULL OR locked_until <= now() OR status IN ('completed','failed'))`);
+    return rowCount ?? 0;
+  });
 }

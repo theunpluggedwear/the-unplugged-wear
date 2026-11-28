@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Ruler, Check, AlertCircle } from 'lucide-react';
+import { Ruler, AlertCircle } from 'lucide-react';
 import { ProductSize } from '@storefront/lib/types';
 
 export interface VariantPillSelectorProps {
@@ -64,7 +64,7 @@ export default function VariantPillSelector({
         <span className="text-store-text-secondary">
           {label}{' '}
           <strong className="text-store-text-primary font-bold">
-            {selectedSize ? selectedSize.size : 'Select option'}
+            {selectedSize ? selectedSize.size : 'Choose one'}
           </strong>
         </span>
 
@@ -72,9 +72,9 @@ export default function VariantPillSelector({
           <button
             type="button"
             onClick={onSizeGuideClick}
-            className="flex items-center gap-1.5 text-xs font-medium text-store-action-primary hover:text-store-gold transition-colors cursor-pointer lowercase first-letter:uppercase"
+            className="flex items-center gap-1.5 text-xs font-medium normal-case tracking-normal text-store-charcoal underline underline-offset-4 decoration-store-gold hover:decoration-store-charcoal cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
           >
-            <Ruler size={13} />
+            <Ruler size={13} aria-hidden="true" />
             <span>{sizeGuideLabel}</span>
           </button>
         )}
@@ -109,27 +109,18 @@ export default function VariantPillSelector({
         })}
       </div>
 
-      {/* Stock allocation message */}
-      {selectedSize && (
-        <div className="mt-2 text-xs flex items-center gap-1.5">
-          {selectedSize.inStock ? (
-            <span className="text-store-text-secondary flex items-center gap-1">
-              <Check size={13} />
-              Printed to order • usually dispatched within a few business days
-            </span>
-          ) : (
-            <span className="text-red-700 font-medium flex items-center gap-1">
-              <AlertCircle size={13} />
-              Out of stock in {selectedSize.size}
-            </span>
-          )}
-        </div>
+      {/* Only the problem case needs a note; "printed to order" is said once, in Delivery & returns. */}
+      {selectedSize && !selectedSize.inStock && (
+        <p className="mt-2 text-xs font-medium text-store-terracotta flex items-center gap-1.5">
+          <AlertCircle size={13} aria-hidden="true" />
+          Sold out in {selectedSize.size}
+        </p>
       )}
 
       {/* Validation alert */}
       {validationError && (
-        <div className="mt-2 p-3 bg-red-50 border border-red-200 text-xs text-red-800 flex items-center gap-2">
-          <AlertCircle size={14} />
+        <div role="alert" className="mt-2 p-3 bg-store-terracotta/5 border border-store-terracotta/30 text-xs font-medium text-store-terracotta flex items-center gap-2">
+          <AlertCircle size={14} aria-hidden="true" />
           <span>{validationError}</span>
         </div>
       )}

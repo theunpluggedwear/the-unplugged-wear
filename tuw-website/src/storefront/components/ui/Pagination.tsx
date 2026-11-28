@@ -29,7 +29,7 @@ export default function Pagination({
         disabled={currentPage <= 1}
         onClick={() => onPageChange(currentPage - 1)}
         aria-label="Previous Page"
-        className="w-10 h-10 flex items-center justify-center rounded-full border border-[#E2DDCF] bg-white text-[#1A1A1A] hover:bg-[#F4F1EA] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        className="w-10 h-10 flex items-center justify-center rounded-full border border-[#E2DDCF] bg-white text-store-charcoal hover:bg-[#F4F1EA] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       >
         <ChevronLeft size={16} />
       </button>
@@ -45,7 +45,7 @@ export default function Pagination({
             className={`w-10 h-10 flex items-center justify-center rounded-full text-xs font-semibold tracking-wide transition-colors ${
               isActive
                 ? 'bg-[#1A1A1A] text-white shadow-sm'
-                : 'border border-[#E2DDCF] bg-white text-[#1A1A1A] hover:bg-[#F4F1EA]'
+                : 'border border-[#E2DDCF] bg-white text-store-charcoal hover:bg-[#F4F1EA]'
             }`}
           >
             {page}
@@ -58,7 +58,7 @@ export default function Pagination({
         disabled={currentPage >= totalPages}
         onClick={() => onPageChange(currentPage + 1)}
         aria-label="Next Page"
-        className="w-10 h-10 flex items-center justify-center rounded-full border border-[#E2DDCF] bg-white text-[#1A1A1A] hover:bg-[#F4F1EA] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        className="w-10 h-10 flex items-center justify-center rounded-full border border-[#E2DDCF] bg-white text-store-charcoal hover:bg-[#F4F1EA] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       >
         <ChevronRight size={16} />
       </button>

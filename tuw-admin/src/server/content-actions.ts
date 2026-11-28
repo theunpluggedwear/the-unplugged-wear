@@ -5,10 +5,10 @@ import { contentSchemas as s, CMS_TAGS, FAQ_TAG } from '@tuw/heart/modules/conte
 import { guards } from './session';
 import { refreshStorefront } from './storefront-cache';
 
-// A write that changes what shoppers see asks the separately deployed
-// storefront to expire the matching tag. The refresh result is returned next
-// to the saved record (never silently discarded) so the UI can report a stale
-// storefront instead of claiming everything is up to date.
+
+
+
+
 const refresh = (tag: string) => refreshStorefront([tag]);
 
 export const listPagesAction = guards.action({ permission: 'content.manage', input: s.listPages }, ({ ctx }) =>
@@ -25,6 +25,14 @@ export const getNavigationAction = guards.action({ permission: 'content.manage',
 export const saveNavigationAction = guards.action({ permission: 'content.manage', input: s.saveNavigation }, async ({ input, ctx }) => {
   const navbar = await content.adminSaveNavigation(input.navbar, ctx.user!.id);
   return { navbar, storefront: await refresh(CMS_TAGS.nav) };
+});
+
+export const getMenuAction = guards.action({ permission: 'content.manage', input: s.getNavigationInput }, ({ ctx }) =>
+  content.adminGetMenu(ctx.user!.id));
+
+export const saveMenuAction = guards.action({ permission: 'content.manage', input: s.saveMenu }, async ({ input, ctx }) => {
+  const items = await content.adminSaveMenu(input.items, ctx.user!.id);
+  return { items, storefront: await refresh(CMS_TAGS.nav) };
 });
 
 export const listFaqsAction = guards.action({ permission: 'content.manage', input: s.faqList }, ({ ctx }) =>

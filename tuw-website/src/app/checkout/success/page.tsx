@@ -20,6 +20,8 @@ import { AlertCircle, ArrowRight, Check, Clock, Download, Info, Mail } from 'luc
 const STEPS = ['Order placed', 'Printing', 'Shipped', 'Delivered'] as const;
 const STEP_INDEX: Record<string, number> = { queued: 0, printing: 1, shipped: 2, delivered: 3 };
 const ORDER_POLL_MS = 5000;
+const MAX_POLL_ATTEMPTS = 6;
+const MAX_POLL_DELAY_MS = 60000;
 
 // Money in paise; order shipping/discount are stored in whole rupees.
 const linePaise = (item: Order['items'][number]) =>
@@ -50,6 +52,7 @@ function OrderSuccessContent() {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pollNotice, setPollNotice] = useState<string | null>(null);
   // Gateway mode is read once on the server in checkout/layout.tsx and shared
   // with the checkout screen (CLN-NXT-006).
   const { testMode } = usePaymentConfig();
@@ -63,7 +66,11 @@ function OrderSuccessContent() {
     // The account that placed it, or whoever holds its receipt link, may see it.
     void getOrderAction({ orderNumber, receipt }).then((result) => {
       if (!live) return;
-      setOrder(result.ok ? toStoreOrder(result.data) : null);
+      const loaded = result.ok ? toStoreOrder(result.data) : null;
+      setOrder(loaded);
+      if (loaded && loaded.paymentStatus !== 'pending' && typeof window !== 'undefined') {
+        window.sessionStorage.removeItem('tuw_last_checkout');
+      }
       setLoading(false);
     });
     return () => { live = false; };
@@ -75,16 +82,28 @@ function OrderSuccessContent() {
   useEffect(() => {
     if (!orderNumber || !awaitingCapture) return;
     let live = true;
-    let inFlight = false;
-    const poll = window.setInterval(() => {
-      if (inFlight) return;
-      inFlight = true;
-      void getOrderAction({ orderNumber, receipt }).then((result) => {
-        inFlight = false;
-        if (live && result.ok) setOrder(toStoreOrder(result.data));
-      });
-    }, ORDER_POLL_MS);
-    return () => { live = false; window.clearInterval(poll); };
+    let attempt = 0;
+    let timer: number | undefined;
+    const check = async () => {
+      const result = await getOrderAction({ orderNumber, receipt });
+      if (!live) return;
+      if (result.ok) {
+        const next = toStoreOrder(result.data);
+        setOrder(next);
+        if (next.paymentStatus !== 'pending') {
+          window.sessionStorage.removeItem('tuw_last_checkout');
+          return;
+        }
+      }
+      attempt += 1;
+      if (attempt >= MAX_POLL_ATTEMPTS) {
+        setPollNotice('Payment is still being confirmed. This page stopped checking automatically — you can refresh it later or track the order with its reference.');
+        return;
+      }
+      timer = window.setTimeout(() => void check(), Math.min(ORDER_POLL_MS * 2 ** (attempt - 1), MAX_POLL_DELAY_MS));
+    };
+    timer = window.setTimeout(() => void check(), ORDER_POLL_MS);
+    return () => { live = false; if (timer !== undefined) window.clearTimeout(timer); };
   }, [orderNumber, receipt, awaitingCapture]);
 
   if (loading) {
@@ -100,7 +119,7 @@ function OrderSuccessContent() {
     return (
       <div className="py-20 text-center max-w-lg mx-auto px-4">
         <AlertCircle size={28} aria-hidden="true" className="mx-auto text-store-text-secondary" />
-        <h1 className="mt-4 font-heading text-3xl font-medium text-store-charcoal">We couldn’t find that order</h1>
+        <h1 className="tuw-h1 mt-4 text-store-charcoal">We couldn’t find that order</h1>
         <p className="text-sm text-store-text-secondary mt-3 leading-relaxed">
           There’s no order with the reference “{orderNumber || 'unspecified'}” in this browser. If you placed it
           somewhere else, you can still track it with its reference.
@@ -143,12 +162,17 @@ function OrderSuccessContent() {
               ? 'Payment captured. We’ll send tracking as soon as it ships.'
               : 'Awaiting payment confirmation. This page updates once the payment is captured.'}
       </p>
+      {pollNotice && (
+        <div role="status" className="mb-8 rounded-xl border border-store-border bg-store-surface px-4 py-3 text-sm text-store-text-secondary">
+          {pollNotice}
+        </div>
+      )}
 
       <header className="text-center max-w-2xl mx-auto">
         <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-store-charcoal text-white">
           {isPending ? <Clock size={22} aria-hidden="true" /> : <Check size={22} aria-hidden="true" />}
         </span>
-        <h1 className="mt-5 font-heading text-[clamp(2rem,3vw+1rem,3rem)] font-medium tracking-tight text-store-charcoal">
+        <h1 className="tuw-h1 mt-5 text-store-charcoal">
           {isPending ? 'Your order is placed' : 'Thank you for your order'}
         </h1>
         <p className="mt-3 text-base text-store-text-secondary leading-relaxed">

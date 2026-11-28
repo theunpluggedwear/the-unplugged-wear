@@ -6,6 +6,9 @@ import { submitDueOrders, syncOpenFulfillment } from '../../modules/fulfillment/
 import { expireDue } from '../../modules/gift-cards/index.ts';
 import { reconcilePendingPayments, retryFailedWebhooks } from '../../modules/payments/index.ts';
 import { reconcileInvoiceDocuments } from '../../modules/invoices/index.ts';
+import { detectAbandonedCarts, maintainAnalyticsPartitions, rollupDaily } from '../../modules/analytics/index.ts';
+import { sendQueuedEmails } from '../../integrations/email/index.ts';
+import { pruneNotifications } from '../../modules/notifications/index.ts';
 import { sweepRateLimits } from '../ratelimit/index.ts';
 
 // Every job the system runs, registered in one place so any trigger (Cron
@@ -67,6 +70,73 @@ export function loadJobs(): void {
     name: 'webhooks.retryFailed',
     description: 'Retry failed provider webhook deliveries from the durable inbox.',
     run: retryFailedWebhooks,
+  });
+
+  registerJob({
+    name: 'analytics.detectAbandoned',
+    description: 'Record idle active carts in the abandoned-cart recovery inbox.',
+    run: async () => ({ processed: await detectAbandonedCarts(24) }),
+  });
+
+  registerJob({
+    name: 'analytics.rollupDaily',
+    description: 'Upsert the permanent daily_stats row for today.',
+    run: async () => ({ processed: await rollupDaily() }),
+  });
+
+  registerJob({
+    name: 'notifications.sendQueued',
+    description: 'Drain queued emails through the active transport.',
+    run: async () => ({ processed: await sendQueuedEmails() }),
+  });
+
+  registerJob({
+    name: 'notifications.pruneOld',
+    description: 'Delete notifications older than the retention window (30 days).',
+    run: async () => ({ processed: await pruneNotifications() }),
+  });
+
+  registerJob({
+    name: 'analytics.maintainPartitions',
+    description: 'Create next month analytics partitions and drop expired raw event partitions.',
+    run: async () => {
+      const result = await maintainAnalyticsPartitions();
+      return { processed: result.created.length + result.dropped.length };
+    },
+  });
+
+  const DAILY = [
+    'platform.sweepIdempotencyKeys', 'platform.sweepRateLimits', 'inventory.notifyRestocked',
+    'fulfillment.submitDue', 'giftCards.expireDue', 'webhooks.retryFailed',
+    'analytics.detectAbandoned', 'analytics.rollupDaily', 'analytics.maintainPartitions',
+    'notifications.sendQueued', 'notifications.pruneOld',
+  ] as const;
+  const URGENT = [
+    'payments.reconcileRazorpay', 'invoices.reconcileDocuments', 'fulfillment.syncOpen',
+    'webhooks.retryFailed', 'notifications.sendQueued',
+  ] as const;
+
+  const runGroup = (names: readonly string[]) => async () => {
+    let processed = 0;
+    let failed = 0;
+    const errors: string[] = [];
+    for (const name of names) {
+      const result = await runJob(name);
+      processed += result.processed;
+      if (!result.ok) { failed += 1; errors.push(`${name}: ${result.error ?? 'failed'}`); }
+    }
+    return { processed, failed, note: errors.join('; ') || undefined };
+  };
+
+  registerJob({
+    name: 'platform.runDaily',
+    description: 'Run the daily job group in one scheduled invocation.',
+    run: runGroup(DAILY),
+  });
+  registerJob({
+    name: 'platform.runUrgent',
+    description: 'Run payment, invoice, webhook, parcel and mail catch-up jobs.',
+    run: runGroup(URGENT),
   });
 }
 

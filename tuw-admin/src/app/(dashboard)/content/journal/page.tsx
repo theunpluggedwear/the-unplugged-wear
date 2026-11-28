@@ -1,4 +1,4 @@
-import DashboardShell from '@/components/layout/DashboardShell';
+export const instant = false;
 import { adminJournalMeta, adminListPosts } from '@tuw/heart/modules/marketing';
 import { session } from '@/server/session';
 import JournalManager from './_components/JournalManager';
@@ -10,8 +10,8 @@ export default async function JournalPage() {
     adminJournalMeta(claims.sub),
   ]);
   return (
-    <DashboardShell>
+    <>
       <JournalManager initial={posts.rows} meta={meta} />
-    </DashboardShell>
+    </>
   );
 }

@@ -105,7 +105,9 @@ test('editor fields: exchange policy saved; gift-card kind stays off the catalog
   assert.equal((await c.adminGetProduct(p.id)).exchangePolicy, 'exchangeable');
   assert.equal(S.productFields.safeParse({ name: 'X', partner: 'Custom Atelier', publicationStatus: 'draft', price: 1, exchangePolicy: 'anything' }).success, false);
   const g = await product('Gift Voucher', { productKind: 'gift_card' });
-  assert.equal((await c.getStorefrontCatalog()).products.some((x) => x.productId === g.id), false);
+  const shop = (await c.getStorefrontCatalog()).products;
+  assert.equal(shop.find((x) => x.productId === g.id)?.productKind, 'gift_card');
+  assert.equal(shop.filter((x) => x.productKind !== 'gift_card').some((x) => x.productId === g.id), false);
 });
 
 test('partner SKUs: exact cost, duplicates and foreign variants refused, blank removes, never public', { skip }, async () => {

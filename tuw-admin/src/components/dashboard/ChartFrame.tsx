@@ -1,6 +1,5 @@
 import React from 'react';
 
-// Class map - selectors live in src/app/globals.css (single app.css, home- prefix).
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'home-' + String(p) });
 
 interface ChartFrameProps {
@@ -9,9 +8,6 @@ interface ChartFrameProps {
   children: React.ReactNode;
 }
 
-// Chart base: Y-axis ticks + dashed gridlines + plot area + X-axis labels.
-// Fluid width, CSS-owned height. Bars arrive as children; labels drive the
-// X axis — any point count renders without touching this component.
 export function ChartFrame({ ticks, labels, children }: ChartFrameProps) {
   return (
     <div className={styles.chartContainer}>

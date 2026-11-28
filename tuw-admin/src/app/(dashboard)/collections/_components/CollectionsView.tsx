@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import DashboardShell from '@/components/layout/DashboardShell';
 import {
   ContentCard,
   StatCard,
@@ -21,17 +20,18 @@ import {
   PageHeader,
 } from '@/components/ui';
 import { Plus, Search, MoreHorizontal } from 'lucide-react';
-import { useAdminState } from '@/mocks/state';
-import type { CollectionItem, ProductItem } from '@/mocks/fixtures';
+import { useToast } from '@/components/providers/ToastProvider';
+import type { CollectionItem, ProductItem } from '@/lib/admin-dto';
 import { deleteCollectionAction, saveCollectionAction } from '@/server/catalog-actions';
 import { collectionCount, uniqueSlug } from '@tuw/heart/modules/catalog/rules';
 import CollectionFormDrawer, { type CollectionSaveResult } from './collections/CollectionFormDrawer';
 import CollectionDetailDrawer from './collections/CollectionDetailDrawer';
+import { MONO_ID_STYLE } from '@/lib/format';
 
-// Collections on real data (TL-BE-05): the server page reads them, this view
-// renders and calls the guarded actions.
+
+
 export default function CollectionsView({ initialCollections, products, canManage }: { initialCollections: CollectionItem[]; products: ProductItem[]; canManage: boolean }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const [collections, setCollections] = useState(initialCollections);
   useEffect(() => setCollections(initialCollections), [initialCollections]);
   const storefrontNote = (storefront: { ok: true } | { ok: false; reason: string }) =>
@@ -49,8 +49,8 @@ export default function CollectionsView({ initialCollections, products, canManag
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
 
-  // Drawers & confirm dialog. Detail/edit are id-driven so the open surface
-  // always reflects live state (no stale snapshots after a save).
+  
+  
   const [selectedColId, setSelectedColId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -97,7 +97,7 @@ export default function CollectionsView({ initialCollections, products, canManag
   };
 
   const handleSaved = (id: string) => {
-    // Edited from the detail drawer → reopen it with the fresh data.
+    
     if (returnToDetailId === id) setSelectedColId(id);
     setReturnToDetailId(null);
   };
@@ -146,7 +146,7 @@ export default function CollectionsView({ initialCollections, products, canManag
     : [{ value: 'view', label: 'View details' }];
 
   return (
-    <DashboardShell pageTitle="Collections">
+    <>
       <PageHeader
         title="Apparel Collections"
         actions={
@@ -203,7 +203,7 @@ export default function CollectionsView({ initialCollections, products, canManag
                 <TableCell style={{ padding: '14px 16px', fontSize: 14, fontWeight: 600, color: 'var(--tuw-text-primary, #262626)' }}>
                   {item.name}
                 </TableCell>
-                <TableCell style={{ padding: '14px 16px', fontSize: 13, fontFamily: 'monospace', color: 'var(--tuw-text-secondary, #5D6772)' }}>
+                <TableCell style={{ ...MONO_ID_STYLE, padding: '14px 16px', fontSize: 13 }}>
                   /{item.slug}
                 </TableCell>
                 <TableCell style={{ padding: '14px 16px', fontSize: 14, color: 'var(--tuw-text-primary, #262626)' }}>
@@ -295,6 +295,6 @@ export default function CollectionsView({ initialCollections, products, canManag
           the store. Products stay in the catalog. This can&apos;t be undone.
         </p>
       </Modal>
-    </DashboardShell>
+    </>
   );
 }

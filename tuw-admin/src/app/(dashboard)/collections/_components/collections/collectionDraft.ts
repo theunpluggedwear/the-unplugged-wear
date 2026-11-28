@@ -1,7 +1,7 @@
-// Pure create/edit draft helpers for the collections form drawer.
-// No React, no storage — mirrored by tests/collections.test.mjs.
 
-import type { CollectionItem, ProductItem } from '@/mocks/fixtures';
+
+
+import type { CollectionItem, ProductItem } from '@/lib/admin-dto';
 import { isValidSlug, isSlugTaken, slugify } from '@tuw/heart/modules/catalog/rules';
 import type { SearchableSelectOption } from '@/components/ui';
 
@@ -10,12 +10,12 @@ export type CollectionVisibility = CollectionItem['visibility'];
 export interface CollectionDraft {
   name: string;
   slug: string;
-  /** True once the user edits the slug directly (or the draft was seeded
-   * from an existing collection) — name edits stop rewriting it. */
+  
+
   slugTouched: boolean;
   season: string;
   visibility: CollectionVisibility;
-  /** datetime-local value; required when scheduled. */
+  
   publishedAt: string;
   description: string;
   productIds: string[];
@@ -28,7 +28,7 @@ export interface CollectionDraftErrors {
   publishedAt?: string;
 }
 
-/** ISO → the local "YYYY-MM-DDTHH:mm" a datetime-local input expects. */
+
 const toLocalInput = (iso?: string): string => {
   if (!iso) return '';
   const d = new Date(iso);
@@ -48,9 +48,9 @@ export function emptyDraft(): CollectionDraft {
   };
 }
 
-/** Seeds an edit draft from a stored collection, dropping links to products
- * that no longer exist. Editing marks the slug as touched so the stored URL
- * never silently changes. */
+
+
+
 export function draftFromCollection(
   collection: CollectionItem,
   products: ProductItem[],
@@ -68,7 +68,7 @@ export function draftFromCollection(
   };
 }
 
-/** Title change — auto-derives the slug until it has been touched. */
+
 export function withName(draft: CollectionDraft, name: string): CollectionDraft {
   return { ...draft, name, slug: draft.slugTouched ? draft.slug : slugify(name) };
 }
@@ -107,8 +107,8 @@ export function draftToPayload(draft: CollectionDraft): Omit<CollectionItem, 'id
   };
 }
 
-/** Picker options for the product multi-select — selection order is the
- * stored `productIds` order. Prices use the catalog's rupee floats. */
+
+
 export function toProductOptions(products: ProductItem[]): SearchableSelectOption[] {
   return products.map((product) => ({
     value: product.id,

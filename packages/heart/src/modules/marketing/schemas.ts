@@ -25,6 +25,7 @@ export const savePost = z.object({
 });
 
 export const postRef = z.object({ id: z.string().uuid() });
+export const revisionRef = z.object({ postId: z.string().uuid(), id: z.string().uuid() });
 export const slugRef = z.object({ slug });
 export const listInput = z.object({
   status: z.enum(['all', 'draft', 'scheduled', 'published', 'archived']).default('all'),

@@ -22,6 +22,7 @@ export default function GiftCardsView({ initial, perms }: { initial: { rows: Row
   const [busy, setBusy] = useState(false);
 
   async function issue() {
+    if (busy) return;
     setBusy(true);
     try {
       const res = await issueGiftCardAction({ amountPaise: Math.round(Number(amount) * 100), recipientEmail: recipient || undefined });

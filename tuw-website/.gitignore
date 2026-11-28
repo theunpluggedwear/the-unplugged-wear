@@ -43,6 +43,9 @@ Thumbs.db
 scratch_*.json
 figma_*.png
 assets/
+!src/storefront/plugins/personalization/assets/
+!src/storefront/plugins/personalization/assets/**
+.data/
 .agent/
 .agents/
 mcp_config.json

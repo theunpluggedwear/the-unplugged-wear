@@ -1,13 +1,12 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { DashboardCard } from './DashboardCard';
 import { FilterMenu } from './FilterMenu';
 import { ProgressBar } from './ProgressBar';
-import { PRODUCT_SORTS, type TopProduct } from '@/hooks/useDashboardData';
+import ImageWithFallback from '@/components/ui/ImageWithFallback';
+import { PRODUCT_SORTS, type TopProduct } from '@/lib/dashboard';
 
-// Class map - selectors live in src/app/globals.css (single app.css, home- prefix).
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'home-' + String(p) });
 
 interface ProductListCardProps {
@@ -34,11 +33,13 @@ export function ProductListCard({ products, sort, onSortChange }: ProductListCar
         {products.map((product) => (
           <div key={product.name} className={styles.productCardItem}>
             <div className={styles.productIllustrationWrapper} style={{ position: 'relative' }}>
-              <Image
+              <ImageWithFallback
                 src={product.image}
                 alt={product.alt}
+                optimized
                 fill
                 sizes="72px"
+                fallbackTone="neutral"
                 style={{ objectFit: 'cover' }}
               />
             </div>

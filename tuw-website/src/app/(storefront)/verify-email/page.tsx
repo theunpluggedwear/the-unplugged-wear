@@ -30,7 +30,7 @@ export default function VerifyEmailPage() {
   return (
       <main id="main-content" className="flex-1 max-w-md mx-auto px-4 py-12 sm:py-20 w-full">
         <div className="bg-white rounded-3xl border border-store-border p-8 shadow-xs space-y-5 text-center">
-          <h1 className="text-2xl font-medium tracking-tight text-store-text-primary">Confirm your email</h1>
+          <h1 className="tuw-h1 text-store-text-primary">Confirm your email</h1>
           {state === 'done' ? (
             <div className="space-y-3">
               <CheckCircle2 size={28} className="mx-auto text-green-700" aria-hidden="true" />
@@ -50,7 +50,7 @@ export default function VerifyEmailPage() {
                 {state === 'working' ? 'Confirming…' : 'Confirm email'}
               </Button>
               <p className="text-xs text-store-text-secondary">
-                Link expired? <Link href="/account" className="underline">Sign in</Link> to request a new one.
+                Link expired? <Link href="/login?next=%2Faccount%2Forders" className="underline">Sign in</Link> to request a new one.
               </p>
             </div>
           )}

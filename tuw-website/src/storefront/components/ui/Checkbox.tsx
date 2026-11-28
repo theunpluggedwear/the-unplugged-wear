@@ -53,7 +53,7 @@ export default function Checkbox({
 
       {(label || description) && (
         <div className="flex flex-col">
-          {label && <span className="text-sm font-medium text-[#1A1A1A] leading-tight">{label}</span>}
+          {label && <span className="text-sm font-medium text-store-charcoal leading-tight">{label}</span>}
           {description && (
             <span className="text-xs text-[#8A8A8A] mt-0.5 leading-snug">{description}</span>
           )}

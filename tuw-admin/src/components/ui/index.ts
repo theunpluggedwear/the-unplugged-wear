@@ -65,6 +65,9 @@ export type { SkeletonProps } from './Skeleton';
 export { default as EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
 
+export { default as TreeGuide } from './TreeGuide';
+export type { TreeGuideProps } from './TreeGuide';
+
 export { default as Tooltip } from './Tooltip';
 export type { TooltipProps } from './Tooltip';
 export type { TooltipSide } from '@/lib/tooltipPosition';

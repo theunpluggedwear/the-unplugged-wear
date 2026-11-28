@@ -1,28 +1,59 @@
-import DashboardShell from '@/components/layout/DashboardShell';
+export const instant = false;
+import {
+  Badge,
+  ContentCard,
+  EmptyState,
+  PageHeader,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui';
 import { adminListSubscribers } from '@tuw/heart/modules/marketing';
+import { formatDate } from '@/lib/format';
 import { session } from '@/server/session';
 
 export default async function NewsletterPage() {
   const claims = await session.requireStaff('content.manage', '/content/newsletter');
   const subscribers = await adminListSubscribers(claims.sub);
   return (
-    <DashboardShell>
-      <div className="space-y-4">
-        <h1 className="text-xl font-semibold">Newsletter subscribers</h1>
-        <table className="w-full text-sm border">
-          <thead><tr><th className="p-2 text-left">Email</th><th className="p-2 text-left">Status</th><th className="p-2 text-left">Source</th><th className="p-2 text-left">Confirmed</th><th className="p-2 text-left">Unsubscribed</th></tr></thead>
-          <tbody>
-            {subscribers.map((s) => (
-              <tr key={s.id} className="border-t">
-                <td className="p-2">{s.email}</td><td className="p-2">{s.status}</td><td className="p-2">{s.source}</td>
-                <td className="p-2">{s.confirmedAt ? new Date(s.confirmedAt).toLocaleDateString() : '—'}</td>
-                <td className="p-2">{s.unsubscribedAt ? new Date(s.unsubscribedAt).toLocaleDateString() : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {subscribers.length === 0 && <p className="text-sm text-muted-foreground">No subscribers yet.</p>}
-      </div>
-    </DashboardShell>
+    <>
+      <PageHeader
+        title="Newsletter subscribers"
+        subtitle="Double opt-in sign-ups and their current status."
+        actions={<Badge variant="info">{subscribers.length} Total</Badge>}
+      />
+
+      {subscribers.length === 0 ? (
+        <EmptyState title="No subscribers yet" description="Confirmed sign-ups will appear here." />
+      ) : (
+        <ContentCard padding="0px">
+          <Table>
+            <TableHeader>
+              <TableRow hoverable={false}>
+                <TableHead>Email</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Source</TableHead>
+                <TableHead>Confirmed</TableHead>
+                <TableHead>Unsubscribed</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {subscribers.map((s) => (
+                <TableRow key={s.id} hoverable={false}>
+                  <TableCell>{s.email}</TableCell>
+                  <TableCell><Badge variant={s.status === 'active' ? 'success' : 'neutral'}>{s.status}</Badge></TableCell>
+                  <TableCell>{s.source}</TableCell>
+                  <TableCell>{s.confirmedAt ? formatDate(s.confirmedAt) : '—'}</TableCell>
+                  <TableCell>{s.unsubscribedAt ? formatDate(s.unsubscribedAt) : '—'}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ContentCard>
+      )}
+    </>
   );
 }

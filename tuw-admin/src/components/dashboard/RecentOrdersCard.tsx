@@ -2,43 +2,35 @@ import React from 'react';
 import Link from 'next/link';
 import { DashboardCard } from './DashboardCard';
 import { SeeAllLink } from './SeeAllLink';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui';
-import Badge from '@/components/ui/Badge';
-import type { FulfillmentStatus, OrderItem } from '@/mocks/fixtures';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge } from '@/components/ui';
+import type { DashboardOrderStatus } from '@tuw/heart/modules/analytics';
 
-// Class map - selectors live in src/app/globals.css (single app.css, home- prefix).
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'home-' + String(p) });
 
-// Figma 26px status pill: ui Badge carries the token treatment; only the
-// dashboard-specific metrics ride along (no new size variant introduced).
 const STATUS_BADGE_STYLE: React.CSSProperties = {
   height: '26px',
   padding: '0 12px',
   fontSize: '12px',
 };
 
-interface RecentOrdersCardProps {
-  orders: OrderItem[];
-}
+const STATUS_BADGE: Record<DashboardOrderStatus, { variant: 'success' | 'info' | 'warning' | 'danger'; label: string }> = {
+  pending: { variant: 'warning', label: 'Pending' },
+  confirmed: { variant: 'warning', label: 'Confirmed' },
+  processing: { variant: 'warning', label: 'Processing' },
+  shipped: { variant: 'success', label: 'Shipped' },
+  delivered: { variant: 'info', label: 'Delivered' },
+  cancelled: { variant: 'danger', label: 'Cancelled' },
+  failed: { variant: 'danger', label: 'Failed' },
+  refunded: { variant: 'info', label: 'Refunded' },
+};
 
-// Fulfillment status -> ui Badge variant + demo label.
-function statusBadge(status: FulfillmentStatus): { variant: 'success' | 'info' | 'warning' | 'danger'; label: string } {
-  if (status === 'shipped') return { variant: 'success', label: 'Shipped' };
-  if (status === 'delivered') return { variant: 'info', label: 'Delivered' };
-  if (status === 'submission_failed') return { variant: 'danger', label: 'Failed' };
-  if (status === 'printing') return { variant: 'warning', label: 'Printing' };
-  return { variant: 'warning', label: 'Queued' };
+interface RecentOrdersCardProps {
+  orders: Array<{ orderNumber: string; customerName: string; total: number; status: DashboardOrderStatus }>;
 }
 
 export function RecentOrdersCard({ orders }: RecentOrdersCardProps) {
   return (
-    <DashboardCard
-      variant="orders"
-      title="Recent orders"
-      action={
-        <SeeAllLink href="/orders" />
-      }
-    >
+    <DashboardCard variant="orders" title="Recent orders" action={<SeeAllLink href="/orders" />}>
       <Table style={{ marginTop: '16px', minWidth: '600px' }}>
         <TableHeader>
           <TableRow hoverable={false}>
@@ -49,22 +41,26 @@ export function RecentOrdersCard({ orders }: RecentOrdersCardProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {orders.map((order, i) => {
-            const badge = statusBadge(order.fulfillmentStatus);
+          {orders.length === 0 ? (
+            <TableRow hoverable={false}>
+              <TableCell colSpan={4}>No orders yet.</TableCell>
+            </TableRow>
+          ) : orders.map((order, i) => {
+            const badge = STATUS_BADGE[order.status] ?? { variant: 'neutral' as const, label: order.status };
             const last = i === orders.length - 1;
             return (
-              <TableRow
-                key={order.id}
-                className={styles.orderDataRow}
-                style={last ? { borderBottom: 'none' } : {}}
-              >
+              <TableRow key={order.orderNumber} className={styles.orderDataRow} style={last ? { borderBottom: 'none' } : {}}>
                 <TableCell style={{ padding: '14px 14px', fontWeight: 600, color: 'var(--tuw-action-primary, #7539FF)' }}>
                   <Link href="/orders" style={{ color: 'inherit', textDecoration: 'none' }}>
-                    {order.id}
+                    {order.orderNumber}
                   </Link>
                 </TableCell>
-                <TableCell style={{ padding: '14px 14px', color: 'var(--tuw-text-secondary, #5D6772)' }}>{order.customerName}</TableCell>
-                <TableCell className="tuw-tabular-nums" style={{ padding: '14px 14px', fontWeight: 600 }}>₹{order.total.toFixed(2)}</TableCell>
+                <TableCell style={{ padding: '14px 14px', color: 'var(--tuw-text-secondary, #5D6772)' }}>
+                  {order.customerName}
+                </TableCell>
+                <TableCell className="tuw-tabular-nums" style={{ padding: '14px 14px', fontWeight: 600 }}>
+                  ₹{order.total.toFixed(2)}
+                </TableCell>
                 <TableCell style={{ padding: '14px 14px', textAlign: 'right' }}>
                   <Badge variant={badge.variant} style={STATUS_BADGE_STYLE}>{badge.label}</Badge>
                 </TableCell>

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useReducer, useState } from 'react';
 import { notifyMeAction } from '@/server/catalog-actions';
+import { asyncReducer, initialAsync } from '@storefront/lib/async-state';
 import Button from '@storefront/components/ui/Button';
 import Input from '@storefront/components/ui/Input';
 
@@ -14,20 +15,25 @@ export interface NotifyMeProps {
 /** "Notify me" for a sold-out option. Keeps what was typed if the request fails. */
 export default function NotifyMe({ productId, color, size }: NotifyMeProps) {
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'saving' | 'done'>('idle');
-  const [error, setError] = useState<string | null>(null);
+  const [request, dispatchRequest] = useReducer(asyncReducer<null>, initialAsync);
+  const error = request.kind === 'error' ? request.message : null;
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setStatus('saving');
-    setError(null);
-    const result = await notifyMeAction({ productId, color, size, email });
-    if (result.ok) return setStatus('done');
-    setStatus('idle');
-    setError(result.error.details[0]?.message ?? result.error.message);
+    dispatchRequest({ type: 'START' });
+    try {
+      const result = await notifyMeAction({ productId, color, size, email });
+      if (result.ok) {
+        dispatchRequest({ type: 'SUCCESS', data: null });
+        return;
+      }
+      dispatchRequest({ type: 'FAIL', message: result.error.details[0]?.message ?? result.error.message });
+    } catch (cause) {
+      dispatchRequest({ type: 'FAIL', message: cause instanceof Error ? cause.message : 'Could not save your request.' });
+    }
   };
 
-  if (status === 'done') {
+  if (request.kind === 'success') {
     return (
       <p role="status" className="p-4 bg-store-cream border border-store-card-border text-sm text-store-charcoal">
         We&rsquo;ll let you know at {email} when {size} is back. Demo: no email is sent until the email provider is connected.
@@ -48,8 +54,8 @@ export default function NotifyMe({ productId, color, size }: NotifyMeProps) {
         onChange={(e) => setEmail(e.target.value)}
         error={error ?? undefined}
       />
-      <Button type="submit" variant="dark" size="md" fullWidth disabled={status === 'saving'}>
-        {status === 'saving' ? 'Saving…' : 'Notify me'}
+      <Button type="submit" variant="dark" size="md" fullWidth disabled={request.kind === 'loading'}>
+        {request.kind === 'loading' ? 'Saving…' : 'Notify me'}
       </Button>
     </form>
   );

@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { asyncReducer, initialAsync } from './async-state';
 import type { CartLine } from '@tuw/heart/modules/cart';
 import {
-  addToBagAction, changeBagVariantAction, clearBagAction, getBagAction, removeFromBagAction, setBagQtyAction, setWishlistAction,
+  addToBagAction, approveBagPreviewAction, changeBagVariantAction, clearBagAction, getBagAction, removeFromBagAction, setBagQtyAction, setWishlistAction,
 } from '@/server/cart-actions';
 import type { CartItem } from './types';
 
@@ -24,18 +25,36 @@ const toItem = (l: CartLine): CartItem => ({
   quantity: l.qty,
   image: l.image ?? '',
   maxQty: l.maxQty,
+  slug: l.slug ?? undefined,
+  productKind: l.productKind,
+  giftRecipientName: l.personalization?.recipientName,
+  giftRecipientEmail: l.personalization?.recipientEmail,
+  giftMessage: l.personalization?.message,
+  monogram: l.personalization?.monogram,
+  placement: l.personalization?.placement,
+  previewImageUrl: l.previewImageUrl ?? undefined,
+  previewApproved: l.previewApproved,
 });
 
 /** The storefront's neutral labels mean "no such axis" to the server. */
 const axis = (value: string | undefined, neutral: RegExp) => (value && !neutral.test(value) ? value : undefined);
 
+const sameLine = (a: CartItem, b: Omit<CartItem, 'id'>) =>
+  a.productId === b.productId && a.color === b.color && a.size === b.size
+  && a.monogram === b.monogram && a.previewImageUrl === b.previewImageUrl;
+
 export function useBag(opts: { session: unknown; onError: (title: string, message: string) => void }) {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const cartRef = useRef<CartItem[]>([]);
+  useEffect(() => { cartRef.current = cart; }, [cart]);
   const [wishlist, setWishlist] = useState<string[]>([]);
-  const [signedIn, setSignedIn] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [load, dispatchLoad] = useReducer(asyncReducer<{ signedIn: boolean }>, initialAsync);
+  const ready = load.kind === 'success';
+  const error = load.kind === 'error' ? load.message : null;
+  const signedIn = load.kind === 'success' ? load.data.signedIn : false;
   const queue = useRef<Promise<unknown>>(Promise.resolve());
+  /** Optimistic changes sent but not yet answered, oldest first. */
+  const pending = useRef<((prev: CartItem[]) => CartItem[])[]>([]);
   const onError = useRef(opts.onError);
   onError.current = opts.onError;
 
@@ -49,19 +68,21 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
   }, []);
 
   const refreshBag = useCallback(async () => {
+    const reportFailure = (message: string) => {
+      dispatchLoad({ type: 'FAIL', message });
+      if (cartRef.current.length > 0) onError.current('Could not refresh your bag', message);
+    };
     try {
       const result = await getBagAction({});
       if (!result.ok) {
-        setError(result.error.message);
+        reportFailure(result.error.message);
         return;
       }
       setCart(result.data.lines.map(toItem));
       applyWishlist(result.data.wishlist);
-      setSignedIn(result.data.signedIn);
-      setError(null);
-      setReady(true);
+      dispatchLoad({ type: 'SUCCESS', data: { signedIn: result.data.signedIn } });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not load your bag.');
+      reportFailure(cause instanceof Error ? cause.message : 'Could not load your bag.');
     }
   }, [applyWishlist]);
 
@@ -69,26 +90,35 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
   useEffect(() => { void refreshBag(); }, [opts.session, refreshBag]);
 
   /** Optimistic change now, server call in turn; the server's lines win. */
-  const send = useCallback((optimistic: (prev: CartItem[]) => CartItem[], call: () => Promise<Result<CartLine[]>>, failTitle: string) => {
+  const runQueue = useCallback((optimistic: (prev: CartItem[]) => CartItem[], call: () => Promise<Result<CartLine[]>>, failTitle: string) => {
     setCart(optimistic);
+    pending.current.push(optimistic);
+    const settle = () => { pending.current = pending.current.filter((op) => op !== optimistic); };
     const next = queue.current.then(async () => {
-      const result = await call();
-      if (result.ok) setCart(result.data.map(toItem));
-      else {
+      const result = await call().finally(settle);
+      if (result.ok) {
+        // The server's lines win, with changes still waiting in the queue
+        // replayed on top, so an older reply never undoes a newer click.
+        const server = result.data.map(toItem);
+        setCart(pending.current.reduce((lines, op) => op(lines), server));
+      } else {
         onError.current(failTitle, result.error.message);
         await refreshBag();
       }
-      return result.ok;
+      return result;
     });
     queue.current = next.catch(() => undefined);
     return next;
   }, [refreshBag]);
 
+  const send = useCallback((optimistic: (prev: CartItem[]) => CartItem[], call: () => Promise<Result<CartLine[]>>, failTitle: string) =>
+    runQueue(optimistic, call, failTitle).then((result) => result.ok), [runQueue]);
+
   const addToCart = useCallback((item: Omit<CartItem, 'id'>) => {
     const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     return send(
       (prev) => {
-        const twin = prev.find((i) => i.productId === item.productId && i.color === item.color && i.size === item.size);
+        const twin = prev.find((i) => sameLine(i, item));
         return twin ? prev.map((i) => (i === twin ? { ...i, quantity: i.quantity + item.quantity } : i)) : [...prev, { ...item, id: tempId }];
       },
       () => addToBagAction({
@@ -102,6 +132,12 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
             recipientEmail: item.giftRecipientEmail,
             message: item.giftMessage,
           },
+        } : item.monogram ? {
+          personalization: {
+            ...(item.monogram ? { monogram: item.monogram } : {}),
+            ...(item.placement ? { placement: item.placement } : {}),
+          },
+          previewImageUrl: item.previewImageUrl,
         } : {}),
       }),
       'Could not add to bag',
@@ -162,5 +198,35 @@ export function useBag(opts: { session: unknown; onError: (title: string, messag
 
   const isWishlistSaved = useCallback((productId: string) => wishlistRef.current.includes(productId), []);
 
-  return { cart, wishlist, signedIn, ready, error, refreshBag, addToCart, updateQuantity, updateCartItemVariant, removeLine, clearCart, setSaved, isWishlistSaved };
+  const addPersonalisedToCart = useCallback(async (item: Omit<CartItem, 'id'>) => {
+    const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const result = await runQueue(
+      (prev) => {
+        const twin = prev.find((i) => sameLine(i, item));
+        return twin ? prev.map((i) => (i === twin ? { ...i, quantity: i.quantity + item.quantity } : i)) : [...prev, { ...item, id: tempId }];
+      },
+      () => addToBagAction({
+        productId: item.productId,
+        color: axis(item.color, /^standard$/i),
+        size: axis(item.size, /^one size$/i),
+        qty: item.quantity,
+        personalization: {
+          ...(item.monogram ? { monogram: item.monogram } : {}),
+          ...(item.placement ? { placement: item.placement } : {}),
+        },
+        previewImageUrl: item.previewImageUrl,
+      }),
+      'Could not add to bag',
+    );
+    if (!result.ok) return null;
+    return result.data.find((l) => l.previewImageUrl === item.previewImageUrl && l.personalization?.monogram === item.monogram)?.id ?? null;
+  }, [runQueue]);
+
+  const approvePreviewFor = useCallback((lineId: string) => send(
+    (prev) => prev.map((i) => (i.id === lineId ? { ...i, previewApproved: true } : i)),
+    () => approveBagPreviewAction({ lineId }),
+    'Could not approve the preview',
+  ), [send]);
+
+  return { cart, wishlist, signedIn, ready, error, refreshBag, addToCart, addPersonalisedToCart, approvePreviewFor, updateQuantity, updateCartItemVariant, removeLine, clearCart, setSaved, isWishlistSaved };
 }

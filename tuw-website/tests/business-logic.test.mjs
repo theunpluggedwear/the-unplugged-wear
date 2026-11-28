@@ -294,7 +294,8 @@ describe('Demo sign-in and checkout flow', () => {
   test('order amounts stored in rupees are converted to paise before formatting', () => {
     const files = [
       'src/app/checkout/success/page.tsx',
-      'src/app/account/orders/page.tsx',
+      'src/app/account/_components/OrdersSection.tsx',
+      'src/app/account/_components/OverviewSection.tsx',
       'src/app/account/orders/[id]/page.tsx',
     ];
     for (const file of files) {
@@ -306,9 +307,12 @@ describe('Demo sign-in and checkout flow', () => {
   });
 
   test('new orders keep payment and fulfilment status separate', () => {
+    const checkout = read('../packages/heart/src/modules/orders/checkout.ts');
+    assert.ok(checkout.includes("${orderNumber}, 'pending',"), 'new orders start in the SQL fulfilment queue');
+    assert.ok(checkout.includes("'pending', ${address}::jsonb"), 'COD orders start payment-pending; capture comes later');
+    const integration = read('../packages/heart/src/modules/orders/orders.int.test.ts');
+    assert.ok(integration.includes("[o.guest_email, o.payment_status], [null, 'pending']"), 'heart verifies COD is collected on delivery');
     const store = read('src/storefront/mocks/store.tsx');
-    assert.ok(store.includes("paymentStatus: isCashOnDelivery ? 'pending' : 'paid'"), 'COD orders stay payment-pending');
-    assert.ok(store.includes("fulfillmentStatus: 'queued'"), 'new orders start in the print queue');
-    assert.ok(store.includes('while (taken.has(orderNumber))'), 'order numbers never reuse an existing reference');
+    assert.ok(!store.includes("paymentStatus: isCashOnDelivery"), 'the storefront no longer fabricates order statuses locally');
   });
 });

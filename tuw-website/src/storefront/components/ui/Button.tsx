@@ -36,9 +36,9 @@ export default function Button({
   const variantClasses = {
     primary: 'bg-[#7539FF] text-white hover:bg-[#6025DB] active:bg-[#501EB8] shadow-sm',
     dark: 'bg-[#1A1A1A] text-white hover:bg-black active:bg-[#2A2A2A] shadow-sm',
-    secondary: 'bg-[#F4F1EA] text-[#1A1A1A] hover:bg-[#EAE5D9] active:bg-[#DFD9CB] border border-[#E2DDCF]',
-    outline: 'bg-transparent text-[#1A1A1A] border border-[#1A1A1A] hover:bg-[#1A1A1A] hover:text-white',
-    ghost: 'bg-transparent text-[#5A5A5A] hover:text-[#1A1A1A] hover:bg-black/5',
+    secondary: 'bg-[#F4F1EA] text-store-charcoal hover:bg-[#EAE5D9] active:bg-[#DFD9CB] border border-[#E2DDCF]',
+    outline: 'bg-transparent text-store-charcoal border border-[#1A1A1A] hover:bg-[#1A1A1A] hover:text-white',
+    ghost: 'bg-transparent text-[#5A5A5A] hover:text-store-charcoal hover:bg-black/5',
     danger: 'bg-[#FEF4F4] text-[#C91818] border border-[#FED7D7] hover:bg-[#FDE8E8]',
   }[variant];
 

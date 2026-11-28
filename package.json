@@ -25,9 +25,15 @@
     "test:heart": "pnpm --dir packages/heart test",
     "db:types": "pnpm --dir packages/heart exec node --env-file-if-exists=../../.env.local node_modules/drizzle-kit/bin.cjs pull --config drizzle.config.ts && node packages/heart/scripts/fix-generated.mjs",
     "auth:bootstrap-admin": "node --env-file-if-exists=.env.local --conditions=react-server packages/heart/scripts/bootstrap-admin.ts",
-    "db:seed-catalog": "node --env-file-if-exists=.env.local --conditions=react-server packages/heart/scripts/seed-demo-catalog.ts"
+    "db:seed-catalog": "node --env-file-if-exists=.env.local --conditions=react-server packages/heart/scripts/seed-demo-catalog.ts",
+    "qikink:sandbox": "node --conditions=react-server scripts/qikink-sandbox-check.mjs",
+    "load:check": "node scripts/load-check.mjs",
+    "lint:comments": "node scripts/check-comments.mjs",
+    "comments:update": "node scripts/check-comments.mjs --update",
+    "comments:audit": "node scripts/check-comments.mjs --audit"
   },
   "devDependencies": {
+    "autocannon": "^9.0.0",
     "pg": "8.13.1"
   }
 }

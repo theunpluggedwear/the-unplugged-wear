@@ -5,11 +5,12 @@ import * as catalog from '@tuw/heart/modules/catalog';
 import { notifyRestocked } from '@tuw/heart/modules/inventory';
 import { catalogSchemas as s, PRODUCTS_TAG } from '@tuw/heart/modules/catalog';
 import { AppError } from '@tuw/heart/platform/errors';
+import { qikinkSkuImport } from '@/plugins/personalization/sku-schema';
 import { guards } from './session';
 import { refreshStorefront } from './storefront-cache';
 
-// Catalog writes. Each one re-checks its own permission (guards) and asks
-// the storefront to expire its catalog; a failed refresh never fails a save.
+
+
 const refresh = () => refreshStorefront([PRODUCTS_TAG]);
 
 export const getProductAction = guards.action({ permission: 'product.update', input: s.productRef }, async ({ input }) => catalog.adminGetProduct(input.id));
@@ -20,13 +21,13 @@ export const createProductAction = guards.action({ permission: 'product.create',
 });
 
 export const updateProductAction = guards.action({ permission: 'product.update', input: s.updateProduct }, async ({ input, ctx }) => {
-  // Archiving through the editor needs the archive permission too.
+  
   if (input.publicationStatus === 'archived' && !ctx.user!.permissions.includes('product.archive')) {
     throw new AppError('FORBIDDEN', 'You do not have permission to archive products.');
   }
   const { id, expectedUpdatedAt, ...fields } = input;
   const product = await catalog.adminUpdateProduct(id, fields, ctx.user!.id, expectedUpdatedAt);
-  // A restock tells waiting shoppers right away; the daily job catches anything missed.
+  
   after(() => notifyRestocked().catch((error) => console.warn('[inventory] restock emails failed', error)));
   return { product, storefront: await refresh() };
 });
@@ -45,7 +46,7 @@ export const deleteProductsAction = guards.action({ permission: 'product.archive
 });
 
 export const importListingAction = guards.action({ permission: 'product.import', input: s.importRows }, async ({ input, ctx }) => {
-  // Imports create drafts only, so the storefront has nothing to refresh.
+  
   const { jobId, status, created, updated, failedRows, issues } = await catalog.importQikinkListing(input.rows, { actorId: ctx.user!.id, source: 'csv' });
   return { jobId, status, created, updated, failedRows, issues: issues.slice(0, 50) };
 });
@@ -70,12 +71,12 @@ export const deleteCategoryAction = guards.action({ permission: 'category.manage
   return { categories, storefront: await refresh() };
 });
 
-// ---- attribute library, size charts, partner SKUs, reviews (product.update)
+
 
 export const createAttributeAction = guards.action({ permission: 'product.update', input: s.attributeCreate }, async ({ input, ctx }) => catalog.createAttribute(input, ctx.user!.id));
 export const updateAttributeAction = guards.action({ permission: 'product.update', input: s.attributeUpdate }, async ({ input, ctx }) => {
   const library = await catalog.updateAttribute(input, ctx.user!.id);
-  await refresh(); // visibility changes what the product page lists
+  await refresh(); 
   return library;
 });
 export const deleteAttributeAction = guards.action({ permission: 'product.update', input: s.productRef }, async ({ input, ctx }) => catalog.deleteAttribute(input.id, ctx.user!.id));
@@ -95,6 +96,11 @@ export const deleteSizeChartAction = guards.action({ permission: 'product.update
 
 export const getMappingsAction = guards.action({ permission: 'product.update', input: s.productRef }, async ({ input }) => catalog.listMappings(input.id));
 export const saveMappingsAction = guards.action({ permission: 'product.update', input: s.mappingSave }, async ({ input, ctx }) => catalog.saveMappings(input, ctx.user!.id));
+
+export const importQikinkSkuMapAction = guards.action({ permission: 'product.update', input: qikinkSkuImport }, async ({ input, ctx }) => {
+  const mappings = await catalog.saveMappings(input, ctx.user!.id);
+  return { saved: input.rows.length, mappings };
+});
 
 const refreshReviews = () => refreshStorefront([catalog.REVIEWS_TAG]);
 export const moderateReviewAction = guards.action({ permission: 'product.update', input: s.reviewModerate }, async ({ input, ctx }) => {

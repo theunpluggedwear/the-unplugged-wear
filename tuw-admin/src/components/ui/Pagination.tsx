@@ -105,7 +105,7 @@ export default function Pagination({
           Previous
         </Button>
 
-        {/* Page numbers with smart ellipsis */}
+        {}
         {(() => {
           const getPageNumbers = () => {
             if (validTotalPages <= 7) {

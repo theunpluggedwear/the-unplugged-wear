@@ -60,7 +60,7 @@ export default function SearchBox() {
           className="w-full h-14 pl-12 pr-12 rounded-2xl border border-[#E2DDCF] bg-white text-base outline-none shadow-xs focus:border-[#1A1A1A] transition-colors"
         />
         {query && (
-          <button type="button" onClick={() => change('', 0)} aria-label="Clear search query" className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8A8A8A] hover:text-[#1A1A1A]">
+          <button type="button" onClick={() => change('', 0)} aria-label="Clear search query" className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8A8A8A] hover:text-store-charcoal">
             <X size={18} />
           </button>
         )}
@@ -68,7 +68,7 @@ export default function SearchBox() {
       <div className="flex items-center gap-2 flex-wrap mt-4">
         <span className="text-xs text-[#8A8A8A] font-medium flex items-center gap-1"><Tag size={12} /> Popular:</span>
         {SUGGESTED.map((term) => (
-          <button key={term} type="button" onClick={() => change(term, 0)} className="px-3 py-1 rounded-full bg-[#F4F1EA] text-xs font-medium text-[#1A1A1A] hover:bg-[#EAE5D9] transition-colors cursor-pointer">
+          <button key={term} type="button" onClick={() => change(term, 0)} className="px-3 py-1 rounded-full bg-[#F4F1EA] text-xs font-medium text-store-charcoal hover:bg-[#EAE5D9] transition-colors cursor-pointer">
             {term}
           </button>
         ))}

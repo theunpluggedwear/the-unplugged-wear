@@ -15,9 +15,9 @@ export interface OrderTimelineProps {
   style?: React.CSSProperties;
 }
 
-/**
- * Visual timeline for order tracking and lifecycle events
- */
+
+
+
 export default function OrderTimeline({
   events,
   className = '',
@@ -67,7 +67,7 @@ export default function OrderTimeline({
               paddingBottom: isLast ? '0px' : '24px',
             }}
           >
-            {/* Timeline vertical connector */}
+            {}
             {!isLast && (
               <div
                 style={{
@@ -84,7 +84,7 @@ export default function OrderTimeline({
               />
             )}
 
-            {/* Timeline icon node */}
+            {}
             <div
               style={{
                 position: 'absolute',
@@ -101,7 +101,7 @@ export default function OrderTimeline({
               {getIcon(event.status)}
             </div>
 
-            {/* Timeline content */}
+            {}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                 <span

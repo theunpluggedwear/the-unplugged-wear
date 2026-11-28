@@ -6,6 +6,8 @@ import { AppError } from '../../platform/errors/index.ts';
 import { toRupees } from '../../platform/money/index.ts';
 import * as giftCards from '../gift-cards/index.ts';
 import { release } from '../inventory/index.ts';
+import { canTransitionOrder } from '../../platform/status/index.ts';
+import type { OrderStatus } from '../../platform/status/index.ts';
 
 export interface ConfirmPaidInput {
   providerOrderId: string;
@@ -108,10 +110,10 @@ export async function expirePendingPayment(orderId: string): Promise<void> {
       SELECT id, status, payload FROM payment_intents WHERE order_id=${orderId}::uuid FOR UPDATE`);
     const intent = intents[0];
     if (!intent || intent.status === 'paid' || intent.status === 'expired') return;
-    const { rows: orders } = await tx.execute<{ status: string; payment_status: string; discount_code_id: string | null }>(sql`
+    const { rows: orders } = await tx.execute<{ status: OrderStatus; payment_status: string; discount_code_id: string | null }>(sql`
       SELECT status, payment_status, discount_code_id FROM orders WHERE id=${orderId}::uuid FOR UPDATE`);
     const order = orders[0];
-    if (!order || order.payment_status === 'paid' || order.status === 'cancelled') return;
+    if (!order || order.payment_status === 'paid' || !canTransitionOrder(order.status, 'cancelled')) return;
 
     // Stock and gift-card credits are released by their own idempotent helpers.
     await release(tx, { orderId });
@@ -145,6 +147,6 @@ export async function expirePendingPayment(orderId: string): Promise<void> {
     await tx.execute(sql`UPDATE orders SET status='cancelled', updated_at=now() WHERE id=${orderId}::uuid`);
     await tx.execute(sql`UPDATE payments SET status='failed', updated_at=now() WHERE order_id=${orderId}::uuid AND status='pending'`);
     await tx.execute(sql`INSERT INTO order_status_history (id, order_id, from_status, to_status, note, actor)
-      VALUES (${uuidv7()}, ${orderId}::uuid, 'pending', 'cancelled', 'Payment not completed', 'system')`);
+      VALUES (${uuidv7()}, ${orderId}::uuid, ${order.status}, 'cancelled', 'Payment not completed', 'system')`);
   });
 }

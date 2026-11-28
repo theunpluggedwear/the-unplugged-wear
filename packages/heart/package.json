@@ -8,6 +8,7 @@
     "./platform/*": "./src/platform/*/index.ts",
     "./modules/catalog/rules": "./src/modules/catalog/rules.ts",
     "./modules/catalog/planner": "./src/modules/catalog/planner.ts",
+    "./modules/catalog/variants": "./src/modules/catalog/variants.ts",
     "./modules/*": "./src/modules/*/index.ts",
     "./integrations/*": "./src/integrations/*/index.ts",
     "./platform/jobs/catalog": "./src/platform/jobs/catalog.ts",

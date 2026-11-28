@@ -7,18 +7,18 @@ export interface KeyValueItem {
 
 export interface KeyValueListProps extends React.HTMLAttributes<HTMLDivElement> {
   items: KeyValueItem[];
-  /** Stack gap between rows. Default 10. */
+  
   gap?: number;
-  /** Divided variant (media drawer): hairline rule under each row. */
+  
   divided?: boolean;
-  /** Trailing node inside the list container (participates in gap) — e.g.
-   * callout blocks that must keep exact rhythm with the rows. */
+  
+
   after?: React.ReactNode;
 }
 
-// Drawer key-value list (DW0): label/value rows inside drawer bodies.
-// Labels share the secondary treatment; values pass through verbatim so
-// per-site weight, ink, and tabular figures survive untouched.
+
+
+
 export default function KeyValueList({
   items,
   gap = 10,

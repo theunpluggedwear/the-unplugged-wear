@@ -1,336 +1,156 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
-import {
-  Home as HomeIcon,
-  ClipboardList,
-  Package,
-  Users,
-  TrendingUp,
-  LayoutGrid,
-  ShoppingBag,
-  ShoppingCart,
-  Settings,
-  Headphones,
-  LogOut,
-  PackageCheck,
-  Truck,
-  Undo2,
-  RotateCcw,
-  CreditCard,
-  Layers,
-  Palette,
-  FileText,
-  ShieldCheck,
-  X,
-  BadgePercent,
-} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { SidebarNavGroup, SidebarNavItem, SidebarDock } from './sidebar-nav';
-import type { SidebarNavItemDef } from './sidebar-nav';
-import type { LucideIcon } from 'lucide-react';
+import { SidebarNavGroup, SidebarNavItem } from './sidebar-nav';
+import { getActiveGroupForPath, visibleFooterItems, visibleNavGroups } from '@/lib/admin-nav';
 
 interface SidebarProps {
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
-  mobileMenuOpen?: boolean;
-  onCloseMobileMenu?: () => void;
+  mobileMenuOpen: boolean;
+  onCloseMobileMenu: () => void;
+  permissions: string[];
 }
 
-// Module-level cache to persist open group state across Next.js client-side page transitions
 let globalOpenGroups: Set<string> | null = null;
 const STORAGE_KEY = 'tuw_admin_open_groups';
 
-function getActiveGroupForPath(pathname: string): string | null {
-  if (
-    pathname === '/' ||
-    pathname === '/dashboard' ||
-    pathname.startsWith('/orders') ||
-    pathname.startsWith('/products') ||
-    pathname.startsWith('/customers') ||
-    pathname.startsWith('/reports') ||
-    pathname.startsWith('/analytics')
-  ) {
-    return 'core';
-  }
-  if (
-    pathname.startsWith('/fulfillment') ||
-    pathname.startsWith('/shipments') ||
-    pathname.startsWith('/returns') ||
-    pathname.startsWith('/refunds') ||
-    pathname.startsWith('/payments') ||
-    pathname.startsWith('/discounts') ||
-    pathname.startsWith('/abandoned')
-  ) {
-    return 'operations';
-  }
-  if (
-    pathname.startsWith('/collections') ||
-    pathname.startsWith('/designs') ||
-    pathname.startsWith('/content')
-  ) {
-    return 'merchandise';
-  }
-  if (
-    pathname.startsWith('/team')
-  ) {
-    return 'system';
-  }
-  return null;
-}
-
-interface NavGroupDef {
-  key: string;
-  label: string;
-  icon: LucideIcon;
-  items: SidebarNavItemDef[];
-}
-
-// Single source of truth for sidebar navigation (pixel-identical rendering;
-// groups and items below map over this config — no hand-written repeats).
-const NAV_GROUPS: NavGroupDef[] = [
-  {
-    key: 'core',
-    label: 'Core',
-    icon: LayoutGrid,
-    items: [
-      { href: '/dashboard', label: 'Dashboard', icon: HomeIcon, match: ['/dashboard'] },
-      { href: '/orders', label: 'Orders', icon: ClipboardList, match: ['/orders'] },
-      { href: '/products', label: 'Products', icon: Package, match: ['/products'] },
-      { href: '/customers', label: 'Customers', icon: Users, match: ['/customers'] },
-      { href: '/reports', label: 'Analytics & Reports', icon: TrendingUp, match: ['/reports', '/analytics'] },
-    ],
-  },
-  {
-    key: 'operations',
-    label: 'Operations',
-    icon: Package,
-    items: [
-      { href: '/fulfillment', label: 'Fulfillment', icon: PackageCheck, match: ['/fulfillment'], badge: { text: '4', dotClassName: 'bg-action-primary', className: 'inline-flex min-w-[18px] items-center justify-center rounded-full bg-nav-badge-purple-bg px-[7.5px] py-[2.5px] text-center text-[11.5px] font-bold leading-none text-action-primary' } },
-      { href: '/shipments', label: 'Shipments', icon: Truck, match: ['/shipments'] },
-      { href: '/returns', label: 'Returns & RMA', icon: Undo2, match: ['/returns'] },
-      { href: '/refunds', label: 'Refunds', icon: RotateCcw, match: ['/refunds'] },
-      { href: '/payments', label: 'Payments', icon: CreditCard, match: ['/payments'] },
-      { href: '/discounts', label: 'Discounts', icon: BadgePercent, match: ['/discounts'] },
-      { href: '/abandoned', label: 'Abandoned', icon: ShoppingCart, match: ['/abandoned'] },
-    ],
-  },
-  {
-    key: 'merchandise',
-    label: 'Merchandise',
-    icon: ShoppingBag,
-    items: [
-      { href: '/collections', label: 'Collections', icon: Layers, match: ['/collections'] },
-      { href: '/designs', label: 'Design Assets', icon: Palette, match: ['/designs'] },
-      { href: '/content', label: 'Content CMS', icon: FileText, match: ['/content'] },
-    ],
-  },
-  {
-    key: 'system',
-    label: 'System',
-    icon: ShieldCheck,
-    items: [
-      { href: '/team', label: 'Team', icon: Users, match: ['/team'] },
-    ],
-  },
-];
-
-interface FooterItemDef {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  match: string[];
-  variant: 'footer' | 'danger';
-}
-
-const FOOTER_ITEMS: FooterItemDef[] = [
-  { href: '/settings', label: 'Settings', icon: Settings, match: ['/settings'], variant: 'footer' },
-  { href: '/support', label: 'Help & Support', icon: Headphones, match: ['/support', '/help'], variant: 'footer' },
-  { href: '/login', label: 'Log out', icon: LogOut, match: [], variant: 'danger' },
-];
-
-export default function Sidebar({
-  isCollapsed,
-  onToggleCollapse,
-  mobileMenuOpen = false,
-  onCloseMobileMenu,
-}: SidebarProps) {
+export default function Sidebar({ mobileMenuOpen, onCloseMobileMenu, permissions }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const groups = visibleNavGroups(permissions);
+  const footer = visibleFooterItems(permissions);
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => globalOpenGroups ?? new Set<string>());
+  const [resetNotice, setResetNotice] = useState<string | null>(null);
 
-  // Close mobile drawer when pressing Escape
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          const next = new Set<string>(parsed.filter((value): value is string => typeof value === 'string'));
+          globalOpenGroups = next;
+          setOpenGroups(next);
+        }
+      }
+    } catch {
+      
+    }
+  }, []);
+
   React.useEffect(() => {
     if (!mobileMenuOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onCloseMobileMenu?.();
-      }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCloseMobileMenu();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [mobileMenuOpen, onCloseMobileMenu]);
 
-  // When clicking any link inside mobile sidebar, close drawer smoothly
-  const handleSidebarClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('a') && mobileMenuOpen && onCloseMobileMenu) {
-      onCloseMobileMenu();
-    }
-  };
-
-  // User-controlled accordion state: persists across route transitions & page loads.
-  // Hydration-safe: the module cache is null on both server and first client render,
-  // so both derive ONLY from pathname (identical output → no SSR mismatch).
-  // Client-side navigations reuse the live cache with no flash; stored groups
-  // apply in the client-only effect below.
-  const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
-    if (globalOpenGroups !== null) {
-      return new Set(globalOpenGroups);
-    }
-    const activeGroup = getActiveGroupForPath(pathname) || 'core';
-    return new Set<string>([activeGroup]);
-  });
-
-  React.useEffect(() => {
-    try {
-      if (globalOpenGroups !== null) {
-        setOpenGroups(new Set(globalOpenGroups));
-        return;
-      }
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          const set = new Set<string>(parsed);
-          globalOpenGroups = set;
-          setOpenGroups(set);
-        }
-      }
-    } catch {
-      // fallback: keep pathname-derived default
-    }
-  }, []);
-
-  // Fade-mask scroll indicators were removed: their flex items added phantom gaps
-  // and zoom-fragile overlap math. Nav scrolls clean without indicators.
-
   const toggleGroup = (key: string) => {
     setOpenGroups((prev) => {
-      // Single-accordion: opening one section closes others; clicking open section collapses it
       const next = prev.has(key) ? new Set<string>() : new Set<string>([key]);
       globalOpenGroups = next;
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(next)));
-        } catch {
-          // ignore
-        }
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(next)));
+      } catch {
+        
       }
       return next;
     });
   };
 
-  const isGroupOpen = (key: string) => openGroups.has(key);
-
   const getIsActive = (path: string) => {
-    if (path === '/' || path === '/dashboard') {
-      return pathname === '/' || pathname === '/dashboard';
-    }
+    if (path === '/' || path === '/dashboard') return pathname === '/' || pathname === '/dashboard';
     return pathname.startsWith(path);
   };
 
-  // Index of the active child per group (-1 = none): drives the segmented dark stem.
-  const childActiveIndex = (activeFlags: boolean[]) => activeFlags.findIndex(Boolean);
-  // Route-based active parent group (independent of open state) for parent highlighting.
-  const activeGroup = getActiveGroupForPath(pathname);  const coreFlags = [getIsActive('/dashboard'), getIsActive('/orders'), getIsActive('/products'), getIsActive('/customers'), getIsActive('/reports') || getIsActive('/analytics')];
-  const opsFlags = [getIsActive('/fulfillment'), getIsActive('/shipments'), getIsActive('/returns'), getIsActive('/refunds'), getIsActive('/payments')];
-  const merchFlags = [getIsActive('/collections'), getIsActive('/designs'), getIsActive('/content')];
-  const sysFlags = [getIsActive('/team')];
-  const coreStem = childActiveIndex(coreFlags);
-  const opsStem = childActiveIndex(opsFlags);
-  const merchStem = childActiveIndex(merchFlags);
-  const sysStem = childActiveIndex(sysFlags);
+  const handleSidebarClick = (event: React.MouseEvent) => {
+    if ((event.target as HTMLElement).closest('a')) onCloseMobileMenu();
+  };
+
+  const resetDemo = () => {
+    ['tuw_admin_open_groups', 'tuw_admin_v2_product_editor', 'tuw_search_frequent'].forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        
+      }
+    });
+    globalOpenGroups = null;
+    setOpenGroups(new Set<string>());
+    setResetNotice('Demo state reset — saved menu groups and demo preferences were cleared.');
+    router.refresh();
+  };
 
   return (
     <aside
-      className={cn('sidebar', 'fixed left-0 top-0 z-50 flex shrink-0 flex-col overflow-hidden border-r border-subtle bg-canvas transition-[width] duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]', isCollapsed ? 'w-20 min-w-20 px-[10px] pb-[14px]' : 'w-60 min-w-60 md:w-55 md:min-w-55 lg:w-60 lg:min-w-60 px-[14px] pb-[10px]', mobileMenuOpen ? 'max-md:translate-x-0' : 'max-md:-translate-x-full', 'max-md:bottom-0 max-md:z-[100] max-md:max-w-[86vw] max-md:w-[290px] max-md:min-w-auto max-md:overflow-y-auto max-md:overflow-x-hidden max-md:px-[14px] max-md:pb-4 max-md:shadow-[4px_0_24px_rgba(0,0,0,0.15)] max-md:transition-transform')}
+      className={cn(
+        'sidebar fixed left-0 top-0 z-[100] flex h-dvh w-[290px] max-w-[86vw] shrink-0 flex-col overflow-hidden border-r border-subtle bg-canvas px-[14px] pb-4 transition-transform md:hidden',
+        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full',
+      )}
       onClick={handleSidebarClick}
     >
-      {/* Brand Header */}
-      <div className={cn('flex w-full shrink-0 items-center bg-canvas border-b border-subtle mb-2 z-10 h-20 min-h-20', isCollapsed ? 'justify-center p-0' : 'justify-between px-1')}>
-        <Link href="/" className="flex items-center gap-2.5 no-underline text-primary">
+      <div className="flex h-20 min-h-20 w-full shrink-0 items-center justify-between border-b border-subtle bg-canvas">
+        <Link href="/dashboard" className="flex items-center gap-2.5 no-underline text-primary" onClick={onCloseMobileMenu}>
           <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-primary shadow-nav-logo">
-            <Image
-              src="/logos/tuw-stag-white.png"
-              alt="The Unplugged Wear"
-              width={22}
-              height={22}
-              className="h-[22px] w-auto object-contain"
-              priority
-            />
+            <Image src="/logos/tuw-stag-white.png" alt="The Unplugged Wear" width={22} height={22} className="h-[22px] w-auto object-contain" priority />
           </div>
-          {!isCollapsed && <span className="text-[20px] font-bold tracking-auth-hero text-primary whitespace-nowrap">TUW Admin</span>}
+          <span className="whitespace-nowrap text-[20px] font-bold tracking-auth-hero text-primary">TUW Admin</span>
         </Link>
-
-        {/* Mobile Close Button */}
-        <button
-          type="button"
-          className="hidden size-7.5 shrink-0 cursor-pointer items-center justify-center rounded-control border border-subtle bg-surface text-primary transition-all duration-[180ms] hover:border-action-primary hover:bg-selected hover:text-action-primary ml-auto max-md:flex focus-visible:outline-2 focus-visible:outline-action-primary focus-visible:outline-offset-2"
-          onClick={onCloseMobileMenu}
-          aria-label="Close menu"
-          title="Close menu"
-        >
+        <button type="button" className="flex size-7.5 shrink-0 items-center justify-center rounded-control border border-subtle bg-surface text-primary" onClick={onCloseMobileMenu} aria-label="Close menu" title="Close menu">
           <X size={18} />
         </button>
       </div>
 
-      {/* Navigation Sections */}
-      <div className={cn('flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain mt-0.5 pb-6 pr-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden', isCollapsed ? 'gap-0' : 'gap-2.5')}>
-        {NAV_GROUPS.map((group) => {
-          const actives = group.items.map((item) => item.match.some((p) => getIsActive(p)));
-          const stemIdx = actives.findIndex(Boolean);
-          const open = !isCollapsed ? isGroupOpen(group.key) : true;
+      <div className="mt-0.5 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overflow-x-hidden overscroll-y-contain pb-6 pr-1">
+        {groups.map((group) => {
+          const actives = group.items.map((item) => item.match.some((prefix) => getIsActive(prefix)));
           return (
             <SidebarNavGroup
               key={group.key}
               groupKey={group.key}
               label={group.label}
               icon={group.icon}
-              isCollapsed={isCollapsed}
-              open={open}
-              chevronOpen={isGroupOpen(group.key)}
-              groupActive={activeGroup === group.key}
-              stemIdx={stemIdx}
+              isCollapsed={false}
+              open={openGroups.has(group.key)}
+              chevronOpen={openGroups.has(group.key)}
+              groupActive={getActiveGroupForPath(pathname) === group.key}
+              stemIdx={actives.findIndex(Boolean)}
               onToggle={toggleGroup}
             >
-            {group.items.map((item, idx) => (
-              <SidebarNavItem key={item.href} item={item} active={actives[idx]} isCollapsed={isCollapsed} variant="branch" />
-            ))}
+              {group.items.map((item, index) => (
+                <SidebarNavItem key={item.href} item={item} active={actives[index]} isCollapsed={false} variant="branch" />
+              ))}
             </SidebarNavGroup>
           );
         })}
       </div>
 
-      {/* Footer Controls */}
-      <div className="flex flex-col gap-0.5 border-t border-subtle bg-canvas pt-2 pb-0 mt-auto shrink-0 z-10">
-        <ul className="list-none flex flex-col gap-[3px]">
-          {FOOTER_ITEMS.map((item) => {
-            const active = item.match.some((p) => getIsActive(p));
-            return (
+      <div className="mt-auto flex shrink-0 flex-col border-t border-subtle bg-canvas pt-2">
+        <ul className="flex list-none flex-col gap-[3px]">
+          {footer.map((item) => (
             <li key={item.href}>
-              <SidebarNavItem item={item} active={active} isCollapsed={isCollapsed} variant={item.variant} />
+              <SidebarNavItem item={item} active={item.match.some((prefix) => getIsActive(prefix))} isCollapsed={false} variant={item.variant} />
             </li>
-            );
-          })}
+          ))}
         </ul>
-
-        {/* ================================================================
-            BOTTOM DOCKING TOOLBAR (NIGHT / THEME / SIDEBAR)
-            ================================================================ */}
-        {/* Bottom docking toolbar (night / contrast / collapse) */}
-        <SidebarDock isCollapsed={isCollapsed} onToggleCollapse={onToggleCollapse} />
+        <button
+          type="button"
+          className="mt-1 px-2.5 py-2 text-left"
+          style={{ fontSize: 13, color: 'var(--tuw-text-secondary, #5D6772)', borderRadius: 'var(--tuw-radius-control, 8px)' }}
+          onClick={resetDemo}
+          title="Clear saved demo state"
+        >
+          Reset Demo
+        </button>
+        {resetNotice ? (
+          <p role="status" className="px-2.5 pb-1" style={{ fontSize: 12, color: 'var(--tuw-text-success, #187343)' }}>{resetNotice}</p>
+        ) : null}
       </div>
     </aside>
   );

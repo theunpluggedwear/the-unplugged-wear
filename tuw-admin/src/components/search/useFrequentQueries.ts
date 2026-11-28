@@ -55,10 +55,10 @@ function topJumps(store: FrequentStore, limit = 3): FrequentJump[] {
     .map(([id, j]) => ({ ...j, id }));
 }
 
-// Frequent-search engine (P1): counts every jumped query + destination in
-// localStorage, ranked by use. Session-persistent, demo-reset-cleared.
-// A per-user server store replaces these internals later; the returned
-// shape ({ topQueries, frequentJumps, record }) stays identical.
+
+
+
+
 export function useFrequentQueries() {
   const [version, setVersion] = React.useState(0);
 
@@ -66,7 +66,7 @@ export function useFrequentQueries() {
     void version;
     if (typeof window === 'undefined') return { queries: {} as Record<string, number>, jumps: {} as Record<string, StoredJump> };
     return loadStore();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [version]);
 
   const record = React.useCallback((query: string, result?: SpotlightResult) => {
@@ -100,7 +100,7 @@ export function useFrequentQueries() {
       );
       setVersion((v) => v + 1);
     } catch {
-      // storage unavailable (private mode) — search still works, counts don't persist
+      
     }
   }, []);
 

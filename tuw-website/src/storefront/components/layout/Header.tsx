@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState, useEffect, useRef, useCallback } from 'react';
+import React, { Suspense, useState, useEffect, useReducer, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -19,11 +19,12 @@ import CartDrawer from './CartDrawer';
 import TuwEmblem from './TuwEmblem';
 import ImageWithFallback from '@storefront/components/ui/ImageWithFallback';
 import type { Product } from '@storefront/lib/types';
-import { NAV_ITEMS, type NavItem, type NavLink } from './navigation';
+import { type NavItem, type NavLink } from './navigation';
 import { suggestAction } from '@/server/catalog-actions';
 import { matchesShopFilter } from '@storefront/lib/product';
 import { site } from '@storefront/lib/site';
 import { rupeesLabel, useSiteSettings } from '@storefront/lib/site-settings';
+import { navMenuReducer, initialNavMenu } from '@storefront/lib/nav-menu-machine';
 
 // Desktop mega-menu panel: link columns (with live product counts) on the left,
 // product tiles on the right, and a "Shop all" link along the bottom.
@@ -358,60 +359,65 @@ const SOCIAL_LINKS = [
 
 export default function Header() {
   const pathname = usePathname();
-  const { cartCount, wishlist, setIsCartDrawerOpen, products, hiddenCategories } = useStore();
-  // Categories staff switched off in the admin drop out of the menu.
+  const { cartCount, wishlist, setIsCartDrawerOpen, products, hiddenCategories, menuItems } = useStore();
   const navItems = React.useMemo(() => {
-    if (!hiddenCategories.length) return NAV_ITEMS;
+    if (!hiddenCategories.length) return menuItems;
     const hidden = new Set<string>(hiddenCategories);
-    return NAV_ITEMS.map((item) => ({
+    return menuItems.map((item) => ({
       ...item,
       columns: item.columns?.map((column) => ({ ...column, links: column.links.filter((link) => !link.filter?.category || !hidden.has(link.filter.category)) })),
     }));
-  }, [hiddenCategories]);
+  }, [hiddenCategories, menuItems]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchVal, setSearchVal] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [navMenu, dispatchNav] = useReducer(navMenuReducer, initialNavMenu);
+  const openMenu = navMenu.kind === 'closed' ? null : navMenu.key;
 
   const closeSearch = useCallback(() => setIsSearchOpen(false), []);
 
   const openMenuNow = useCallback((label: string) => {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-    setOpenMenu(label);
+    dispatchNav({ type: 'CANCEL_CLOSE' });
+    dispatchNav({ type: 'ENTER_GROUP', key: label });
   }, []);
 
-  // Short delay lets the pointer travel from a nav label into its panel.
-  const scheduleMenuClose = useCallback((delay = 120) => {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-    closeTimerRef.current = setTimeout(() => setOpenMenu(null), delay);
+  const clickMenuTrigger = useCallback((label: string) => {
+    dispatchNav({ type: 'CLICK_TRIGGER', key: label });
+  }, []);
+
+  const scheduleMenuClose = useCallback(() => {
+    dispatchNav({ type: 'POINTER_LEAVE' });
+    dispatchNav({ type: 'RESET_SUPPRESSION' });
   }, []);
 
   const closeMenuNow = useCallback(() => {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-    setOpenMenu(null);
+    dispatchNav({ type: 'CLOSE_REQUEST' });
   }, []);
 
   useEffect(() => {
-    closeMenuNow();
-  }, [pathname, closeMenuNow]);
+    dispatchNav({ type: 'NAVIGATE' });
+    dispatchNav({ type: 'RESET_SUPPRESSION' });
+  }, [pathname]);
+
+  useEffect(() => {
+    const finishing = navMenu.kind === 'closing' || (navMenu.kind === 'open' && navMenu.pendingClose);
+    if (!finishing) return;
+    const timer = setTimeout(() => dispatchNav({ type: 'FINALIZE' }), 120);
+    return () => clearTimeout(timer);
+  }, [navMenu.kind, navMenu.kind === 'open' && navMenu.pendingClose]);
 
   useEffect(() => {
     if (!openMenu) return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       const trigger = document.querySelector<HTMLElement>(`[data-nav-top="${openMenu}"]`);
-      closeMenuNow();
+      dispatchNav({ type: 'ESCAPE' });
       trigger?.focus();
     };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
-  }, [openMenu, closeMenuNow]);
-
-  useEffect(() => () => {
-    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-  }, []);
+  }, [openMenu]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -514,7 +520,7 @@ export default function Header() {
                       onFocus={() => hasPanel && openMenuNow(item.label)}
                       onBlur={(e) => {
                         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-                          scheduleMenuClose(0);
+                          closeMenuNow();
                         }
                       }}
                     >
@@ -523,7 +529,7 @@ export default function Header() {
                         data-nav-top={item.label}
                         aria-expanded={hasPanel ? isOpen : undefined}
                         aria-controls={hasPanel ? panelId : undefined}
-                        onClick={closeMenuNow}
+                        onClick={() => (hasPanel ? clickMenuTrigger(item.label) : dispatchNav({ type: 'NAVIGATE' }))}
                         className={`inline-flex items-center min-h-6 text-sm font-medium tracking-wide transition-colors hover:text-black whitespace-nowrap border-b-2 pb-0.5 ${
                           isActive || isOpen
                             ? 'text-store-text-primary border-primary-dark'
@@ -537,7 +543,7 @@ export default function Header() {
                           id={panelId}
                           item={item}
                           products={products}
-                          onNavigate={closeMenuNow}
+                          onNavigate={() => dispatchNav({ type: 'NAVIGATE' })}
                         />
                       )}
                     </div>
@@ -595,7 +601,7 @@ export default function Header() {
 
               {/* 2. Wishlist */}
               <Link
-                href="/wishlist"
+                href="/account/wishlist"
                 aria-label={wishlist.length ? `Wishlist, ${wishlist.length} saved` : 'Wishlist'}
                 className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-store-text-primary hover:text-black hover:bg-black/5 active:scale-95 transition-all cursor-pointer"
               >

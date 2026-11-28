@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tuw_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL_UNPOOLED: postgres://postgres:postgres@localhost:5432/tuw_ci
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/tuw_ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install from lockfile
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck all workspaces
+        run: pnpm typecheck
+
+      - name: Comment ratchet
+        run: pnpm lint:comments
+
+      - name: Prepare temporary migration schema
+        run: |
+          export PGPASSWORD=postgres
+          psql -h localhost -U postgres -d tuw_ci -c "CREATE SCHEMA ci_${GITHUB_RUN_ID};"
+          echo "DATABASE_URL_UNPOOLED=postgres://postgres:postgres@localhost:5432/tuw_ci?options=-c%20search_path%3Dci_${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
+          echo "DATABASE_URL=postgres://postgres:postgres@localhost:5432/tuw_ci?options=-c%20search_path%3Dci_${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
+
+      - name: Apply migrations on the temporary schema
+        run: pnpm db:migrate
+
+      - name: Tests
+        run: pnpm test
+
+      - name: Build both apps
+        run: pnpm build

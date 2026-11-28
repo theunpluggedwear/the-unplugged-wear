@@ -1,0 +1,111 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  editorReducer, initialEditorState, isEditorOpen, editorProduct,
+  editorIsCreating, editorOpeningId,
+} from '../src/app/(dashboard)/products/_components/editor/editorMachine.ts';
+import {
+  asyncReducer, initialAsyncState, isAsyncBusy,
+} from '../src/app/(dashboard)/products/_components/editor/asyncMachine.ts';
+import {
+  importReducer, initialImportState, isImportModalOpen, isImporting, importPreviewOf,
+} from '../src/app/(dashboard)/products/_components/editor/importMachine.ts';
+import {
+  cardReducer, initialCardOpen, cardForField,
+} from '../src/app/(dashboard)/products/_components/editor/cards.ts';
+
+const product = { id: 'p1', name: 'Demo', publicationStatus: 'draft' };
+
+test('opening state exists but keeps the drawer closed', () => {
+  const opening = editorReducer(initialEditorState, { type: 'OPEN_EDIT_START', id: 'p1' });
+  assert.equal(opening.status, 'opening');
+  assert.equal(editorOpeningId(opening), 'p1');
+  assert.equal(isEditorOpen(opening), false);
+  assert.equal(editorProduct(opening), null);
+  assert.equal(editorIsCreating(opening), false);
+});
+
+test('create and edit transitions expose the previous boolean flags', () => {
+  const create = editorReducer(initialEditorState, { type: 'OPEN_CREATE' });
+  assert.equal(isEditorOpen(create), true);
+  assert.equal(editorIsCreating(create), true);
+  assert.equal(editorProduct(create), null);
+
+  const edit = editorReducer(create, { type: 'OPEN_EDIT_DONE', product });
+  assert.equal(isEditorOpen(edit), true);
+  assert.equal(editorIsCreating(edit), false);
+  assert.equal(editorProduct(edit), product);
+});
+
+test('failed load returns to closed and a second open while opening is ignored by guard', () => {
+  const opening = editorReducer(initialEditorState, { type: 'OPEN_EDIT_START', id: 'p1' });
+  assert.equal(editorReducer(opening, { type: 'OPEN_EDIT_FAIL' }).status, 'closed');
+  const reopened = editorReducer(opening, { type: 'OPEN_EDIT_START', id: 'p2' });
+  assert.equal(editorOpeningId(reopened), 'p2');
+});
+
+test('close and bulk status patch preserve state shape', () => {
+  const edit = editorReducer(initialEditorState, { type: 'OPEN_EDIT_DONE', product });
+  const patched = editorReducer(edit, { type: 'PATCH_EDIT_PRODUCT', patch: { publicationStatus: 'published' } });
+  assert.equal(editorProduct(patched).publicationStatus, 'published');
+  assert.equal(editorReducer(patched, { type: 'PATCH_EDIT_PRODUCT', patch: {} }).status, 'edit');
+  assert.equal(editorReducer(initialEditorState, { type: 'PATCH_EDIT_PRODUCT', patch: {} }).status, 'closed');
+  assert.equal(editorReducer(patched, { type: 'CLOSE' }).status, 'closed');
+});
+
+test('open-create after an in-flight edit removes creating state', () => {
+  const opening = editorReducer(initialEditorState, { type: 'OPEN_EDIT_START', id: 'p1' });
+  const create = editorReducer(opening, { type: 'OPEN_CREATE' });
+  assert.equal(editorIsCreating(create), true);
+  assert.equal(editorOpeningId(create), null);
+});
+
+test('async machine records which save action is busy and always returns to idle', () => {
+  for (const action of ['create', 'update', 'bulk-status', 'bulk-delete']) {
+    const busy = asyncReducer(initialAsyncState, { type: 'START', action });
+    assert.equal(isAsyncBusy(busy), true);
+    assert.equal(busy.action, action);
+    assert.equal(isAsyncBusy(asyncReducer(busy, { type: 'FINISH' })), false);
+  }
+  assert.equal(isAsyncBusy(initialAsyncState), false);
+});
+
+test('import machine keeps the preview open during import and on failure', () => {
+  const preview = { fileName: 'x.csv', groups: [], listing: [], errors: [], hasCategoryColumn: true };
+  assert.equal(isImportModalOpen(initialImportState), false);
+  const shown = importReducer(initialImportState, { type: 'SHOW_PREVIEW', preview });
+  assert.equal(isImportModalOpen(shown), true);
+  assert.equal(importPreviewOf(shown), preview);
+
+  const importing = importReducer(shown, { type: 'START_IMPORT' });
+  assert.equal(isImporting(importing), true);
+  assert.equal(isImportModalOpen(importing), true);
+
+  const finished = importReducer(importing, { type: 'FINISH_IMPORT' });
+  assert.equal(isImporting(finished), false);
+  assert.equal(importPreviewOf(finished), preview);
+
+  assert.equal(importReducer(finished, { type: 'CANCEL' }).status, 'idle');
+  assert.equal(importReducer(initialImportState, { type: 'START_IMPORT' }).status, 'idle');
+});
+
+test('card machine defaults and reset preserve the variant-matrix default', () => {
+  assert.equal(initialCardOpen.variantsMatrix, true);
+  assert.equal(initialCardOpen.basic, false);
+  const opened = cardReducer(initialCardOpen, { type: 'SET', card: 'pricing', open: true });
+  assert.equal(opened.pricing, true);
+  assert.equal(cardReducer(opened, { type: 'RESET' }).pricing, false);
+  assert.equal(cardReducer(opened, { type: 'RESET' }).variantsMatrix, true);
+});
+
+test('field-to-card mapping matches the previous revealField chain', () => {
+  assert.deepEqual(cardForField('variants.matrix'), { tab: 'variants' });
+  assert.deepEqual(cardForField('images[0]'), { tab: 'media' });
+  assert.deepEqual(cardForField('monogram'), { tab: 'specs', card: 'specsMonogram' });
+  assert.deepEqual(cardForField('care'), { tab: 'specs', card: 'specsClothing' });
+  assert.deepEqual(cardForField('hsnCode'), { tab: 'general', card: 'pricing' });
+  assert.deepEqual(cardForField('discounts'), { tab: 'general', card: 'discounts' });
+  assert.deepEqual(cardForField('partner'), { tab: 'general', card: 'fulfillment' });
+  assert.deepEqual(cardForField('attributes[0].name'), { tab: 'general', card: 'attributes' });
+  assert.deepEqual(cardForField('unknown'), { tab: 'general', card: 'basic' });
+});

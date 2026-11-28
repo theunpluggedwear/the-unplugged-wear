@@ -21,20 +21,20 @@ export const NOTIFICATION_CATEGORIES: { value: NotificationCategory | 'all'; lab
   { value: 'marketing', label: 'Marketing' },
 ];
 
-// Repository contract (N1): components consume this shape only. Today it is
-// backed by session-local read state over store-derived items; tomorrow a
-// database adapter implements the same interface and nothing upstream moves.
-/** Read state held by the server for database-backed items. */
+
+
+
+
 export interface RemoteReadState {
   readIds: ReadonlySet<string>;
-  markRead: (id: string) => void;
-  markAllRead: () => void;
+  markRead: (id: string) => Promise<void>;
+  markAllRead: () => Promise<void>;
 }
 
 export interface NotificationRepository {
   all: Notification[];
   unreadCount: number;
   isRead: (id: string) => boolean;
-  markRead: (id: string) => void;
-  markAllRead: () => void;
+  markRead: (id: string) => Promise<void>;
+  markAllRead: () => Promise<void>;
 }

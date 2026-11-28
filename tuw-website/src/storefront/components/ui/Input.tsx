@@ -43,7 +43,7 @@ export default function Input({
         <input
           id={generatedId}
           disabled={disabled}
-          className={`w-full h-11 px-3.5 text-sm bg-transparent outline-none placeholder:text-[#A0AEC0] text-[#1A1A1A] ${className}`}
+          className={`w-full h-11 px-3.5 text-sm bg-transparent outline-none placeholder:text-[#A0AEC0] text-store-charcoal ${className}`}
           {...props}
         />
         {suffix && <span className="pr-3.5 text-[#8A8A8A] flex items-center">{suffix}</span>}

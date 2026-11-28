@@ -1,17 +1,11 @@
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import { getCatalog } from '@/server/catalog';
+import { productForPage, resolveProductSlug } from './_lib/resolve';
 
-// Resolve the slug (or a legacy alias) on the server before the client page
-// streams, so unknown products return a real 404 and each piece gets its own title.
-async function findProduct(slug: string) {
-  const key = slug.toLowerCase();
-  const { products } = await getCatalog();
-  return products.find(
-    (p) => p.slug.toLowerCase() === key || p.aliases?.some((a) => a.toLowerCase() === key)
-  );
-}
+// Resolve the slug on the server before the page streams: unknown products
+// return a real 404, old slugs and gift cards redirect (see _lib/resolve),
+// and each piece gets its own title.
 
 // Cache Components: prerender every published product (database, cached
 // with the 'products' tag); new products render on demand.
@@ -26,12 +20,24 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = await findProduct(slug);
-  if (!product) return { title: 'Piece Not Found | The Unplugged Wear' };
+  const resolved = await resolveProductSlug(slug);
+  if (resolved?.kind !== 'product') return { title: 'Piece Not Found | The Unplugged Wear' };
+  const { product } = resolved;
+  const path = `/products/${product.slug}`;
   return {
+    // APP_URL makes the canonical and share links absolute; without it Next
+    // falls back to the request origin.
+    ...(process.env.APP_URL ? { metadataBase: new URL(process.env.APP_URL) } : {}),
     title: `${product.title} | The Unplugged Wear`,
     description: product.description,
-    openGraph: product.images[0] ? { images: [{ url: product.images[0].url }] } : undefined,
+    alternates: { canonical: path },
+    openGraph: {
+      title: product.title,
+      description: product.description,
+      url: path,
+      siteName: 'The Unplugged Wear',
+      ...(product.images[0] ? { images: [{ url: product.images[0].url, alt: product.images[0].alt }] } : {}),
+    },
   };
 }
 
@@ -43,6 +49,6 @@ export default async function ProductLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  if (!(await findProduct(slug))) notFound();
+  await productForPage(slug);
   return children;
 }

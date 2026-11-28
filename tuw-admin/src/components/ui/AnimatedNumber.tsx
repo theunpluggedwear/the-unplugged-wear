@@ -7,23 +7,23 @@ export interface AnimatedNumberProps {
   format: (n: number) => string;
   className?: string;
   style?: React.CSSProperties;
-  /** Tint applied while counting up (e.g. success text class). */
+  
   upClassName?: string;
-  /** Tint applied while counting down (e.g. error text class). */
+  
   downClassName?: string;
-  /** Floor duration in ms (default 1000). */
+  
   minDurationMs?: number;
-  /** Ceiling duration in ms (default 1500). */
+  
   maxDurationMs?: number;
-  /** Relative change that reaches the ceiling (default 0.5 = 50%). */
+  
   fullScaleAt?: number;
 }
 
-// Global count-tween readout (V1): a single ease-in-out traverse from the
-// previous value to `value` — slow start, slow arrival, no pauses, no
-// pulses. Data-only props — feed it mock or live numbers anywhere without
-// touching this component. Resting DOM is untouched (natural flow).
-// Reduced motion swaps instantly with no tint.
+
+
+
+
+
 export default function AnimatedNumber({
   value,
   format,
@@ -85,7 +85,7 @@ export default function AnimatedNumber({
         : Date.now();
     const tick = (now: number) => {
       const progress = Math.min(1, (now - startedAt) / duration);
-      // easeInOutCubic: slow start, slow arrival, steady middle.
+      
       const eased =
         progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
       const current = Math.round(from + (value - from) * eased);
@@ -95,8 +95,8 @@ export default function AnimatedNumber({
         raf.current = requestAnimationFrame(tick);
       } else {
         raf.current = null;
-        // Tint lands with the final digit, lingers, then the CSS color
-        // transition melts it back to primary — no mid-run snap.
+        
+        
         linger.current = setTimeout(() => {
           linger.current = null;
           setTint(0);

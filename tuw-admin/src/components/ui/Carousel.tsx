@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import ImageWithFallback from './ImageWithFallback';
 
 export interface CarouselSlide {
   type: 'image' | 'video';
@@ -13,21 +14,21 @@ export interface CarouselSlide {
 export interface CarouselProps {
   slides: CarouselSlide[];
   ariaLabel?: string;
-  /** Frame aspect ratio. Default '4 / 3'. */
+  
   aspect?: string;
-  /** Dots or thumbnail filmstrip navigation. Default 'dots'. */
+  
   variant?: 'dots' | 'filmstrip';
-  /** Controlled slide index (uncontrolled internal state when omitted). */
+  
   index?: number;
   onIndexChange?: (index: number) => void;
 }
 
-// Customer-view gallery (MD2): dots + chevron navigation over a fixed-aspect
-// canvas-letterboxed frame. Media renders contain (never crop, never
-// stretch). Video slides carry native controls and never autoplay. Renders
-// null when empty — the caller owns the empty text.
-// Plain <img> (not next/image): slides include blob: upload previews, which
-// the optimizer rejects — same constraint as ImageWithFallback.
+
+
+
+
+
+
 export default function Carousel({ slides, ariaLabel = 'Gallery', aspect = '4 / 3', variant = 'dots', index, onIndexChange }: CarouselProps) {
   const [innerIndex, setInnerIndex] = useState(0);
   const setIndex = onIndexChange ?? setInnerIndex;
@@ -74,11 +75,15 @@ export default function Carousel({ slides, ariaLabel = 'Gallery', aspect = '4 / 
             style={{ width: '100%', height: '100%', objectFit: 'contain' }}
           />
         ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          
+          <ImageWithFallback
             src={slide.src}
             alt={slide.alt}
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            optimized
+            fill
+            sizes="(max-width: 768px) 100vw, 800px"
+            fallbackTone="neutral"
+            style={{ objectFit: 'contain' }}
           />
         )}
         {slides.length > 1 ? (
@@ -145,8 +150,8 @@ export default function Carousel({ slides, ariaLabel = 'Gallery', aspect = '4 / 
                     REEL
                   </span>
                 ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={s.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  
+                  <ImageWithFallback src={s.src} alt="" optimized fill sizes="56px" fallbackTone="neutral" style={{ objectFit: 'cover' }} />
                 )}
                 {i === 0 && s.type === 'image' ? (
                   <span

@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Mail, Eye, EyeOff, Check, CircleX, CircleCheck, ArrowRight } from 'lucide-react';
 import { loginAction, forgotPasswordAction, resetPasswordAction } from '@/server/auth-actions';
-// Class map - selectors live in src/app/globals.css (single app.css, login- prefix).
-// Verbatim port of LoginPage.module.css; JSX untouched for zero pixel drift.
+
+
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'login-' + String(p) });
 
 type AuthView = 'login' | 'reset-password' | 'recovery-sent' | 'set-password';
@@ -28,7 +28,7 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [hasError, setHasError] = useState(false);
-  // Real auth (TL-BE-02): server messages, pending state, dev-only reset link.
+  
   const [errorMessage, setErrorMessage] = useState('');
   const [notice, setNotice] = useState('');
   const [pending, setPending] = useState(false);
@@ -36,8 +36,8 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Apply a specific Figma state mode (design preview only — never an auth bypass).
-  // A state transition always clears any stale notice from a previous view.
+  
+  
   const applyState = (mode: StateMode) => {
     setNotice('');
     if (mode === 'default') {
@@ -71,7 +71,7 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
     }
   };
 
-  // Synchronize state if URL query param or initialMode is provided
+  
   useEffect(() => {
     if (stateParam) {
       applyState(stateParam);
@@ -80,7 +80,7 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
     }
   }, [stateParam, initialMode]);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pending) return;
     setNotice('');
@@ -90,40 +90,49 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
       return;
     }
     setPending(true);
-    const next = searchParams.get('next') ?? undefined;
-    void loginAction({ email, password, remember: rememberMe, next }).then((result) => {
-      setPending(false);
+    try {
+      const next = searchParams.get('next') ?? undefined;
+      const result = await loginAction({ email, password, remember: rememberMe, next });
       if (!result.ok) {
-        // Typed values stay; the message comes from the server (lockout, staff only…).
+        
         setHasError(true);
         setErrorMessage(result.error.message);
         return;
       }
       setHasError(false);
-      // Cache Components keep the previous route mounted (hidden) — never
-      // leave the typed password in memory or the DOM after signing in.
+      
+      
       setPassword('');
       router.push(result.data.next);
-    });
+    } catch {
+      setHasError(true);
+      setErrorMessage('Sign-in is unavailable. Please try again.');
+    } finally {
+      setPending(false);
+    }
   };
 
-  const handleResetSubmit = (e: React.FormEvent) => {
+  const handleResetSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pending) return;
     setNotice('');
     setPending(true);
-    void forgotPasswordAction({ email }).then((result) => {
-      setPending(false);
+    try {
+      const result = await forgotPasswordAction({ email });
       if (!result.ok) {
         setNotice(result.error.message);
         return;
       }
       setDevLink(result.data.devLink);
       applyState('recovery');
-    });
+    } catch {
+      setNotice('The reset link could not be requested. Please try again.');
+    } finally {
+      setPending(false);
+    }
   };
 
-  const handleSetPasswordSubmit = (e: React.FormEvent) => {
+  const handleSetPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (pending) return;
     setNotice('');
@@ -131,14 +140,18 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
     if (!token) return setNotice('Open the reset link from your email to set a new password.');
     if (newPassword !== confirmPassword) return setNotice('The two passwords do not match.');
     setPending(true);
-    void resetPasswordAction({ token, password: newPassword }).then((result) => {
-      setPending(false);
+    try {
+      const result = await resetPasswordAction({ token, password: newPassword });
       if (!result.ok) return setNotice(result.error.message);
       setNewPassword('');
       setConfirmPassword('');
       applyState('default');
       setNotice('Your password was changed. Log in with the new password.');
-    });
+    } catch {
+      setNotice('The password could not be changed. Please try again.');
+    } finally {
+      setPending(false);
+    }
   };
 
   const socialUnavailable = (provider: string) => () =>
@@ -148,13 +161,13 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
 
   return (
     <main className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-white max-lg:flex-col">
-      {/* ==========================================================================
-          LEFT HERO SECTION (Frame 124 - Width 712px, Height 1024px)
-          ========================================================================== */}
+      {
 
-      {/* ==========================================================================
-          LEFT HERO SECTION (Frame 124 - Width 712px, Height 1024px)
-          ========================================================================== */}
+}
+
+      {
+
+}
       <section className="relative flex min-h-screen w-[49.444%] flex-[0_0_49.444%] flex-col justify-end overflow-hidden bg-auth-hero max-lg:h-[420px] max-lg:min-h-[420px] max-lg:w-full max-lg:flex-none">
         <Image
           src="/images/login-hero.png"
@@ -164,10 +177,10 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
           sizes="(max-width: 900px) 100vw, 50vw"
           className="absolute inset-0 h-full w-full object-cover object-top"
         />
-        {/* Rectangle 96: Linear gradient overlay on bottom 50% */}
+        {}
         <div className={styles.heroOverlay} />
 
-        {/* Frame 60511: Brand, Headline, Subtitle */}
+        {}
         <div className="relative z-2 flex flex-col gap-4 px-14 pb-17 text-white max-lg:px-6 max-lg:pb-8">
           <div className="text-auth-brand font-bold text-white tracking-auth-title">The Unplugged Wear</div>
           <h1 className="text-auth-headline font-bold leading-auth-headline text-white tracking-auth-hero whitespace-pre-line max-w-auth-hero-head max-lg:text-auth-headline-md">
@@ -179,12 +192,12 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
         </div>
       </section>
 
-      {/* ==========================================================================
-          RIGHT AUTH SECTION (Frame 140 - Width 728px, Height 1024px)
-          ========================================================================== */}
+      {
+
+}
       <section className="relative flex min-h-screen w-[50.556%] flex-[0_0_50.556%] flex-col items-center justify-center overflow-y-auto bg-white bg-no-repeat py-[clamp(24px,4vh,48px)] px-6 max-lg:w-full max-lg:flex-none max-lg:px-5 max-lg:py-9 bg-[radial-gradient(circle_520px_at_78%_5%,rgba(229,245,211,0.6)_0%,rgba(255,255,255,0)_100%),radial-gradient(circle_420px_at_98%_8%,rgba(246,198,54,0.1)_0%,rgba(229,245,211,0.05)_50%,rgba(255,255,255,0)_100%)]">
         <div className="flex w-full max-w-auth-form flex-col items-center">
-          {/* Header Block: Frame 3 Logo Badge + Title */}
+          {}
           <header className="flex flex-col items-center mb-auth-header-gap text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-auth-badge bg-auth-button shadow-auth-badge mb-4">
               <Image
@@ -224,12 +237,12 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
             )}
           </header>
 
-          {/* ==========================================================================
-              STATE 1 & 2 & 3: LOGIN FORM (Frames 1:20816, 1:20776, 1:20725)
-              ========================================================================== */}
+          {
+
+}
           {view === 'login' && (
             <>
-              {/* Frame 139: Social Login Buttons */}
+              {}
               <div className="grid w-full max-w-auth-form grid-cols-2 gap-6 mb-auth-social-gap">
                 <button
                   type="button"
@@ -272,16 +285,16 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
                 <p role="status" className="w-full max-w-auth-form mb-4 text-auth-input tracking-auth-input text-auth-muted">{notice}</p>
               )}
 
-              {/* Frame 136: Divider */}
+              {}
               <div className="flex w-full max-w-auth-form items-center justify-between gap-4 mb-auth-social-gap">
                 <div className="h-px flex-1 bg-auth-divider" />
                 <span className="shrink-0 px-6 text-center text-auth-divider font-normal text-auth-muted">Or</span>
                 <div className="h-px flex-1 bg-auth-divider" />
               </div>
 
-              {/* Login Form */}
+              {}
               <form className="flex w-full max-w-auth-form flex-col" onSubmit={handleLoginSubmit} noValidate>
-                {/* Frame 129: Email Field */}
+                {}
                 <div className="flex w-full flex-col mb-auth-field-gap">
                   <label htmlFor="email-input" className="text-auth-social font-medium tracking-auth-social text-auth-ink mb-2 text-left">
                     Email
@@ -307,7 +320,7 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
                   </div>
                 </div>
 
-                {/* Frame 130: Password Field & Remember Me */}
+                {}
                 <div className="flex w-full flex-col mb-auth-field-gap">
                   <label htmlFor="password-input" className="text-auth-social font-medium tracking-auth-social text-auth-ink mb-2 text-left">
                     Password
@@ -342,7 +355,7 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
                     </button>
                   </div>
 
-                  {/* Frame 281 in 1:20725: Password comparison error */}
+                  {}
                   {hasError && (
                     <div className="flex items-center gap-1.5 mt-1.5 text-auth-input tracking-auth-input text-auth-error" id="password-error">
                       <CircleX size={16} strokeWidth={1.0} className="shrink-0 text-auth-error" />
@@ -351,7 +364,7 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
                   )}
                 </div>
 
-                {/* Frame 132: Remember Me Checkbox */}
+                {}
                 <div
                   className="flex items-center gap-2 mt-2.5 mb-auth-field-gap cursor-pointer select-none w-fit"
                   onClick={() => setRememberMe(!rememberMe)}
@@ -365,13 +378,13 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
                   <span className="text-auth-input tracking-auth-input font-normal text-auth-ink">Remember me</span>
                 </div>
 
-                {/* Primary_button in Figma: 568x48, radius 12px, fill auth-button token */}
+                {}
                 <button type="submit" disabled={pending} aria-busy={pending} className="flex h-12 w-full max-w-auth-form items-center justify-center rounded-xl bg-auth-button text-auth-btn font-bold text-white select-none transition-colors duration-150 hover:bg-auth-button-hover disabled:opacity-70" id="login-submit-btn">
                   {pending ? 'Logging in…' : 'Log in'}
                 </button>
               </form>
 
-              {/* Frame 133: Forgot Password Link */}
+              {}
               <div className="flex w-full items-center justify-center gap-2 my-auth-row-gap text-auth-input tracking-auth-input font-normal text-auth-ink">
                 Did you forget your password?{' '}
                 <span
@@ -383,7 +396,7 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
                 </span>
               </div>
 
-              {/* Sign up for free: 568x48, radius auth-btn token, 16px 700 */}
+              {}
               <Link
                 href="/signup"
                 className="flex h-12 w-full max-w-auth-form cursor-pointer items-center justify-center rounded-auth-btn text-auth-btn font-bold text-auth-ink no-underline select-none transition-opacity duration-150 hover:opacity-75"
@@ -423,10 +436,10 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
             </div>
           )}
 
-          {/* ==========================================================================
-              STATE 4: RESET PASSWORD (Frame 1:20710)
-              Card width: 552px, radius: 20px, fill: surface token, stroke: auth-line token
-              ========================================================================== */}
+          {
+
+
+}
           {view === 'reset-password' && (
             <div className="flex w-full max-w-auth-card flex-col gap-6 rounded-auth-card border border-auth-line bg-white shadow-auth-card py-10 px-8">
               <form className="flex w-full max-w-auth-form flex-col" onSubmit={handleResetSubmit}>
@@ -471,19 +484,19 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
             </div>
           )}
 
-          {/* ==========================================================================
-              STATE 5: RECOVERY EMAIL SENT (Frame 1:20690)
-              Card width: 552px, radius: 24px, fill: surface token, stroke: auth-line token
-              ========================================================================== */}
+          {
+
+
+}
           {view === 'recovery-sent' && (
             <div className="flex w-full max-w-auth-card flex-col items-center gap-8 rounded-auth-card-lg border border-auth-line bg-white py-[clamp(24px,4vh,40px)] px-[clamp(20px,5vw,80px)]">
-              {/* Frame 281: Success pill badge */}
+              {}
               <div className="inline-flex items-center gap-1.5 rounded-xl bg-auth-success-bg px-4 py-2 text-auth-input-filled tracking-auth-input-filled font-normal text-auth-success whitespace-nowrap">
                 <CircleCheck size={20} strokeWidth={1.5} color="currentColor" className="text-auth-success" />
                 <span>Sending password reset link was successful</span>
               </div>
 
-              {/* Frame 283: Headline & Description */}
+              {}
               <div className="flex w-full max-w-auth-recovery flex-col items-center gap-4 text-center">
                 <h3 className="text-auth-recovery-head font-semibold tracking-auth-recovery-head text-auth-teal">
                   Check your email
@@ -499,7 +512,7 @@ function LoginPageContent({ initialMode }: LoginPageProps) {
                 )}
               </div>
 
-              {/* Primary_button: Back to login */}
+              {}
               <button
                 type="button"
                 className="flex h-12 w-full max-w-auth-recovery items-center justify-center rounded-xl bg-auth-button text-auth-btn font-bold text-white select-none transition-colors duration-150 hover:bg-auth-button-hover"

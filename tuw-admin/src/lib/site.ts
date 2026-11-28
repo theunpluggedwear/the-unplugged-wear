@@ -1,5 +1,5 @@
-// Site + nav config — replaces old src/config/ folder.
-// No secrets here. Read env via process.env in server code only.
+
+
 export const site = {
   name: "TUW Admin",
   nav: [

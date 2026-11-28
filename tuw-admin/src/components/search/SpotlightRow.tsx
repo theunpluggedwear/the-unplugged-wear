@@ -28,13 +28,13 @@ interface SpotlightRowProps {
   result: SpotlightResult;
   onJump: (result: SpotlightResult) => void;
   highlight?: string;
-  /** compact: no icon tile, tighter padding, optional use-count chip. */
+  
   variant?: 'full' | 'compact';
   count?: number;
 }
 
-// Query-match highlighter (P3): matched substring in action-purple
-// semibold, no background wash. Regex-escaped, case-insensitive.
+
+
 function highlightMatch(text: string, term: string): React.ReactNode {
   const needle = term.trim();
   if (!needle) return text;
@@ -61,10 +61,10 @@ function highlightMatch(text: string, term: string): React.ReactNode {
   return parts.length > 0 ? parts : text;
 }
 
-// One spotlight result row (S4): tinted icon tile + title/sub + Jump pill.
-// Whole-row click jumps (pill is a visual affordance of the same action).
-// Jump-pill reuse verdict: ui Button outline/sm renders 36px tall — too
-// heavy for this pill, so the row owns a token-driven 28px pill instead.
+
+
+
+
 export function SpotlightRow({ result, onJump, highlight = '', variant = 'full', count }: SpotlightRowProps) {
   const tile = TILE_STYLES[result.tileTone];
   const compact = variant === 'compact';

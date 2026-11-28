@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import TuwEmblem from './TuwEmblem';
 
@@ -9,6 +9,7 @@ import TuwEmblem from './TuwEmblem';
 // The root layout reads a cookie (written below when the intro finishes) and
 // gates this component on the server, so repeat visitors get no overlay at all.
 import { INTRO_SEEN_KEY, markIntroSeen } from '@storefront/lib/intro';
+import { introFlags, nextIntroPhase, type IntroPhase } from '@storefront/lib/intro-machine';
 
 const BRAND_WORDS = [
   { word: 'THE', chars: ['T', 'H', 'E'] },
@@ -23,85 +24,58 @@ export default function BrandIntro() {
   // 3. Brand Crest Settle (1250ms): Gold accent rule and slow-living atelier sub-mark fade in
   // 4. Shutter Up Curtain Transition (2050ms): Shutter sweeps straight UP (translateY -120vh) unveiling the home page
   // 5. Completion (3000ms): Clean unmount from DOM, restoring viewport scrolling
-  const [emblemVisible, setEmblemVisible] = useState(false);
-  const [lettersVisible, setLettersVisible] = useState(false);
-  const [taglineVisible, setTaglineVisible] = useState(false);
-  const [shutterUp, setShutterUp] = useState(false);
-  const [done, setDone] = useState(false);
+  const [phase, setPhase] = useState<IntroPhase>('staged');
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const { emblemVisible, lettersVisible, taglineVisible, shutterUp, done } = introFlags(phase);
   const isHome = usePathname() === '/';
 
   useEffect(() => {
-    // 1. Accessibility: check for prefers-reduced-motion
+    const clearTimers = () => {
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
+    };
+    const restoreScroll = () => {
+      if (typeof window !== 'undefined') document.body.style.overflow = '';
+    };
+
     if (!isHome) {
-      setDone(true);
+      setPhase('done');
       return;
     }
+    let seenThisSession = false;
     if (typeof window !== 'undefined') {
-      // Read only here; the flag is written when the intro finishes or is
-      // skipped, so React's dev double-effect cannot mark it seen too early.
-      let seenThisSession = false;
       try {
         seenThisSession = sessionStorage.getItem(INTRO_SEEN_KEY) === '1';
       } catch {
-        // Storage blocked (private mode): fall back to playing the intro.
+        
       }
-      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (prefersReducedMotion || seenThisSession) {
-        setDone(true);
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || seenThisSession) {
+        setPhase('done');
         return;
       }
       document.body.style.overflow = 'hidden';
     }
 
-    // Step 1 (100ms): Leaping deer stag emblem blooms
-    const tEmblem = setTimeout(() => {
-      setEmblemVisible(true);
-    }, 100);
-
-    // Step 2 (320ms): Letters begin loading one by one
-    const tLetters = setTimeout(() => {
-      setLettersVisible(true);
-    }, 320);
-
-    // Step 3 (1250ms): Subtitle & gold rule fade in
-    const tTagline = setTimeout(() => {
-      setTaglineVisible(true);
-    }, 1250);
-
-    // Step 4 (2050ms): Curtain sweeps upward into home page
-    const tShutter = setTimeout(() => {
-      setShutterUp(true);
-      if (typeof window !== 'undefined') {
-        document.body.style.overflow = '';
-      }
-    }, 2050);
-
-    // Step 5 (3000ms): Unmount from DOM after animation clears
-    const tDone = setTimeout(() => {
-      markIntroSeen();
-      setDone(true);
-    }, 3000);
+    timersRef.current = [
+      setTimeout(() => setPhase('emblem'), 100),
+      setTimeout(() => setPhase('letters'), 320),
+      setTimeout(() => setPhase('tagline'), 1250),
+      setTimeout(() => setPhase('shutter'), 2050),
+      setTimeout(() => { markIntroSeen(); setPhase('done'); }, 3000),
+    ];
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (typeof window !== 'undefined') {
-          document.body.style.overflow = '';
-        }
-        markIntroSeen();
-        setDone(true);
-      }
+      if (e.key !== 'Escape') return;
+      clearTimers();
+      restoreScroll();
+      markIntroSeen();
+      setPhase('done');
     };
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      clearTimeout(tEmblem);
-      clearTimeout(tLetters);
-      clearTimeout(tTagline);
-      clearTimeout(tShutter);
-      clearTimeout(tDone);
-      if (typeof window !== 'undefined') {
-        document.body.style.overflow = '';
-      }
+      clearTimers();
+      restoreScroll();
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isHome]);
@@ -111,11 +85,13 @@ export default function BrandIntro() {
   }
 
   const handleSkip = () => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
     if (typeof window !== 'undefined') {
       document.body.style.overflow = '';
     }
     markIntroSeen();
-    setDone(true);
+    setPhase('done');
   };
 
   // Compute global running letter index for smooth cross-word staggering

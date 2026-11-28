@@ -8,10 +8,10 @@ export interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
   tooltip?: string;
 }
 
-/**
- * Accessible IconButton component conforming to TUW Design System
- * Enforces an accessible label for screen readers.
- */
+
+
+
+
 export default function IconButton({
   label,
   icon,

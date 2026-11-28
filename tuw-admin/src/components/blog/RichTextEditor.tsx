@@ -155,11 +155,11 @@ function blockToTiptap(block: BlogBlockNode, mediaById: Map<string, BlogMediaAss
   }
 }
 
-/**
- * Our persisted body is a compact block array. Tiptap expects a full
- * ProseMirror document (`{ type: 'doc', content: [...] }`), so convert at the
- * editor boundary and keep media URLs out of the stored JSON.
- */
+
+
+
+
+
 function toTiptapDoc(content: BlogContent, mediaAssets: BlogMediaAsset[]): JSONContent {
   const mediaById = new Map(mediaAssets.map((asset) => [asset.id, asset]));
   return {

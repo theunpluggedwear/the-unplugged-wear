@@ -47,7 +47,7 @@ export default function PolicyPage({ slug }: { slug: PolicySlug }) {
         />
 
         <header className="mt-8 mb-10 max-w-3xl">
-          <h1 className="font-heading text-[clamp(2rem,3vw+1rem,3rem)] font-medium tracking-tight text-store-charcoal">
+          <h1 className="tuw-h1 text-store-charcoal">
             {policy.title}
           </h1>
           <p className="mt-3 text-base sm:text-lg text-store-text-secondary leading-relaxed">{policy.summary}</p>

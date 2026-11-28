@@ -4,15 +4,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { RotateCcw, Search, Download } from 'lucide-react';
 import type { RefundRow, RefundableOrder } from '@tuw/heart/modules/orders';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { ContentCard, StatCard, Badge, Button, Input, Select, Drawer, Pagination, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, FilterPills, PageHeader, HeroCard, DrawerSection, KeyValueList } from '@/components/ui';
-import { useAdminState } from '@/mocks/state';
+import { useToast } from '@/components/providers/ToastProvider';
 import { issueRefundAction, listRefundsAction, markRefundPaidAction, refundableOrderAction, rejectRefundAction } from '@/server/money-actions';
+import { MONO_ID_STYLE } from '@/lib/format';
 
-// Refunds from the database (TL-BE-09). Prepaid money goes back to its source
-// through the (demo) gateway at once; cash on delivery is paid out by staff
-// and finished with the bank UTR. The server refuses anything above what is
-// left, a second open payout, or a repeated click.
+
+
+
+
 
 type ListResult = { rows: RefundRow[]; total: number; stats: { completedPaise: number; completed: number; processing: number; rejected: number } };
 
@@ -25,7 +25,7 @@ const STATUS: Record<RefundRow['status'], { label: string; variant: 'success' | 
 const REASONS = ['Customer cancellation', 'Damaged or misprinted item', 'Item could not be printed', 'Late delivery goodwill', 'Exchange price difference', 'Other'];
 
 export default function RefundsView({ initial, perms, openForOrder }: { initial: ListResult; perms: string[]; openForOrder?: string }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const router = useRouter();
   const canRefund = perms.includes('order.refund');
 
@@ -36,7 +36,7 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
   const [pageSize, setPageSize] = useState(10);
   const [selected, setSelected] = useState<RefundRow | null>(null);
 
-  // Issue form. One key per opening, reused on retries: a double click makes one refund.
+  
   const [isIssueOpen, setIsIssueOpen] = useState(false);
   const [issueKey, setIssueKey] = useState('');
   const [orderNumber, setOrderNumber] = useState('');
@@ -49,7 +49,7 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Paying out a cash-on-delivery refund.
+  
   const [utr, setUtr] = useState('');
   const [rejectNote, setRejectNote] = useState('');
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -71,11 +71,11 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
     if (first.current) { first.current = false; return; }
     const t = setTimeout(() => void load(), searchTerm ? 300 : 0);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [searchTerm, statusFilter, currentPage, pageSize]);
   useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter]);
 
-  // Two Look up clicks can resolve out of order; only the newest answer wins.
+  
   const lookupRequest = useRef(0);
   const lookUp = async (num: string) => {
     if (!num.trim()) return;
@@ -96,7 +96,7 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
     }
   };
 
-  // Reset the busy flag even when a server call rejects.
+  
   const withBusy = async <T,>(run: () => Promise<T>, failureTitle: string): Promise<T | null> => {
     setBusy(true);
     try {
@@ -123,14 +123,14 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
     if (num) void lookUp(num);
   };
 
-  // Linked from Orders / Payments: open the form for that order once.
+  
   const openedFor = useRef<string | null>(null);
   useEffect(() => {
     if (openForOrder && openedFor.current !== openForOrder) {
       openedFor.current = openForOrder;
       openIssue(openForOrder);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [openForOrder]);
 
   const submitIssue = async (e: React.FormEvent) => {
@@ -145,7 +145,7 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
     }), 'Refund Failed');
     if (!result) return;
     if (!result.ok) {
-      // Keep everything typed; show what to fix.
+      
       setFormError(result.error.details[0]?.message ?? result.error.message);
       return;
     }
@@ -195,7 +195,7 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
       link.href = url;
       link.download = `tuw_refunds_${new Date().toISOString().slice(0, 10)}.csv`;
       link.click();
-      // Let the download start before releasing the blob URL.
+      
       setTimeout(() => URL.revokeObjectURL(url), 0);
     } catch {
       showToast({ type: 'warning', title: 'Export Failed', description: 'The request failed. Please try again.' });
@@ -206,7 +206,7 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
   const totalPages = Math.max(1, Math.ceil(list.total / pageSize));
 
   return (
-    <DashboardShell pageTitle="Refunds">
+    <>
       <PageHeader
         title="Refund Management"
         actions={
@@ -365,8 +365,8 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
                 items={[
                   { label: 'Customer:', value: <strong>{selected.customerName}</strong> },
                   { label: 'Method:', value: <span>{METHOD[selected.method]}</span> },
-                  ...(selected.destinationMasked ? [{ label: 'Paid to:', value: <span style={{ fontFamily: 'monospace' }}>{selected.destinationMasked}</span> }] : []),
-                  { label: 'Reference:', value: <span style={{ fontFamily: 'monospace' }}>{selected.payoutReference ?? 'Not paid yet'}</span> },
+                  ...(selected.destinationMasked ? [{ label: 'Paid to:', value: <span style={MONO_ID_STYLE}>{selected.destinationMasked}</span> }] : []),
+                  { label: 'Reference:', value: <span style={MONO_ID_STYLE}>{selected.payoutReference ?? 'Not paid yet'}</span> },
                   { label: 'Reason:', value: <span>{selected.reason}</span> },
                   { label: 'Issued by:', value: <span>{selected.actorName}</span> },
                   { label: 'Last change:', value: <span>{when(selected.updatedAt)}</span> },
@@ -377,6 +377,6 @@ export default function RefundsView({ initial, perms, openForOrder }: { initial:
           </div>
         )}
       </Drawer>
-    </DashboardShell>
+    </>
   );
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { Button, Badge, Input, ContentCard, StatCard, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, PageHeader } from '@/components/ui';
 import { COLORS, SPACING, FIGMA_META } from '@/lib/tokens';
 import {
@@ -60,10 +59,10 @@ export default function DesignSystemPage() {
   ];
 
   return (
-    <DashboardShell>
+    <>
       <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
         
-        {/* Page Header */}
+        {}
         <div style={{
           backgroundColor: 'var(--tuw-bg-surface)',
           padding: '32px',
@@ -112,7 +111,7 @@ export default function DesignSystemPage() {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
+        {}
         <div style={{
           display: 'flex',
           gap: '8px',
@@ -141,7 +140,7 @@ export default function DesignSystemPage() {
           ))}
         </div>
 
-        {/* 01: COLOR ROLES */}
+        {}
         {(activeTab === 'all' || activeTab === 'colors') && (
           <ContentCard>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
@@ -219,7 +218,7 @@ export default function DesignSystemPage() {
           </ContentCard>
         )}
 
-        {/* 02: TYPOGRAPHY SCALE */}
+        {}
         {(activeTab === 'all' || activeTab === 'typography') && (
           <ContentCard>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
@@ -270,7 +269,7 @@ export default function DesignSystemPage() {
           </ContentCard>
         )}
 
-        {/* 03: REUSABLE UI COMPONENTS */}
+        {}
         {(activeTab === 'all' || activeTab === 'components') && (
           <ContentCard>
             <div>
@@ -284,7 +283,7 @@ export default function DesignSystemPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', marginTop: '16px' }}>
               
-              {/* BUTTONS */}
+              {}
               <div>
                 <h3 className="tuw-type-heading-card" style={{ marginBottom: '12px', color: 'var(--tuw-text-primary)' }}>
                   Buttons (Variants & Sizes)
@@ -302,7 +301,7 @@ export default function DesignSystemPage() {
                 </div>
               </div>
 
-              {/* BADGES */}
+              {}
               <div>
                 <h3 className="tuw-type-heading-card" style={{ marginBottom: '12px', color: 'var(--tuw-text-primary)' }}>
                   Status Badges
@@ -318,7 +317,7 @@ export default function DesignSystemPage() {
                 </div>
               </div>
 
-              {/* FORM CONTROLS */}
+              {}
               <div>
                 <h3 className="tuw-type-heading-card" style={{ marginBottom: '12px', color: 'var(--tuw-text-primary)' }}>
                   Inputs & Form Controls
@@ -350,7 +349,7 @@ export default function DesignSystemPage() {
                 </div>
               </div>
 
-              {/* CARDS */}
+              {}
               <div>
                 <h3 className="tuw-type-heading-card" style={{ marginBottom: '12px', color: 'var(--tuw-text-primary)' }}>
                   Stat Cards
@@ -380,7 +379,7 @@ export default function DesignSystemPage() {
                 </div>
               </div>
 
-              {/* SAMPLE TABLE */}
+              {}
               <div>
                 <h3 className="tuw-type-heading-card" style={{ marginBottom: '12px', color: 'var(--tuw-text-primary)' }}>
                   Standard Data Table
@@ -421,7 +420,7 @@ export default function DesignSystemPage() {
           </ContentCard>
         )}
 
-        {/* 04: SPACING & RADIUS TOKENS */}
+        {}
         {(activeTab === 'all' || activeTab === 'tokens') && (
           <ContentCard>
             <div>
@@ -435,7 +434,7 @@ export default function DesignSystemPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginTop: '16px' }}>
               
-              {/* Spacing */}
+              {}
               <div style={{ backgroundColor: 'var(--tuw-bg-canvas)', padding: '20px', borderRadius: 'var(--tuw-radius-control)' }}>
                 <h4 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '16px', color: 'var(--tuw-text-primary)' }}>
                   Spacing Grid (4 · 8 · 12 · 16 · 24 · 32 · 48 · 64px)
@@ -463,7 +462,7 @@ export default function DesignSystemPage() {
                 </div>
               </div>
 
-              {/* Radii */}
+              {}
               <div style={{ backgroundColor: 'var(--tuw-bg-canvas)', padding: '20px', borderRadius: 'var(--tuw-radius-control)' }}>
                 <h4 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '16px', color: 'var(--tuw-text-primary)' }}>
                   Corner Radii (4 · 8 · 12 · 16 · 9999px)
@@ -505,6 +504,6 @@ export default function DesignSystemPage() {
         )}
 
       </div>
-    </DashboardShell>
+    </>
   );
 }

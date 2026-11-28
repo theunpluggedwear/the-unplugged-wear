@@ -8,7 +8,6 @@ import type {
   AdminReturnStats,
   ReturnStatus,
 } from '@tuw/heart/modules/returns';
-import DashboardShell from '@/components/layout/DashboardShell';
 import {
   StatCard,
   ContentCard,
@@ -31,7 +30,7 @@ import {
   DrawerSection,
   ItemsRow,
 } from '@/components/ui';
-import { useAdminState } from '@/mocks/state';
+import { useToast } from '@/components/providers/ToastProvider';
 import {
   getReturnAction,
   listReturnsAction,
@@ -40,10 +39,10 @@ import {
   setReturnStatusAction,
 } from '@/server/return-actions';
 
-// Exchange and replacement requests (TL-BE-10). The server owns eligibility,
-// the follow-up order, stock and refunds; this screen only asks it to act.
-// A request is decided once (approve/reject); after that it follows its
-// pickup → received → inspected → completed path with a disposition per line.
+
+
+
+
 
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'sub-' + String(p) });
 
@@ -87,7 +86,7 @@ const DISPOSITION_LABEL: Record<string, string> = {
   pending: 'Waiting at warehouse', restock: 'Back in stock', scrap: 'Scrapped', return_to_customer: 'Sent back to customer',
   exchange: 'Replaced (exchange)', replacement: 'Reprinted',
 };
-/** What each move's button says. */
+
 const MOVE_LABEL: Record<ReturnStatus, string> = {
   requested: 'Reopen',
   approved: 'Approve',
@@ -102,7 +101,7 @@ const MOVE_LABEL: Record<ReturnStatus, string> = {
 };
 
 export default function ReturnsView({ initial, perms, openRma }: { initial: ListResult; perms: string[]; openRma?: string }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const canManage = perms.includes('return.manage');
 
   const [list, setList] = useState<ListResult>(initial);
@@ -122,10 +121,10 @@ export default function ReturnsView({ initial, perms, openRma }: { initial: List
   const [refundOpen, setRefundOpen] = useState(false);
   const [refundMethod, setRefundMethod] = useState<'source' | 'upi' | 'bank_transfer'>('source');
   const [refundDestination, setRefundDestination] = useState('');
-  // One key per staff intent, so a retried refund cannot pay twice.
+  
   const refundKey = useRef<string | null>(null);
 
-  // A slower, older list answer never overwrites a newer one.
+  
   const request = useRef(0);
   const openingInFlight = useRef(false);
   const openRequest = useRef(0);
@@ -143,7 +142,7 @@ export default function ReturnsView({ initial, perms, openRma }: { initial: List
     if (first.current) { first.current = false; return; }
     const t = setTimeout(() => void load(), searchTerm ? 300 : 0);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [searchTerm, statusTab, typeTab, currentPage, pageSize]);
   useEffect(() => { setCurrentPage(1); }, [searchTerm, statusTab, typeTab]);
 
@@ -169,7 +168,7 @@ export default function ReturnsView({ initial, perms, openRma }: { initial: List
     }
   };
 
-  // Notification links arrive as /returns?open=RMA-XXXX; the list may not hold it.
+  
   const linkOpened = useRef(false);
   useEffect(() => {
     if (!openRma || linkOpened.current) return;
@@ -181,7 +180,7 @@ export default function ReturnsView({ initial, perms, openRma }: { initial: List
       if (result.ok && result.data.rows[0]) void openReturn(result.data.rows[0]);
       else showToast({ type: 'warning', title: 'Request Not Found', description: `No request matches ${openRma}.` });
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [openRma]);
 
   const refreshDetail = async (id: string) => {
@@ -301,7 +300,7 @@ export default function ReturnsView({ initial, perms, openRma }: { initial: List
   const linesLocked = detail ? ['requested', 'rejected', 'cancelled'].includes(detail.status) : true;
 
   return (
-    <DashboardShell pageTitle="Returns" activeNav="returns">
+    <>
       <PageHeader
         title="Returns & Exchanges"
         actions={
@@ -637,7 +636,7 @@ export default function ReturnsView({ initial, perms, openRma }: { initial: List
                     </div>
                   ))}
                   <p style={{ fontSize: 12, margin: 0, color: 'var(--tuw-text-secondary, #5D6772)' }}>
-                    Demo uploads: files are recorded as demo:// references until real storage lands (TL-BE-11).
+                    Demo uploads: files are recorded as demo:
                   </p>
                 </div>
               )}
@@ -657,6 +656,6 @@ export default function ReturnsView({ initial, perms, openRma }: { initial: List
           </div>
         )}
       </Drawer>
-    </DashboardShell>
+    </>
   );
 }

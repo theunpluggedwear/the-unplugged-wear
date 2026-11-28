@@ -1,5 +1,6 @@
 import 'server-only';
 import { AppError } from '../../platform/errors/index.ts';
+import { personalizationDesignPayload } from '../../modules/personalization/index.ts';
 import {
   mapQikinkStatus,
   qikinkSimulator,
@@ -24,6 +25,17 @@ import {
 
 const TOKEN_TTL_MS = 45 * 60_000;
 const TIMEOUT_MS = 20_000;
+
+export const QIKINK_MAX_REQUESTS_PER_MINUTE = 30;
+export const QIKINK_RATE_LIMIT_WINDOW_MS = 60_000;
+
+export function qikinkBackoffDelayMs(timestamps: readonly number[], now = Date.now()): number {
+  const recent = timestamps
+    .filter((at) => Number.isFinite(at) && at <= now && now - at < QIKINK_RATE_LIMIT_WINDOW_MS)
+    .sort((a, b) => a - b);
+  if (recent.length < QIKINK_MAX_REQUESTS_PER_MINUTE) return 0;
+  return Math.max(0, recent[recent.length - QIKINK_MAX_REQUESTS_PER_MINUTE]! + QIKINK_RATE_LIMIT_WINDOW_MS - now);
+}
 
 export interface QikinkConfig {
   clientId: string;
@@ -142,6 +154,25 @@ async function accessToken(config: QikinkConfig): Promise<string> {
   return token;
 }
 
+async function withFreshTokenOn401<T>(config: QikinkConfig, send: (token: string) => Promise<T>): Promise<T> {
+  const key = `${config.baseUrl}:${config.clientId}`;
+  let token: string;
+  try {
+    token = await accessToken(config);
+  } catch (error) {
+    if (!(error instanceof QikinkError) || error.status !== 401) throw error;
+    tokens.delete(key);
+    token = await accessToken(config);
+  }
+  try {
+    return await send(token);
+  } catch (error) {
+    if (!(error instanceof QikinkError) || error.status !== 401) throw error;
+    tokens.delete(key);
+    return send(await accessToken(config));
+  }
+}
+
 function splitName(fullName: string): { first_name: string; last_name: string } {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
   return { first_name: parts[0] ?? 'Customer', last_name: parts.slice(1).join(' ') || '-' };
@@ -158,7 +189,7 @@ const countryCode = (value: string | undefined): string => COUNTRY_CODE[(value ?
  *     print_type_id or designs — Qikink reads both from the SKU;
  *   * Strategy B (our artwork) needs print_type_id + designs instead.
  */
-function createBody(input: FulfillmentOrderInput): Record<string, unknown> {
+export function createBody(input: FulfillmentOrderInput): Record<string, unknown> {
   const { first_name, last_name } = splitName(input.shipTo.name);
   const total = input.gateway === 'cod' ? input.codAmountPaise ?? input.totalPaise : input.totalPaise;
   return {
@@ -167,11 +198,9 @@ function createBody(input: FulfillmentOrderInput): Record<string, unknown> {
     gateway: input.gateway === 'cod' ? 'COD' : 'Prepaid',
     total_order_value: rupees(total),
     line_items: input.lines.map((line) => {
-      const designs = Array.isArray(line.payload?.designs) ? line.payload.designs : [];
       const base = { quantity: String(line.quantity), sku: line.sku, price: rupees(line.unitPricePaise) };
-      return designs.length
-        ? { ...base, print_type_id: Number(line.payload?.printTypeId ?? 1), designs }
-        : { ...base, search_from_my_products: 1 };
+      const design = personalizationDesignPayload(line);
+      return design ? { ...base, ...design } : { ...base, search_from_my_products: 1 };
     }),
     shipping_address: {
       first_name,
@@ -213,21 +242,21 @@ export function createQikinkClient(config: QikinkConfig): FulfillmentPartner {
     liveReady: () => true,
     mapStatus: mapQikinkStatus,
     async createOrder(input) {
-      const token = await accessToken(config);
-      const body = await call(config, '/api/order/create', { method: 'POST', token, body: createBody(input) });
+      const body = await withFreshTokenOn401(config, (token) =>
+        call(config, '/api/order/create', { method: 'POST', token, body: createBody(input) }));
       const state = stateFrom(body, input.reference);
       // A create answer rarely carries the provider status; "Live" is Qikink's
       // accepted state, which the first poll then confirms.
       return { ...state, providerStatus: state.providerStatus === 'Live' ? 'Live' : state.providerStatus, status: mapQikinkStatus(state.providerStatus) };
     },
     async getOrder(providerOrderRef) {
-      const token = await accessToken(config);
       // Qikink's own id is numeric; anything else is our reference, which is
       // found in the order list (verified: GET /api/order answers an array).
       if (/^\d+$/.test(providerOrderRef)) {
-        return stateFrom(await call(config, `/api/order?order_id=${encodeURIComponent(providerOrderRef)}`, { token }), providerOrderRef);
+        const body = await withFreshTokenOn401(config, (token) => call(config, `/api/order?order_id=${encodeURIComponent(providerOrderRef)}`, { token }));
+        return stateFrom(body, providerOrderRef);
       }
-      const list = await call(config, '/api/order', { token });
+      const list = await withFreshTokenOn401(config, (token) => call(config, '/api/order', { token }));
       const rows = Array.isArray(list)
         ? list
         : Array.isArray((list as { data?: unknown } | null)?.data)
@@ -238,9 +267,8 @@ export function createQikinkClient(config: QikinkConfig): FulfillmentPartner {
       return stateFrom(match, providerOrderRef);
     },
     async cancelOrder(providerOrderRef) {
-      const token = await accessToken(config);
       try {
-        const body = await call(config, '/api/order/cancel', { method: 'POST', token, body: { order_id: providerOrderRef } });
+        const body = await withFreshTokenOn401(config, (token) => call(config, '/api/order/cancel', { method: 'POST', token, body: { order_id: providerOrderRef } }));
         const status = text(pick(body, ['order_status', 'status'])) ?? 'Cancelled';
         return { cancelled: mapQikinkStatus(status) === 'cancelled' || status.toLowerCase().includes('cancel'), providerStatus: status };
       } catch (error) {

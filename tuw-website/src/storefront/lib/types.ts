@@ -123,6 +123,7 @@ export type Product = {
   priceIsDraft?: boolean;
   /** Print areas offered by the print partner (verbatim from their sheet). */
   printAreas?: string[];
+  monogram?: { maxChars: number };
   weightGrams?: number;
   taxRatePercent?: number;
   hsnCode?: string;
@@ -171,9 +172,16 @@ export type CartItem = {
   image: string;
   /** How many this line may hold right now (from the server; 0 = no longer available). */
   maxQty?: number;
+  /** Product page slug, when the server knows it. */
+  slug?: string;
+  productKind?: 'physical' | 'gift_card';
   giftRecipientName?: string;
   giftRecipientEmail?: string;
   giftMessage?: string;
+  monogram?: string;
+  placement?: string;
+  previewImageUrl?: string;
+  previewApproved?: boolean;
   selectedRadioOptions?: {
     groupKey: string;
     groupLabel: string;
@@ -198,7 +206,10 @@ export type Address = {
   isDefault?: boolean;
 };
 
-export type PaymentStatus = 'paid' | 'pending' | 'failed' | 'refunded';
+import type { OrderPaymentStatus, FulfillmentStatus as CanonicalFulfillmentStatus, OrderStatus } from '@tuw/heart/platform/status';
+
+export type PaymentStatus = OrderPaymentStatus;
+export type { CanonicalFulfillmentStatus, OrderStatus };
 export type FulfillmentStatus = 'queued' | 'printing' | 'shipped' | 'delivered' | 'submission_failed' | 'cancelled';
 
 export type Order = {
@@ -207,7 +218,7 @@ export type Order = {
   date: string;
   status: 'Confirmed' | 'Printing' | 'Shipped' | 'Delivered' | 'Returned' | 'Failed' | 'Refunded' | 'Cancelled';
   /** The database status (SQL vocabulary), when the order came from the database. */
-  sqlStatus?: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'failed' | 'refunded';
+  sqlStatus?: OrderStatus;
   /** End of the free-cancel window (ISO). */
   cancellableUntil?: string;
   /** True while the account that placed it may still cancel. */
@@ -238,17 +249,6 @@ export type Order = {
 };
 
 export type DemoScenario = 'normal' | 'loading' | 'empty' | 'error' | 'long_content';
-
-export type ReturnRequest = {
-  id: string;
-  orderNumber: string;
-  itemTitle: string;
-  variant: string;
-  reason: string;
-  condition: string;
-  status: 'Requested' | 'Approved' | 'Pickup Scheduled' | 'Received & Restocked' | 'Rejected';
-  createdAt: string;
-};
 
 export type JournalArticle = {
   id: string;

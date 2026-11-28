@@ -2,9 +2,8 @@ import React from 'react';
 import { DashboardCard } from './DashboardCard';
 import { SeeAllLink } from './SeeAllLink';
 import { SegmentedBar } from './SegmentedBar';
-import type { InventoryAlert } from '@/hooks/useDashboardData';
+import type { InventoryAlert } from '@/lib/dashboard';
 
-// Class map - selectors live in src/app/globals.css (single app.css, home- prefix).
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'home-' + String(p) });
 
 interface InventoryAlertsCardProps {
@@ -17,9 +16,7 @@ export function InventoryAlertsCard({ alerts }: InventoryAlertsCardProps) {
       variant="inventory"
       title="Inventory alerts"
       subtitle={`${alerts.length} items need attention`}
-      action={
-        <SeeAllLink href="/products" />
-      }
+      action={<SeeAllLink href="/products" />}
     >
       <div className={styles.alertsList}>
         {alerts.map((alert) => (
@@ -27,7 +24,9 @@ export function InventoryAlertsCard({ alerts }: InventoryAlertsCardProps) {
             <div className={styles.alertTopRow}>
               <div className={styles.alertStatusGroup}>
                 <span className={alert.severity === 'Critical' ? styles.alertDotRed : styles.alertDotOrange} />
-                <span className={alert.severity === 'Critical' ? styles.alertStatusCritical : styles.alertStatusLow}>{alert.severity}</span>
+                <span className={alert.severity === 'Critical' ? styles.alertStatusCritical : styles.alertStatusLow}>
+                  {alert.severity}
+                </span>
               </div>
               <span className={styles.alertUnitsLeft}>{alert.unitsLeft}</span>
             </div>

@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
-/* ==========================================================================
-   TUW V2 — URBANIST DESIGN SYSTEM TOKENS (FIGMA FILE: WmpPcdGcXerVgqNpgr6Q6S)
-   Node: 1-26969 · Foundations · Light mode · Urbanist · 18 Color Roles
-   THE ONLY CSS FILE — imported once in src/app/layout.tsx.
-   Merged from old src/design-system/tokens.css + src/app/globals.css verbatim.
-   Do not create a 2nd CSS file. No CSS Modules.
-   ========================================================================== */
+
+
+
+
+
+
+
 
 @theme {
   --font-sans: "Urbanist", ui-sans-serif, system-ui, sans-serif;
   --font-urbanist: "Urbanist", ui-sans-serif, system-ui, sans-serif;
 
-  /* 18 Semantic Color Roles per DESIGN_SYSTEM.md */
+  
   --color-canvas: #F7F8F9;
   --color-surface: #FFFFFF;
   --color-text-primary: #262626;
@@ -33,35 +33,35 @@
   --color-error-text: #C91818;
   --color-error-bg: #FEF4F4;
 
-  /* Compatibility aliases (documented): short utility spellings for the three most
-     reused roles. text-primary/border-subtle/bg-primary etc. had zero generated
-     output before these existed (utilities derive from full token names). */
+  
+
+
   --color-primary: #262626;
   --color-secondary: #5D6772;
   --color-subtle: #E9E9E9;
 
-  /* Admin Radii */
+  
   --radius-sm: 4px;
   --radius-control: 8px;
   --radius-card: 12px;
   --radius-modal: 16px;
   --radius-pill: 9999px;
-  /* Sidebar role radii */
+  
   --radius-nav: 10px;
   --radius-nav-sm: 6px;
-  /* Sidebar active + hover treatments (3D uplift: inset edge replaces drop shadow) */
+  
   --shadow-nav-edge: inset 0 -2px 0 #d6d6d6;
   --color-nav-active-text: #111827;
   --color-nav-hover-wash: rgba(117, 57, 255, 0.06);
-  /* Branch tree treatments */
+  
   --color-nav-branch-hover: rgba(0, 0, 0, 0.04);
   --color-nav-guide: #dddddd;
   --color-nav-guide-active: #c4c4c4;
 
-  /* Auth (login/signup) palette — Figma Storeflow frames, tokenized, no hardcodes in JSX.
-     Admin --color-* above untouched; auth uses its own namespace. */
+  
+
   --color-auth-ink: #242424;
-  /* Button fills: shared bg; login-family hover vs signup (auth-pure) hover */
+  
   --color-auth-button: #242424;
   --color-auth-button-hover: #141414;
   --color-auth-pure: #000000;
@@ -78,47 +78,47 @@
   --color-auth-success-bg: #EDF8E2;
   --color-auth-divider: #BBBBBB;
   --color-auth-hero: #1A1A1A;
-  /* Signup social hover pair (distinct from login FAFAFA/D1D5DB); shared with backToLogin */
+  
   --color-auth-hover-canvas: #F8F9FA;
   --color-auth-hover-line: #D6D6D6;
 
-  /* Auth radii */
+  
   --radius-auth-checkbox: 6px;
   --radius-auth-btn: 10px;
   --radius-auth-social: 14px;
   --radius-auth-badge: 13.5px;
 
-  /* Auth type (size + line-height travel in one utility: text-auth-btn / text-auth-social) */
+  
   --text-auth-btn: 16px;
   --text-auth-btn--line-height: 22.4px;
   --text-auth-social: 14px;
   --text-auth-social--line-height: 22.4px;
   --tracking-auth-social: 0.14px;
 
-  /* Auth form widths */
+  
   --container-auth-form: 568px;
   --container-auth-reset: 488px;
   --container-auth-recovery: 392px;
   --container-auth-card: 552px;
-  /* Auth cards */
+  
   --radius-auth-card: 20px;
   --radius-auth-card-lg: 24px;
   --shadow-auth-card: -1px 1px 40px rgba(0, 0, 0, 0.06);
-  /* Recovery heading */
+  
   --text-auth-recovery-head: 24px;
   --text-auth-recovery-head--line-height: 28.8px;
   --tracking-auth-recovery-head: 0.72px;
-  /* Back link: 14px/500 with NO line-height (computes normal) */
+  
   --text-auth-backlink: 14px;
   --text-auth-backlink--line-height: normal;
 
-  /* Auth input type */
+  
   --text-auth-input: 14px;
   --text-auth-input--line-height: 22.4px;
   --text-auth-divider: 16px;
   --text-auth-divider--line-height: 20.2px;
   --leading-auth-link: 16.8px;
-  /* Auth hero + header type (Pass C; lead shared by heroSubtitle + formSubtitle) */
+  
   --text-auth-brand: 32px;
   --text-auth-brand--line-height: 38.4px;
   --text-auth-headline: clamp(38px, 4.4vw, 64px);
@@ -133,21 +133,21 @@
   --tracking-auth-title: -0.01em;
   --tracking-auth-hero: -0.02em;
   --tracking-auth-wide: 0.6px;
-  /* Signup input type + focus ring (.12 alpha — distinct from OTP .15) */
+  
   --text-auth-signup-input: 15px;
   --text-auth-signup-input--line-height: 22px;
   --tracking-auth-signup-input: 0.2px;
   --shadow-auth-input: 0 0 0 3px rgba(17, 93, 93, 0.12);
-  /* OTP ring (.15 alpha — distinct from input .12) + idle border */
+  
   --shadow-auth-otp: 0 0 0 3px rgba(17, 93, 93, 0.15);
   --color-auth-otp-line: #C6EAA0;
-  /* Signup terms (verbatim outliers: 5px check vs login 6px, E7EEEE vs E7EFEF) */
+  
   --color-auth-terms-line: #E7EEEE;
   --radius-auth-terms-check: 5px;
   --text-auth-terms: 13px;
   --text-auth-terms--line-height: 18px;
   --tracking-auth-terms: 0.15px;
-  /* Signup hero copy (fluid Figma specs; wrap-guards shared by headline+subtitle) */
+  
   --text-auth-signup-brand: clamp(20px, 2.22vw, 32px);
   --text-auth-signup-headline: clamp(28px, 3.6vw, 64px);
   --leading-auth-signup-headline: 1.15;
@@ -156,12 +156,12 @@
   --tracking-auth-signup-sub: 0.4px;
   --container-auth-hero-copy: 520px;
   --container-auth-verify: 350px;
-  /* Verify title (fluid) + resend row type (14/22 shared spec) */
+  
   --text-auth-verify-title: clamp(24px, 2.2vw, 32px);
   --text-auth-verify-title--line-height: 1.25;
   --text-auth-resend: 14px;
   --text-auth-resend--line-height: 22px;
-  /* Signup header type (title fluid; subrow 15/22 shared with verifySubtitle) */
+  
   --text-auth-signup-title: clamp(24px, 2.2vw, 32px);
   --text-auth-signup-title--line-height: 1.25;
   --text-auth-subrow: 15px;
@@ -170,23 +170,23 @@
   --container-auth-hero-sub: 600px;
   --spacing-auth-header-gap: clamp(20px, 3vh, 32px);
   --shadow-auth-badge: 0 4px 14px rgba(36, 36, 36, 0.15);
-  /* Sidebar chrome shadows + type */
+  
   --shadow-nav-logo: 0 2px 6px rgba(0, 0, 0, 0.08);
-  /* Popover elevation (calendar, dropdowns) */
+  
   --shadow-popover: 0 8px 30px rgba(0, 0, 0, 0.12);
   --text-nav-group: 11px;
   --tracking-nav-group: 0.08em;
-  /* Parent/child nav labels: same 13.5px, separate tokens, no line-height declared */
+  
   --text-nav-parent: 13.5px;
   --text-nav-child: 13.5px;
   --color-nav-group-label: #7E8793;
   --color-nav-chevron: #94A3B8;
   --color-nav-group-hover: rgba(0, 0, 0, 0.03);
-  /* Live nav badges only (purple Fulfillment 4, amber Returns 2) */
+  
   --color-nav-badge-purple-bg: #F3E8FF;
   --color-nav-badge-amber-bg: #FEF3C7;
   --color-nav-badge-amber-text: #D97706;
-  /* Bottom dock (dark chrome) + stag caption tracking */
+  
   --color-nav-dock-bg: #0F0F12;
   --color-nav-dock-line: rgba(255, 255, 255, 0.08);
   --color-nav-dock-text: #8E95A2;
@@ -200,21 +200,21 @@
   --tracking-auth-input: 0.28px;
   --tracking-auth-input-filled: 0.32px;
 
-  /* Auth field rhythm */
+  
   --spacing-auth-field-gap: clamp(16px, 2.2vh, 24px);
-  /* forgotPasswordRow top+bottom only (2.4vh middle term) */
+  
   --spacing-auth-row-gap: clamp(16px, 2.4vh, 24px);
-  /* socialRow + dividerRow only (2.5vh middle term — do NOT unify with field-gap) */
+  
   --spacing-auth-social-gap: clamp(16px, 2.5vh, 24px);
 }
 
 :root {
-  /* Typography — single canonical Urbanist stack (matches @theme --font-sans exactly).
-     One font across the dashboard; font-sans is the utility spelling. */
+  
+
   --font-urbanist: "Urbanist", ui-sans-serif, system-ui, sans-serif;
   --font-main: "Urbanist", ui-sans-serif, system-ui, sans-serif;
 
-  /* TUW Semantic Colour Roles (18 roles) - Standard & Figma Web Code Syntax */
+  
   --tuw-bg-canvas: #F7F8F9;
   --tuw-color-bg-canvas: #F7F8F9;
 
@@ -269,9 +269,9 @@
   --tuw-text-on-primary: #FFFFFF;
   --tuw-color-text-on-primary: #FFFFFF;
 
-  /* Legacy token aliases (ghost-var sweep, task 007) — v1-era names referenced
-     by ported JSX. Values are the exact fallbacks already rendering, so this
-     is pixel-neutral; canonical 18 roles above are preferred for new work. */
+  
+
+
   --tuw-bg-surface-subtle: #F1F3F5;
   --tuw-border-error: #FED7D7;
   --tuw-border-strong: #D1D5DB;
@@ -280,22 +280,22 @@
   --tuw-status-warning: #F59E0B;
   --tuw-text-tertiary: #9CA3AF;
 
-  /* Admin Radii per DESIGN_SYSTEM.md */
+  
   --tuw-radius-sm: 4px;
   --tuw-radius-control: 8px;
   --tuw-radius-card: 12px;
   --tuw-radius-modal: 16px;
-  --tuw-radius-modal-lg: 24px; /* used by: spotlight search dialog (S2 demo source) */
+  --tuw-radius-modal-lg: 24px; 
   --tuw-radius-pill: 9999px;
 
-  /* Scrollbar system (P4) — minimal gray pills admin-wide. Change these
-     three values to restyle every scrollbar (modal lists, drawers, tables,
-    page scroll) at once. Sidebar/nav stay hidden via their own exceptions. */
+  
+
+
   --tuw-scroll-thumb: #C9CED6;
   --tuw-scroll-thumb-hover: #AEB4BE;
   --tuw-scroll-track: transparent;
 
-  /* Spacing Scale per DESIGN_SYSTEM.md: 4, 8, 12, 16, 24, 32, 48, 64px */
+  
   --tuw-space-4: 4px;
   --tuw-space-8: 8px;
   --tuw-space-12: 12px;
@@ -305,12 +305,12 @@
   --tuw-space-48: 48px;
   --tuw-space-64: 64px;
 
-  /* Control Heights */
+  
   --tuw-control-height: 44px;
   --tuw-control-height-sm: 36px;
   --tuw-control-height-lg: 48px;
 
-  /* Urbanist V2 Type Scale Tokens */
+  
   --tuw-type-display-size: 44px;
   --tuw-type-display-line-height: 52px;
   --tuw-type-display-weight: 600;
@@ -347,7 +347,7 @@
   --tuw-type-caption-default-line-height: 18px;
   --tuw-type-caption-default-weight: 400;
 
-  /* Backward Compatible Tokens */
+  
   --color-primary: #262626;
   --brand-lime: #C6EAA0;
 
@@ -359,27 +359,27 @@
   --color-success: #187343;
   --color-success-bg: #F4FBF7;
 
-  /* Spacing Grid: 4 · 8 · 12 · 16 · 24 · 32 · 48 · 64px (canonical set lives above; documented on the design-system page) */
+  
 
   --radius-sm: 4px;
   --radius-card: 12px;
   --radius-modal: 16px;
   --radius-pill: 9999px;
 
-  /* Shadows */
+  
   --shadow-subtle: 0 1px 4px rgba(0, 0, 0, 0.02);
   --shadow-button: 0 2px 6px rgba(117, 57, 255, 0.2);
-  --shadow-spotlight: 0 25px 50px -12px rgba(18, 10, 36, 0.35), 0 0 0 1px rgba(117, 57, 255, 0.1), 0 0 44px rgba(117, 57, 255, 0.14); /* used by: spotlight search dialog (S2 demo source) */
+  --shadow-spotlight: 0 25px 50px -12px rgba(18, 10, 36, 0.35), 0 0 0 1px rgba(117, 57, 255, 0.1), 0 0 44px rgba(117, 57, 255, 0.14); 
 }
 
 
-/* Tabular Numerals for Numerical Data and Currency */
+
 .tuw-tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
-/* Base resets — layered so Tailwind utilities (@layer utilities) win over them.
-   Values unchanged for legacy unlayered components; utilities now apply bg/border/padding. */
+
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -416,9 +416,9 @@
   }
 }
 
-/* ==========================================================================
-   FIGMA TYPOGRAPHY UTILITIES (Urbanist Specimen) — verbatim
-   ========================================================================== */
+
+
+
 .tuw-type-display {
   font-family: var(--font-urbanist), sans-serif;
   font-size: 40px;
@@ -490,7 +490,7 @@
   font-weight: 400;
 }
 
-/* Small helpers (new, non-visual) */
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -498,10 +498,10 @@
   scrollbar-width: none;
 }
 
-/* Admin scrollbar language (P4): 8px overlay gutters, gray pill thumbs,
-   no arrow buttons, zero layout shift (transparent border + padding-box
-   clip). Hidden where the spec demands (.sidebar, .no-scrollbar win by
-   specificity). Firefox gets the thin native equivalent. */
+
+
+
+
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -534,13 +534,13 @@
   overflow: hidden;
 }
 
-/* ==========================================================================
-   LAYOUT CHROME — moved verbatim from old Sidebar.module.css + Header.module.css.
-   Single app.css, no CSS Modules. Class names unchanged so JSX is identical.
-   ========================================================================== */
-/* Dashboard Layout Shell - Natural Page Scroll, Zero Cutoffs, Sidebar Matches Full Page Height */
 
-/* Sidebar viewport height (100vh/100dvh fallback order) + hidden outer scrollbars. */
+
+
+
+
+
+
 .sidebar {
   height: 100vh;
   height: 100dvh;
@@ -564,14 +564,14 @@
   }
 }
 
-/* Branched Navigation Tree Hierarchy — guide stem + curves stay custom. */
-/* Continuous vertical guide line, light full-length (dark path overlaid per segment below) */
+
+
 .navTree::before {
   content: '';
   position: absolute;
   left: 21px;
   top: -6px;
-  bottom: 29px; /* stops exactly at tangent point of last child item curve (38px - 9px) */
+  bottom: 29px; 
   width: 1px;
   background-color: var(--color-nav-guide);
   border-radius: 1px;
@@ -579,13 +579,13 @@
   z-index: 0;
 }
 
-/* Continuous dark path to the active branch (seamless): preceding items paint the full
-   box (top:-6px to bottom:0) so gaps between cards are covered by overlap stacking.
-   The terminal (active) item carries NO straight overlay — only its curved elbow —
-   so no dark bar is ever painted over the active card face. Same color throughout.
-   SCALABILITY LIMIT: stem/overlay/curve selectors cover up to 5 children per group
-   (navStemTo0–navStemTo4). A 6th item renders correctly EXCEPT its dark stem and
-   dark curve states — extend these selector sets before adding one. */
+
+
+
+
+
+
+
 .navStemTo1 > :nth-child(-n+1)::after,
 .navStemTo2 > :nth-child(-n+2)::after,
 .navStemTo3 > :nth-child(-n+3)::after,
@@ -600,7 +600,7 @@
   pointer-events: none;
   z-index: 2;
 }
-/* Active item elbow (both vertical run and curved horizontal arm turn dark) */
+
 .navStemTo0 > :nth-child(1)::before,
 .navStemTo1 > :nth-child(2)::before,
 .navStemTo2 > :nth-child(3)::before,
@@ -611,7 +611,7 @@
   z-index: 2;
 }
 
-/* Branch child item curve (container-indexed; layout lives in Tailwind utilities). */
+
 .navTree > *::before {
   content: '';
   position: absolute;
@@ -626,15 +626,15 @@
   z-index: 1;
 }
 
-/* Header */
+
 .topBar {
   height: 80px;
   min-height: 80px;
   background-color: var(--tuw-bg-surface, #FFFFFF);
   border-bottom: 1px solid var(--tuw-border-subtle, #E5E7EB);
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   padding: 0 30px;
   position: sticky;
   top: 0;
@@ -646,6 +646,19 @@
   display: flex;
   align-items: center;
   gap: 20px;
+  justify-self: start;
+  min-width: 0;
+}
+
+.topBarCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.topBarRight {
+  justify-self: end;
 }
 
 .mobileMenuBtn {
@@ -669,7 +682,7 @@
   font-family: var(--font-main);
 }
 
-/* Search Trigger Icon Button in Navbar */
+
 .searchTriggerBtn {
   width: 40px;
   height: 40px;
@@ -691,7 +704,7 @@
   border-color: rgba(117, 57, 255, 0.3);
 }
 
-/* Command Palette / Search Modal Overlay */
+
 .commandPaletteOverlay {
   position: fixed;
   inset: 0;
@@ -715,9 +728,9 @@
   }
 }
 
-/* Mobile backdrop fade (DC2): DashboardShell references animate-[tuwFadeIn]
-   but the keyframe was never defined (silent no-op) — defined here to
-   restore the intended motion, collapsible under reduced-motion like the rest. */
+
+
+
 @keyframes tuwFadeIn {
   from {
     opacity: 0;
@@ -738,8 +751,8 @@
   }
 }
 
-/* Shared popover motion (M1): enter 180ms ease-out, exit 150ms ease-in
-   (faster out). Under prefers-reduced-motion both collapse to instant. */
+
+
 @keyframes popoverIn {
   from {
     opacity: 0;
@@ -758,9 +771,9 @@
   }
 }
 
-/* Upward variant (DM4): mirrored slide for menus opening above their
-   trigger (pagination Rows). Same durations, easings, reduced-motion
-   collapse as the M1 contract — direction only. */
+
+
+
 @keyframes popoverInUp {
   from {
     opacity: 0;
@@ -779,11 +792,11 @@
   }
 }
 
-/* Drawer panel motion (DF0/DF1): full spatial travel, no fade — drawers are
-   large navigational surfaces that dock from off-screen right (unlike small
-   popovers, which stay fade-only per MN1/MN2). Enter 220ms as referenced;
-   exit 180ms (faster-out per motion skill). Reduced-motion collapse is
-   inherited system-wide. */
+
+
+
+
+
 @keyframes slideInRight {
   from {
     transform: translateX(100%);
@@ -802,8 +815,8 @@
   }
 }
 
-/* Spotlight result rows (S6): hover/focus wash + visible keyboard focus.
-   Entrance/exit motion inherits the global reduced-motion collapse. */
+
+
 .spotlightRow:hover,
 .spotlightRow:focus-visible {
   background-color: var(--tuw-bg-selected, #F8F5FF);
@@ -811,8 +824,8 @@
   outline: none;
 }
 
-/* Tile border light-up + Jump pill fill on row hover (P2): KPI-card
-   language — borders and washes only, no scale anywhere. */
+
+
 .spotlightRow:hover .spot-tile {
   border-color: rgba(117, 57, 255, 0.35);
   box-shadow: 0 1px 4px rgba(117, 57, 255, 0.12);
@@ -829,15 +842,214 @@
 }
 
 .topBarRight {
+  position: relative;
+  z-index: 60;
   display: flex;
   align-items: center;
   gap: 20px;
 }
 
 .actionIcons {
+  position: relative;
+  z-index: 50;
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.topBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 10px;
+  text-decoration: none;
+}
+
+.topBrandMark {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.topBrandText {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-nav-active-text, #111827);
+  white-space: nowrap;
+}
+
+.topNavTriggers {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topNavTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--radius-nav-sm, 6px);
+  background-color: transparent;
+  color: var(--color-nav-group-label, #5D6772);
+  font-family: var(--font-main);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.topNavTrigger:hover {
+  background-color: var(--color-nav-hover-wash, rgba(117, 57, 255, 0.06));
+  color: var(--color-nav-active-text, #111827);
+}
+
+.topNavTriggerActive {
+  background-color: var(--tuw-bg-surface, #FFFFFF);
+  color: var(--color-nav-active-text, #111827);
+  box-shadow: var(--shadow-nav-edge, inset 0 -2px 0 #d6d6d6);
+}
+
+.topNavChevron {
+  color: var(--color-nav-guide-active, #C4C4C4);
+  transition: transform 0.18s ease;
+}
+
+.topNavChevronOpen {
+  transform: rotate(180deg);
+}
+
+.megaMenu {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(920px, calc(100vw - 48px));
+  z-index: 95;
+  padding: 20px;
+  background-color: var(--tuw-bg-surface, #FFFFFF);
+  border: 1px solid var(--tuw-border-subtle, #E9E9E9);
+  border-radius: var(--radius-card, 12px);
+  box-shadow: var(--shadow-popover, 0 8px 30px rgba(0, 0, 0, 0.12));
+}
+
+.megaMenu::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 0;
+  right: 0;
+  height: 12px;
+}
+
+.megaMenuOpening {
+  animation: popoverIn 0.18s ease-out;
+}
+
+.megaMenuClosing {
+  animation: popoverOut 0.15s ease-in forwards;
+}
+
+.popoverOpening {
+  animation: popoverIn 0.18s ease-out;
+}
+
+.popoverClosing {
+  animation: popoverOut 0.15s ease-in forwards;
+}
+
+[class*='animate-[popoverOut_0.15s_ease-in]'] {
+  animation-fill-mode: forwards !important;
+}
+
+.megaMenuHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--tuw-border-subtle, #E9E9E9);
+}
+
+.megaMenuTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-nav-active-text, #111827);
+}
+
+.megaMenuCount {
+  font-size: 12px;
+  color: var(--tuw-text-secondary, #5D6772);
+}
+
+.megaMenuGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.megaMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--radius-nav-sm, 6px);
+  color: var(--tuw-text-primary, #262626);
+  font-family: var(--font-main);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.megaMenuItem:hover {
+  background-color: var(--color-nav-hover-wash, rgba(117, 57, 255, 0.06));
+}
+
+.megaMenuItemIcon {
+  display: inline-flex;
+  color: var(--tuw-action-primary, #7539FF);
+}
+
+.megaMenuItemText {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.megaMenuItemLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.megaMenuBadge {
+  display: inline-flex;
+  min-width: 18px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill, 9999px);
+  background-color: var(--tuw-bg-selected, #F8F5FF);
+  color: var(--tuw-action-primary, #7539FF);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+}
+
+@media (max-width: 768px) {
+  .topBar {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .topBarCenter {
+    display: none;
+  }
+  .topBrandText {
+    display: none;
+  }
 }
 
 .aiBotBtn {
@@ -860,6 +1072,8 @@
 }
 
 .notificationBtn {
+  position: relative;
+  z-index: 45;
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -877,6 +1091,37 @@
 .notificationBtn:hover {
   background-color: var(--tuw-bg-selected, #F8F5FF);
   color: var(--tuw-action-primary, #7539FF);
+}
+
+.notificationPopover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  width: 400px;
+  max-width: min(400px, calc(100vw - 32px));
+  z-index: 50;
+}
+
+@media (max-width: 768px) {
+  .notificationPopover {
+    position: fixed;
+    top: 72px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - 88px);
+    overflow-y: auto;
+  }
+  .notificationPopover [role="dialog"] {
+    max-height: calc(100dvh - 88px);
+    overflow-y: auto;
+  }
+  .notificationFilters > [role="tablist"] {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
 }
 
 .notificationBadge {
@@ -975,8 +1220,8 @@
   pointer-events: none;
 }
 
-/* Rectangle 96: signup hero gradient overlay — distinct 55%/3-stop
-   gradient, retained as an art exception (SignUpPage heroOverlay). */
+
+
 .signup-heroOverlay {
   position: absolute;
   left: 0;
@@ -988,7 +1233,7 @@
   pointer-events: none;
 }
 
-/* Stat Grid */
+
 .sub-statGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -996,7 +1241,7 @@
   width: 100%;
 }
 
-/* Content Container Card */
+
 .sub-contentCard {
   background-color: var(--tuw-bg-surface, #FFFFFF);
   border: 1px solid var(--tuw-border-subtle, #E5E7EB);
@@ -1010,7 +1255,7 @@
   box-sizing: border-box;
 }
 
-/* Tabs Filter Bar */
+
 .sub-filterBar {
   display: flex;
   align-items: center;
@@ -1050,7 +1295,7 @@
   font-weight: 600;
 }
 
-/* Grid for Products / Cards */
+
 .sub-cardGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1070,8 +1315,8 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
 }
 
-/* Hover treatment rides .tuw-stat-hover (tint/wash/glow, non-displacing per
-   the motion skill) — no lift-up on any axis. */
+
+
 
 .sub-productThumbFrame {
   width: 100%;
@@ -1161,7 +1406,7 @@
   background-color: var(--tuw-bg-selected, #F8F5FF);
 }
 
-/* Applied-range tint (D7): signals a non-default date filter is active. */
+
 .home-dateFilterBtnActive {
   background-color: var(--tuw-bg-selected, #F8F5FF);
   border-color: var(--tuw-action-primary, #7539FF);
@@ -1324,7 +1569,7 @@
   background-color: var(--tuw-bg-selected, #F8F5FF);
 }
 
-/* Sales range dropdown menu (D4) — opens from the filter select button. */
+
 .home-rangeMenu {
   background-color: var(--tuw-bg-surface, #FFFFFF);
   border: 1px solid var(--tuw-border-subtle, #E9E9E9);
@@ -1410,7 +1655,7 @@
   color: var(--tuw-text-secondary, #7E8793);
 }
 
-/* Sales Trend Bar Chart */
+
 .home-chartContainer {
   display: flex;
   width: 100%;
@@ -1533,8 +1778,8 @@
   background-color: #D6C8F2;
 }
 
-/* Card-level axis emphasis (B4): hovering the sales card brightens the
-   gridlines and darkens the Y labels — attention without displacement. */
+
+
 .home-salesTrendCard:hover .home-gridLine {
   border-bottom-color: #D8DDE3;
 }
@@ -1665,7 +1910,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-/* Pure Code Product Illustration Frame */
+
 .home-productIllustrationWrapper {
   width: 72px;
   height: 72px;
@@ -1766,9 +2011,9 @@
   text-align: right;
 }
 
-/* --------------------------------------------------------------------------
-   6. BOTTOM SECTION: INVENTORY ALERTS & RECENT ORDERS
-   -------------------------------------------------------------------------- */
+
+
+
 .home-bottomGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr);
@@ -1776,7 +2021,7 @@
   width: 100%;
 }
 
-/* Inventory Alerts Card */
+
 .home-inventoryCard {
   display: flex;
   flex-direction: column;
@@ -1829,8 +2074,8 @@
   background-color: #FCFCFD;
 }
 
-/* Severity dot glow on row hover (B6): static halo, not a pulse —
-   attention without infinite motion. */
+
+
 .home-alertDotRed,
 .home-alertDotOrange {
   transition: box-shadow 0.2s ease;
@@ -1906,7 +2151,7 @@
   color: #6C6C6C;
 }
 
-/* 5 Segment Progress Bar */
+
 .home-segmentedBar {
   display: flex;
   gap: 6px;
@@ -1932,7 +2177,7 @@
   background-color: #DFDFDF;
 }
 
-/* Recent Orders Card */
+
 .home-recentOrdersCard {
   display: flex;
   flex-direction: column;
@@ -1947,9 +2192,9 @@
   background-color: var(--tuw-bg-canvas, #F7F8F9);
 }
 
-/* --------------------------------------------------------------------------
-   7. RESPONSIVE DESIGN - STRICT ZERO OVERFLOW
-   -------------------------------------------------------------------------- */
+
+
+
 @media (max-width: 1100px) {
   .home-middleGrid {
     grid-template-columns: 1fr;
@@ -1968,9 +2213,9 @@
   }
 }
 
-/* --------------------------------------------------------------------------
-   Accessibility: Reduced Motion Preference (WCAG 2.2 AA)
-   -------------------------------------------------------------------------- */
+
+
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1982,9 +2227,9 @@
   }
 }
 
-/* --------------------------------------------------------------------------
-   Accessibility: Skip to Main Content Link (WCAG 2.2 AA)
-   -------------------------------------------------------------------------- */
+
+
+
 .tuw-skip-link {
   position: absolute;
   top: -100px;
@@ -2007,69 +2252,69 @@
   outline-offset: 2px;
 }
 
-/* Shared stat hover treatment (HC1): border tint + wash + shadow.
-   Opt-in via StatCard `hoverable` (default off) — mirrors the dashboard
-   KPI hover tokens, non-displacing per the motion skill. !important wins
-   over the primitive's inline base (same codebase precedent as the
-   reduced-motion rule); applies only when explicitly opted in.
-   Wash single-sourced from --tuw-bg-selected (same token TableHeader uses). */
+
+
+
+
+
+
 .tuw-stat-hover:hover {
   border-color: rgba(117, 57, 255, 0.35) !important;
   background-color: var(--tuw-bg-selected, #F8F5FF) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04) !important;
 }
 
-/* Permanent selected wash (PT1b): same treatment as the hover above, for
-   KPI cards acting as active filters. Toggled via className, not hover. */
+
+
 .tuw-stat-active {
   border-color: rgba(117, 57, 255, 0.35) !important;
   background-color: var(--tuw-bg-selected, #F8F5FF) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04) !important;
 }
 
-/* Shared destructive hover (DS2): red wash + red icon/border for icon
-   buttons with destructive actions (delete, remove). Built only from the
-   error token pair (--tuw-bg-error / --tuw-text-error, the same values as
-   the Tailwind error-bg / error-text tokens the logout row uses), so it
-   collapses both dialects. !important wins over primitive inline bases,
-   same precedent as .tuw-stat-hover. Icon follows via currentColor. */
+
+
+
+
+
+
 .tuw-danger-hover:hover {
   background-color: var(--tuw-bg-error, #FEF4F4) !important;
   border-color: var(--tuw-text-error, #C91818) !important;
   color: var(--tuw-text-error, #C91818) !important;
 }
 
-/* Shared constructive hover (ED1): green wash + green icon/border, the
-   mirror of .tuw-danger-hover for affirmative steppers (stock +, confirm).
-   Same shape / !important precedent; icon follows via currentColor. */
+
+
+
 .tuw-success-hover:hover {
   background-color: var(--tuw-bg-success, #F4FBF7) !important;
   border-color: var(--tuw-text-success, #187343) !important;
   color: var(--tuw-text-success, #187343) !important;
 }
 
-/* Shared primary-action hover (VPRICE-3): light violet wash for icon buttons
-   that restore derived state (matrix price reset). Mirror of
-   .tuw-danger-hover / .tuw-success-hover; same !important precedent; icon
-   follows via currentColor. */
+
+
+
+
 .tuw-primary-hover:hover {
   background-color: var(--tuw-bg-selected, #F8F5FF) !important;
   color: var(--tuw-action-primary, #7539FF) !important;
 }
 
-/* Shared row hover (VPRICE-4): addressable table rows get a quiet canvas
-   wash so wide rows track horizontally (variant matrix, list tables).
-   Opt-in via TableRow's `hoverable` prop (default true); header rows pass
-   hoverable={false}. !important wins over primitive inline bases (e.g. the
-   products list's transparent/selected inline background), same precedent
-   as .tuw-danger-hover / .tuw-stat-hover. */
+
+
+
+
+
+
 .tuw-row-hover:hover {
   background-color: var(--tuw-bg-canvas, #F7F8F9) !important;
 }
 
-/* Native number-spinner kill (ED2): hides the OS up/down arrows on numeric
-   inputs (e.g. the Stepper's click-to-type field) so the slot keeps its
-   exact geometry. Shared/reusable for every future numeric input. */
+
+
+
 .tuw-no-spinner::-webkit-outer-spin-button,
 .tuw-no-spinner::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -2080,11 +2325,11 @@
   appearance: textfield;
 }
 
-/* PEDIT card layouts: Card stacks (General and Clothing Specs) keep one card
-   per row on Compact. Expanded matrix / full canvas becomes a two-column card
-   grid on wide canvases; General card 5 spans both columns. Storefront
-   attribute rows inside card 5 use three columns at the same breakpoint,
-   while Internal only stays a separate group below. */
+
+
+
+
+
 .tuw-pedit-general-grid,
 .tuw-pedit-specs-grid {
   display: grid;
@@ -2118,10 +2363,10 @@
   }
 }
 
-/* Circular native color swatch (PEDIT card 5): rounding only the input leaves
-   Chromium's shadow-DOM colour swatch square inside the ring. Both the input
-   and the browser swatch pseudo-elements must be rounded. Reusable for any
-   future circular colour control. */
+
+
+
+
 .tuw-color-swatch {
   -webkit-appearance: none;
   appearance: none;
@@ -2151,11 +2396,72 @@
   outline-offset: 2px;
 }
 
-/* Shared 3D uplift surface (US1): white face + inset bottom edge, the same
-   relief the sidebar gives its active nav item (shadow-nav-edge token).
-   Sized entirely by the caller (width/height/radius props on UpliftSurface)
-   so it fits anywhere with zero geometry of its own. */
+
+
+
+
 .tuw-3d-active {
   background-color: var(--tuw-bg-surface, #FFFFFF) !important;
   box-shadow: var(--shadow-nav-edge, inset 0 -2px 0 #d6d6d6) !important;
+}
+
+.tuw-nav-matrix-row {
+  background-color: var(--tuw-bg-surface, #FFFFFF);
+  border: 1px solid var(--tuw-border-subtle, #E9E9E9);
+  border-radius: var(--radius-nav, 10px);
+  min-height: 56px;
+  vertical-align: middle;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tuw-nav-matrix-row:hover {
+  background-color: var(--color-nav-branch-hover, rgba(0, 0, 0, 0.04));
+}
+
+.tuw-nav-matrix-row:focus-within {
+  background-color: var(--tuw-bg-surface, #FFFFFF);
+  box-shadow: var(--shadow-nav-edge, inset 0 -2px 0 #d6d6d6);
+}
+
+.tuw-tree-slot {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: stretch;
+}
+
+.tuw-tree-line {
+  position: absolute;
+  width: 1px;
+  background-color: var(--color-nav-guide, #DDDDDD);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tuw-tree-line-parent {
+  top: calc(50% + 10px);
+  bottom: 0;
+}
+
+.tuw-tree-line-through {
+  top: calc(-1 * var(--row-gap));
+  bottom: calc(-1 * var(--row-gap));
+}
+
+.tuw-tree-elbow {
+  position: absolute;
+  width: var(--tree-elbow);
+  height: calc(50% + 6px + var(--row-gap));
+  top: calc(-1 * var(--row-gap));
+  border-left: 1px solid var(--color-nav-guide, #DDDDDD);
+  border-bottom: 1px solid var(--color-nav-guide, #DDDDDD);
+  border-bottom-left-radius: var(--radius-nav, 10px);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tuw-nav-matrix-row:focus-within .tuw-tree-line,
+.tuw-nav-matrix-row:focus-within .tuw-tree-elbow {
+  background-color: var(--color-nav-guide-active, #C4C4C4);
+  border-left-color: var(--color-nav-guide-active, #C4C4C4);
+  border-bottom-color: var(--color-nav-guide-active, #C4C4C4);
 }

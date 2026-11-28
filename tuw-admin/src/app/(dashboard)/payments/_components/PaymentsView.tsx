@@ -5,13 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Download, Search, Banknote } from 'lucide-react';
 import type { PaymentRow } from '@tuw/heart/modules/orders';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { ContentCard, StatCard, Badge, Button, Input, Drawer, Pagination, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, PageHeader, HeroCard, KeyValueList, FilterPills } from '@/components/ui';
-import { useAdminState } from '@/mocks/state';
+import { useToast } from '@/components/providers/ToastProvider';
 import { listPaymentsAction, markCodCollectedAction } from '@/server/money-actions';
+import { MONO_ID_STYLE } from '@/lib/format';
 
-// Payments from the database (TL-BE-09). Only the demo gateway exists until
-// the integrations phase, so no money moves; every figure is still real data.
+
+
 
 type ListResult = { rows: PaymentRow[]; total: number; stats: { capturedPaise: number; pendingPaise: number; pendingCount: number; refundedPaise: number } };
 type ProviderCard = { slug: string; name: string; environment: 'sandbox' | 'live'; isActive: boolean; hasAdapter: boolean };
@@ -25,7 +25,7 @@ const STATUS: Record<string, { label: string; variant: 'success' | 'warning' | '
 };
 
 export default function PaymentsView({ initial, providers, perms }: { initial: ListResult; providers: ProviderCard[]; perms: string[] }) {
-  const { showToast } = useAdminState();
+  const { showToast } = useToast();
   const router = useRouter();
   const canRefund = perms.includes('order.refund');
   const [list, setList] = useState<ListResult>(initial);
@@ -49,7 +49,7 @@ export default function PaymentsView({ initial, providers, perms }: { initial: L
     if (first.current) { first.current = false; return; }
     const t = setTimeout(() => void load(), searchTerm ? 300 : 0);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [searchTerm, status, currentPage, pageSize]);
   useEffect(() => { setCurrentPage(1); }, [searchTerm, status]);
 
@@ -80,7 +80,7 @@ export default function PaymentsView({ initial, providers, perms }: { initial: L
   const totalPages = Math.max(1, Math.ceil(list.total / pageSize));
 
   return (
-    <DashboardShell pageTitle="Payments">
+    <>
       <PageHeader
         title="Payment Transactions & Gateways"
         actions={<Button variant="secondary" size="md" icon={<Download size={16} />} onClick={() => void handleExportCSV()}><span>Export Payments CSV</span></Button>}
@@ -196,7 +196,7 @@ export default function PaymentsView({ initial, providers, perms }: { initial: L
                 { label: 'Email:', value: <span>{selected.customerEmail || '—'}</span> },
                 { label: 'Method:', value: <span>{METHOD[selected.method] ?? selected.method}</span> },
                 { label: 'Provider:', value: <span>{selected.provider === 'mock' ? 'Demo gateway (no money collected)' : selected.provider}</span> },
-                { label: 'Gateway reference:', value: <span style={{ fontFamily: 'monospace' }}>{selected.transactionId ?? '—'}</span> },
+                { label: 'Gateway reference:', value: <span style={MONO_ID_STYLE}>{selected.transactionId ?? '—'}</span> },
                 { label: 'Paid at:', value: <span>{when(selected.paidAt)}</span> },
                 { label: 'Refunded:', value: <span className="tuw-tabular-nums">{selected.refundedPaise ? rupees(selected.refundedPaise) : '—'}</span> },
               ]}
@@ -207,6 +207,6 @@ export default function PaymentsView({ initial, providers, perms }: { initial: L
           </div>
         )}
       </Drawer>
-    </DashboardShell>
+    </>
   );
 }

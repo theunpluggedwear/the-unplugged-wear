@@ -11,13 +11,25 @@ export const listPostsAction = guards.action({ permission: 'content.manage', inp
 
 export const savePostAction = guards.action({ permission: 'content.manage', input: s.savePost }, async ({ input, ctx }) => {
   const post = await marketing.adminSavePost(input, ctx.user!.id);
-  // Journal posts feed both the blog index and the homepage journal cards.
+  
   const storefront = await refreshStorefront([BLOG_TAG, CMS_TAGS.home]);
   return { post, storefront };
 });
 
 export const getPostAction = guards.action({ permission: 'content.manage', input: s.slugRef }, ({ input, ctx }) =>
   marketing.adminGetPost(input.slug, ctx.user!.id));
+
+export const getPostByIdAction = guards.action({ permission: 'content.manage', input: s.postRef }, ({ input, ctx }) =>
+  marketing.adminGetPostById(input.id, ctx.user!.id));
+
+export const listRevisionsAction = guards.action({ permission: 'content.manage', input: s.postRef }, ({ input, ctx }) =>
+  marketing.adminListRevisions(input.id, ctx.user!.id));
+
+export const restoreRevisionAction = guards.action({ permission: 'content.manage', input: s.revisionRef }, async ({ input, ctx }) => {
+  const post = await marketing.adminRestoreRevision(input.postId, input.id, ctx.user!.id);
+  const storefront = await refreshStorefront([BLOG_TAG, CMS_TAGS.home]);
+  return { post, storefront };
+});
 
 export const journalMetaAction = guards.action({ permission: 'content.manage', input: s.listInput.partial() }, ({ ctx }) =>
   marketing.adminJournalMeta(ctx.user!.id));

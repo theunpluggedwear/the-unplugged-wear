@@ -2,8 +2,8 @@
 
 import React from 'react';
 
-/** Thin form wrapper using TUW tokens. Auth pages use their own
- *  pixel-identical LoginPage/SignUpPage; this is for future settings forms. */
+
+
 export function Form({ children, ...props }: React.FormHTMLAttributes<HTMLFormElement>) {
   return (
     <form

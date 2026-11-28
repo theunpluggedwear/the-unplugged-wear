@@ -25,10 +25,10 @@ export default function IconButton({
   }[size];
 
   const variantClasses = {
-    ghost: 'bg-transparent text-[#5A5A5A] hover:text-[#1A1A1A] hover:bg-black/5',
-    secondary: 'bg-[#F4F1EA] text-[#1A1A1A] hover:bg-[#EAE5D9]',
+    ghost: 'bg-transparent text-[#5A5A5A] hover:text-store-charcoal hover:bg-black/5',
+    secondary: 'bg-[#F4F1EA] text-store-charcoal hover:bg-[#EAE5D9]',
     dark: 'bg-[#1A1A1A] text-white hover:bg-black',
-    outline: 'border border-[#E2DDCF] bg-white text-[#1A1A1A] hover:bg-[#F4F1EA]',
+    outline: 'border border-[#E2DDCF] bg-white text-store-charcoal hover:bg-[#F4F1EA]',
   }[variant];
 
   return (

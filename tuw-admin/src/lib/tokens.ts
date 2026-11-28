@@ -1,9 +1,9 @@
-/**
- * TUW V2 Urbanist Design System Tokens
- * Source: Figma File WmpPcdGcXerVgqNpgr6Q6S (Node: 1-26969)
- * Single source of truth is src/app/globals.css :root.
- * This file mirrors those values for TS usage only.
- */
+
+
+
+
+
+
 
 export const FIGMA_META = {
   fileKey: 'WmpPcdGcXerVgqNpgr6Q6S',

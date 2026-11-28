@@ -20,8 +20,8 @@ const NAV_TARGETS: NavTarget[] = [
 
 const TILE_BY_INDEX = ['green', 'purple', 'amber', 'blue', 'cyan'] as const;
 
-// Curated Jump-to defaults (P1): shown when there is no frequent history
-// yet. Data-only list — reorder or extend without touching components.
+
+
 export function getPopularTargets(): SpotlightResult[] {
   return NAV_TARGETS.slice(0, 5).map(
     (n, i): SpotlightResult => ({
@@ -44,7 +44,7 @@ function includes(hay: string, needle: string): boolean {
   return hay.toLowerCase().includes(needle);
 }
 
-/** What the server returns for a query (server/search-actions.ts). */
+
 export interface ServerHits {
   orders: { orderNumber: string; customerName: string; totalPaise: number; status: string; paymentStatus: string }[];
   products: { id: string; name: string; category: string; status: string; pricePaise: number; stock: number; madeToOrder: boolean }[];
@@ -54,8 +54,8 @@ export interface ServerHits {
 
 const rupees = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
-// Search adapter (S3): database hits from the server plus the static page
-// shortcuts, as grouped spotlight sections. Each hit deep-links to its record.
+
+
 export function buildSections(hits: ServerHits | null, rawQuery: string): ResultSection[] {
   const { scope, term, prefix } = parseScopedQuery(rawQuery);
   const q = term.toLowerCase();

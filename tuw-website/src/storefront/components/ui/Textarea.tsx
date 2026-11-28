@@ -33,7 +33,7 @@ export default function Textarea({
         id={generatedId}
         rows={rows}
         disabled={disabled}
-        className={`w-full p-3.5 text-sm rounded-lg border bg-white outline-none transition-colors duration-150 resize-y placeholder:text-[#A0AEC0] text-[#1A1A1A] ${
+        className={`w-full p-3.5 text-sm rounded-lg border bg-white outline-none transition-colors duration-150 resize-y placeholder:text-[#A0AEC0] text-store-charcoal ${
           error
             ? 'border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/20'
             : 'border-[#E2DDCF] hover:border-[#B5AEA1] focus:border-[#1A1A1A] focus:ring-2 focus:ring-[#1A1A1A]/10'

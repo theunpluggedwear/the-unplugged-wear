@@ -12,8 +12,78 @@ export const savePage = z.object({
 
 export const pageRef = z.object({ slug: pageSlug });
 
+export const mobileNavLink = z.object({
+  label: z.string().trim().min(1).max(100),
+  href: z.string().trim().min(1).max(500),
+});
+
+export const mobileNavColumn = z.object({
+  title: z.string().trim().min(1).max(100),
+  links: z.array(mobileNavLink).max(30),
+});
+
+export const mobileNavItem = z.object({
+  label: z.string().trim().min(1).max(100),
+  href: z.string().trim().min(1).max(500),
+  columns: z.array(mobileNavColumn).max(6).optional(),
+});
+
+export const mobileNav = z.array(mobileNavItem).max(20);
+export const saveMobileNav = z.object({ items: mobileNav });
+
+export const navFilter = z.record(z.string(), z.unknown());
+
+export const desktopNavLink = z.object({
+  label: z.string().trim().min(1).max(100),
+  href: z.string().trim().min(1).max(500),
+  filter: navFilter.optional(),
+});
+
+export const desktopNavFeature = z.object({
+  productSlug: z.string().trim().max(200).optional(),
+  image: z.string().trim().max(500).optional(),
+  imagePosition: z.string().trim().max(100).optional(),
+  title: z.string().trim().max(200).optional(),
+  caption: z.string().trim().max(300).optional(),
+  href: z.string().trim().max(500).optional(),
+});
+
+export const desktopNavColumn = z.object({
+  title: z.string().trim().min(1).max(100),
+  links: z.array(desktopNavLink).max(10),
+});
+
+export const desktopNavItem = z.object({
+  label: z.string().trim().min(1).max(100),
+  href: z.string().trim().min(1).max(500),
+  columns: z.array(desktopNavColumn).max(4).optional(),
+  features: z.array(desktopNavFeature).max(2).optional(),
+  shopAll: desktopNavLink.optional(),
+});
+
+export const desktopNav = z.array(desktopNavItem).max(8);
+export const saveDesktopNav = z.object({ items: desktopNav });
+
+export const menuLink = desktopNavLink;
+export const menuFeature = desktopNavFeature;
+export const menuColumn = z.object({
+  title: z.string().trim().min(1).max(100),
+  links: z.array(menuLink).max(30),
+});
+export const menuItem = z.object({
+  label: z.string().trim().min(1).max(100),
+  href: z.string().trim().min(1).max(500),
+  columns: z.array(menuColumn).max(6).optional(),
+  features: z.array(menuFeature).max(2).optional(),
+  shopAll: menuLink.optional(),
+});
+export const menu = z.array(menuItem).max(20);
+export const saveMenu = z.object({ items: menu });
+
 export const saveNavigation = z.object({
-  navbar: z.record(z.unknown()),
+  navbar: z.object({
+    mobile: mobileNav.default([]),
+  }).passthrough(),
 });
 
 export const saveTheme = z.object({

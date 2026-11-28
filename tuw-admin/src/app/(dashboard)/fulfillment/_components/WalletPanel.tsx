@@ -4,12 +4,12 @@ import React, { useEffect, useState } from 'react';
 import { Wallet } from 'lucide-react';
 import type { WalletEntryRow, WalletSummary } from '@tuw/heart/modules/fulfillment';
 import { Badge, Button, ContentCard, EmptyState, Input, Select, StatCard, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui';
-import type { ToastMessage } from '@/mocks/state';
+import type { ToastMessage } from '@/components/providers/ToastProvider';
 import { getWalletAction, recordWalletEntryAction } from '@/server/fulfillment-actions';
 
-// Prepaid balance at the print partner (DOC/backend/16 §5). Qikink prints
-// against credits we top up; every order debit, cancellation credit, claim
-// credit and COD-to-wallet transfer is a row here.
+
+
+
 
 const inr = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }) : '—');
@@ -42,7 +42,7 @@ export default function WalletPanel({ onToast, canManage }: { onToast: (t: Omit<
       onToast({ type: 'warning', title: 'Could Not Load The Wallet', description: result.error.message });
     }
   };
-  useEffect(() => { void load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => { void load();  }, []);
 
   const summary = summaries[0] ?? null;
 

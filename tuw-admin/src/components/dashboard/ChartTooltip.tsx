@@ -1,6 +1,5 @@
 import React from 'react';
 
-// Class map - selectors live in src/app/globals.css (single app.css, home- prefix).
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'home-' + String(p) });
 
 export interface ChartTooltipRow {
@@ -14,8 +13,6 @@ interface ChartTooltipProps {
   rows: ChartTooltipRow[];
 }
 
-// Hover tooltip for one bar group. Rows are data — any series labels and
-// values render without touching this component.
 export function ChartTooltip({ title, rows }: ChartTooltipProps) {
   return (
     <div className={styles.barTooltip}>

@@ -10,9 +10,9 @@ interface PresetListProps {
   onSelect: (key: PresetKey) => void;
 }
 
-/**
- * Preset rail: Today / Yesterday / Last 7-90 days + Custom date indicator.
- */
+
+
+
 export default function PresetList({ active, onSelect }: PresetListProps) {
   return (
     <div className="flex w-40 shrink-0 flex-col gap-1" role="listbox" aria-label="Date presets">

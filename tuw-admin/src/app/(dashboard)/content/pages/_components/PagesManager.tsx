@@ -1,7 +1,23 @@
 'use client';
 
 import { useState } from 'react';
+import {
+  Badge,
+  Button,
+  ContentCard,
+  EmptyState,
+  Input,
+  PageHeader,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Textarea,
+} from '@/components/ui';
 import { savePageAction } from '@/server/content-actions';
+import { MONO_ID_STYLE } from '@/lib/format';
 
 type Page = { id: string; slug: string; title: string; blocks: Record<string, unknown>[]; isActive: boolean };
 
@@ -10,46 +26,77 @@ export default function PagesManager({ initial }: { initial: Page[] }) {
   const [slug, setSlug] = useState('');
   const [title, setTitle] = useState('');
   const [blocks, setBlocks] = useState('[]');
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; tone: 'success' | 'error' } | null>(null);
 
   async function save() {
     setNotice(null);
     try {
       const parsed = JSON.parse(blocks);
       const res = await savePageAction({ slug, title, blocks: parsed, isActive: true });
-      if (!res.ok) { setNotice(res.error.message); return; }
+      if (!res.ok) { setNotice({ text: res.error.message, tone: 'error' }); return; }
       setPages((p) => [...p.filter((x) => x.slug !== slug), res.data.page]);
       const storefrontNote = res.data.storefront.ok ? '' : ` Storefront refresh failed: ${res.data.storefront.reason}`;
-      setNotice(`Saved ${slug}.${storefrontNote}`);
+      setNotice({ text: `Saved ${slug}.${storefrontNote}`, tone: res.data.storefront.ok ? 'success' : 'error' });
     } catch {
-      setNotice('Blocks must be valid JSON.');
+      setNotice({ text: 'Blocks must be valid JSON.', tone: 'error' });
     }
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">CMS pages</h1>
-      <div className="grid gap-3 max-w-2xl">
-        <label className="text-sm">Slug
-          <input className="ml-2 border rounded px-2 py-1" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="about" />
-        </label>
-        <label className="text-sm">Title
-          <input className="ml-2 border rounded px-2 py-1" value={title} onChange={(e) => setTitle(e.target.value)} />
-        </label>
-        <label className="block text-sm">Blocks (JSON)
-          <textarea className="mt-1 w-full border rounded px-2 py-1 font-mono text-xs" rows={8} value={blocks} onChange={(e) => setBlocks(e.target.value)} />
-        </label>
-        <button className="w-fit px-4 py-2 rounded bg-black text-white disabled:opacity-50" disabled={!slug || !title} onClick={save}>Save page</button>
-        {notice && <p className="text-sm">{notice}</p>}
-      </div>
-      <ul className="text-sm divide-y">
-        {pages.map((p) => (
-          <li key={p.id} className="py-2 flex justify-between">
-            <span>{p.title} <span className="text-muted-foreground">/{p.slug}</span></span>
-            <button className="underline" onClick={() => { setSlug(p.slug); setTitle(p.title); setBlocks(JSON.stringify(p.blocks, null, 2)); }}>Edit</button>
-          </li>
-        ))}
-      </ul>
+      <PageHeader
+        title="CMS Pages"
+        subtitle="Static storefront pages and their content blocks."
+        actions={<Button variant="primary" size="md" disabled={!slug || !title} onClick={() => void save()}>Save page</Button>}
+      />
+
+      {notice && (
+        <p
+          role={notice.tone === 'error' ? 'alert' : 'status'}
+          style={{ fontSize: 13, color: notice.tone === 'error' ? 'var(--tuw-text-error)' : 'var(--tuw-text-success)' }}
+        >
+          {notice.text}
+        </p>
+      )}
+
+      <ContentCard>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Input label="Slug" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="about" required />
+          <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+          <div className="md:col-span-2">
+            <Textarea label="Blocks (JSON)" rows={8} value={blocks} onChange={(e) => setBlocks(e.target.value)} className="font-mono" />
+          </div>
+        </div>
+      </ContentCard>
+
+      {pages.length === 0 ? (
+        <EmptyState title="No CMS pages yet" description="Saved pages will appear here." />
+      ) : (
+        <ContentCard padding="0px">
+          <Table>
+            <TableHeader>
+              <TableRow hoverable={false}>
+                <TableHead>Page</TableHead>
+                <TableHead>Slug</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pages.map((p) => (
+                <TableRow key={p.id} hoverable={false}>
+                  <TableCell>{p.title}</TableCell>
+                  <TableCell style={MONO_ID_STYLE}>/{p.slug}</TableCell>
+                  <TableCell><Badge variant={p.isActive ? 'success' : 'neutral'}>{p.isActive ? 'Active' : 'Inactive'}</Badge></TableCell>
+                  <TableCell>
+                    <Button variant="secondary" size="sm" onClick={() => { setSlug(p.slug); setTitle(p.title); setBlocks(JSON.stringify(p.blocks, null, 2)); }}>Edit</Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ContentCard>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import DashboardShell from '@/components/layout/DashboardShell';
+export const instant = false;
 import { adminGetHomeCms } from '@tuw/heart/modules/content';
 import { adminListPosts, adminJournalMeta } from '@tuw/heart/modules/marketing';
 import { getStorefrontCatalog } from '@tuw/heart/modules/catalog';
@@ -14,13 +14,13 @@ export default async function ContentHomePage() {
     adminJournalMeta(claims.sub),
   ]);
   return (
-    <DashboardShell>
+    <>
       <HomeCmsManager
         initial={config}
         products={catalog.products.map((p) => ({ id: p.productId ?? p.id, title: p.title }))}
         posts={posts.rows.map((p) => ({ id: p.id, title: p.title }))}
         categories={meta.categories}
       />
-    </DashboardShell>
+    </>
   );
 }

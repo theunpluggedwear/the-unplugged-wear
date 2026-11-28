@@ -24,8 +24,8 @@ export interface SearchPrefix {
   hint: string;
 }
 
-// Prefix scope config (S3): new scopes are data-only additions — append one
-// entry, never new branches. DB-backed search swaps the adapter, not this.
+
+
 export const SEARCH_PREFIXES: SearchPrefix[] = [
   { token: '#orders', scope: 'orders', label: '#orders', hint: 'Orders only' },
   { token: '@customer', scope: 'customers', label: '@customer', hint: 'Customers only' },
@@ -43,9 +43,9 @@ export function parseScopedQuery(raw: string): { scope: SearchScope | null; term
   return { scope: hit.scope, term: trimmed.slice(first.length).trim(), prefix: hit.token };
 }
 
-// Adapter contract (S3): grouped results for a query. The local
-// implementation searches demo store state; a database adapter implements
-// this same interface later and no component moves.
+
+
+
 export interface SearchAdapter {
   search: (query: string) => ResultSection[];
 }

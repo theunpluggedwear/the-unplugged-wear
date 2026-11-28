@@ -6,6 +6,8 @@ import { ImageOff } from 'lucide-react';
 export interface ImageWithFallbackProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallbackSrc?: string;
   fallbackText?: string;
+  /** Rendered instead of the default "Image not available" box. */
+  fallback?: React.ReactNode;
 }
 
 export default function ImageWithFallback({
@@ -13,33 +15,28 @@ export default function ImageWithFallback({
   alt = '',
   fallbackSrc,
   fallbackText = 'Image not available',
+  fallback,
   className = '',
   ...props
 }: ImageWithFallbackProps) {
-  const [error, setError] = useState(false);
-  const [loading, setLoading] = useState(true);
+  type ImageStatus = 'loading' | 'loaded' | 'errored';
+  const [status, setStatus] = useState<ImageStatus>('loading');
+  const error = status === 'errored';
+  const loading = status === 'loading';
   const imgRef = useRef<HTMLImageElement>(null);
 
   // Server-rendered images often finish (or fail) before hydration attaches
   // onLoad/onError, so those events never reach React. Read the element's
   // settled state directly whenever the source changes.
   useEffect(() => {
-    setError(false);
+    setStatus('loading');
     const img = imgRef.current;
     if (!img) return;
-    if (img.complete) {
-      if (img.naturalWidth > 0) {
-        setLoading(false);
-      } else {
-        setError(true);
-        setLoading(false);
-      }
-    } else {
-      setLoading(true);
-    }
+    if (img.complete) setStatus(img.naturalWidth > 0 ? 'loaded' : 'errored');
   }, [src]);
 
   if (error || !src) {
+    if (fallback) return <>{fallback}</>;
     if (fallbackSrc) {
       return (
         <img
@@ -68,11 +65,8 @@ export default function ImageWithFallback({
       ref={imgRef}
       src={src}
       alt={alt}
-      onLoad={() => setLoading(false)}
-      onError={() => {
-        setError(true);
-        setLoading(false);
-      }}
+      onLoad={() => setStatus('loaded')}
+      onError={() => setStatus('errored')}
       className={`transition-opacity duration-300 ${loading ? 'opacity-0' : 'opacity-100'} ${className}`}
       {...props}
     />

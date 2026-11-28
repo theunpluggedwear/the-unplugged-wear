@@ -1,3 +1,4 @@
+export const instant = false;
 import { adminListOrders, type AdminOrderTab } from '@tuw/heart/modules/orders';
 import { session } from '@/server/session';
 import OrdersView from './_components/OrdersView';
@@ -8,9 +9,9 @@ const positiveInt = (value: string | undefined, fallback: number, max: number) =
   return Number.isInteger(n) && n >= 1 && n <= max ? n : fallback;
 };
 
-// Server Component: q/tab/page live in the URL, so every list read happens on
-// the server and arrives with the HTML (the customer directory uses the same
-// pattern). Filter changes only replace the URL; the client never refetches.
+
+
+
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ q?: string; tab?: string; page?: string; perPage?: string; open?: string }> }) {
   const claims = await session.requireStaff('order.view', '/orders');
   const params = await searchParams;

@@ -46,7 +46,9 @@ async function buyAndDeliver(product: { id: string }, size: 'M' | 'L' = 'M', qty
   await cart.addLine({ userId: shopper }, { productRef: product.id, color: 'Black', size, qty });
   const placed = await orders.placeOrder({ userId: shopper, email: 'returns.shopper@example.com' },
     orders.orderSchemas.placeOrder.parse({ checkoutKey: uuidv7(), shippingAddress: address, method: 'card' }));
-  await db().execute(sql`UPDATE orders SET status = 'delivered' WHERE id = ${placed.orderId}`);
+  for (const status of ['confirmed', 'processing', 'shipped', 'delivered']) {
+    await db().execute(sql`UPDATE orders SET status = ${status} WHERE id = ${placed.orderId}`);
+  }
   await db().execute(sql`INSERT INTO shipments (id, order_id, status, delivered_at) VALUES (${uuidv7()}, ${placed.orderId}, 'delivered', now())`);
   const line = await one<{ id: string }>(sql`SELECT id FROM order_items WHERE order_id = ${placed.orderId}`);
   return { ...placed, lineId: line.id };

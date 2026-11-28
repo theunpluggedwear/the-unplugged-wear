@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useTransition } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { UserPlus, Download, Search, MapPin, Phone, Mail, Plus } from 'lucide-react';
-import DashboardShell from '@/components/layout/DashboardShell';
 import { StatCard, ContentCard, Button, Badge, Input, Drawer, Pagination, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, PageHeader, DrawerSection } from '@/components/ui';
 import type { CustomerSummary, CustomerNote, Address, Household } from '@tuw/heart/modules/customers';
 import { addCustomerNoteAction, createCustomerAction } from '@/server/customer-actions';
@@ -21,9 +20,9 @@ interface CustomersViewProps {
 const inr = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const date = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { dateStyle: 'medium' });
 
-// Customer directory on real data (TL-BE-03): the server page reads the
-// list, stats and the open profile from the URL; this view renders them and
-// calls the guarded actions, then refreshes.
+
+
+
 export default function CustomersView({ list, stats, detail, selectedId, query }: CustomersViewProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -45,24 +44,24 @@ export default function CustomersView({ list, stats, detail, selectedId, query }
     startTransition(() => router.replace(`${pathname}?${next.toString()}`, { scroll: false }));
   };
 
-  // Debounced server-side search.
+  
   useEffect(() => {
     if (searchTerm === query) return;
     const t = setTimeout(() => setParams({ q: searchTerm, page: null }), 300);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [searchTerm]);
 
-  // The drawer opens on click with the row's summary; addresses, household
-  // and notes stream in when the server render for ?customer= arrives.
+  
+  
   const [openId, setOpenId] = useState(selectedId);
   useEffect(() => setOpenId(selectedId), [selectedId]);
   const openProfile = (id: string | null) => { setOpenId(id); setParams({ customer: id }); };
   const ready = Boolean(openId) && detail?.summary?.profileId === openId;
-  useEffect(() => setSavedNotes(null), [detail]); // fresh server data wins
+  useEffect(() => setSavedNotes(null), [detail]); 
   const selectedCustomer = (ready ? detail!.summary : null) ?? list.data.find((c) => c.profileId === openId) ?? null;
   const defaultAddress = ready ? (detail!.addresses.find((a) => a.isDefault) ?? detail!.addresses[0] ?? null) : null;
-  // Notes saved here show at once from the action result (keyed by profile).
+  
   const [savedNotes, setSavedNotes] = useState<{ profileId: string; notes: CustomerNote[] } | null>(null);
   const notes = savedNotes?.profileId === openId ? savedNotes.notes : ready ? detail!.notes : [];
   const totalPages = Math.max(1, Math.ceil(list.total / list.perPage));
@@ -71,12 +70,17 @@ export default function CustomersView({ list, stats, detail, selectedId, query }
     e.preventDefault();
     if (!openId || !newNote.trim() || pending) return;
     setPending(true);
-    const result = await addCustomerNoteAction({ profileId: openId, note: newNote });
-    setPending(false);
-    if (!result.ok) return setNoteError(result.error.message);
-    setNoteError(null);
-    setNewNote('');
-    setSavedNotes({ profileId: openId, notes: result.data });
+    try {
+      const result = await addCustomerNoteAction({ profileId: openId, note: newNote });
+      if (!result.ok) return setNoteError(result.error.message);
+      setNoteError(null);
+      setNewNote('');
+      setSavedNotes({ profileId: openId, notes: result.data });
+    } catch {
+      setNoteError('The note could not be saved. Please try again.');
+    } finally {
+      setPending(false);
+    }
   };
 
   const openCreate = () => {
@@ -90,22 +94,27 @@ export default function CustomersView({ list, stats, detail, selectedId, query }
     if (e) e.preventDefault();
     if (pending) return;
     setPending(true);
-    const result = await createCustomerAction({ ...newCustomerForm, idempotencyKey: createKey });
-    setPending(false);
-    if (!result.ok) {
-      // Drawer stays open and values are kept; each field shows its own error.
-      setFieldErrors(Object.fromEntries(result.error.details.filter((d) => d.field).map((d) => [d.field!, d.message])));
-      return setCreateMsg({ tone: 'error', text: result.error.message });
+    try {
+      const result = await createCustomerAction({ ...newCustomerForm, idempotencyKey: createKey });
+      if (!result.ok) {
+        
+        setFieldErrors(Object.fromEntries(result.error.details.filter((d) => d.field).map((d) => [d.field!, d.message])));
+        return setCreateMsg({ tone: 'error', text: result.error.message });
+      }
+      setFieldErrors({});
+      setIsAddModalOpen(false);
+      setCreateMsg({
+        tone: 'ok',
+        text: result.data.devLink ? `${newCustomerForm.email} was created. Email is not connected yet (development) — set-password link:` : `${newCustomerForm.email} was created and emailed a link to set a password.`,
+        link: result.data.devLink ?? undefined,
+      });
+      setNewCustomerForm({ name: '', email: '', phone: '', initialNote: '' });
+      router.refresh();
+    } catch {
+      setCreateMsg({ tone: 'error', text: 'The customer could not be created. Please try again.' });
+    } finally {
+      setPending(false);
     }
-    setFieldErrors({});
-    setIsAddModalOpen(false);
-    setCreateMsg({
-      tone: 'ok',
-      text: result.data.devLink ? `${newCustomerForm.email} was created. Email is not connected yet (development) — set-password link:` : `${newCustomerForm.email} was created and emailed a link to set a password.`,
-      link: result.data.devLink ?? undefined,
-    });
-    setNewCustomerForm({ name: '', email: '', phone: '', initialNote: '' });
-    router.refresh();
   };
 
   const handleExportCSV = () => {
@@ -121,7 +130,7 @@ export default function CustomersView({ list, stats, detail, selectedId, query }
   };
 
   return (
-    <DashboardShell pageTitle="Customers" activeNav="customers">
+    <>
       <PageHeader
         title="Customer Directory"
         actions={
@@ -248,7 +257,7 @@ export default function CustomersView({ list, stats, detail, selectedId, query }
         />
       </ContentCard>
 
-      {/* Customer Profile Drawer */}
+      {}
       <Drawer
         isOpen={Boolean(openId)}
         onClose={() => openProfile(null)}
@@ -257,7 +266,7 @@ export default function CustomersView({ list, stats, detail, selectedId, query }
       >
         {selectedCustomer && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            {/* LTV & Orders Cards */}
+            {}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div style={{ padding: 14, backgroundColor: 'var(--tuw-bg-canvas, #F7F8F9)', borderRadius: 10 }}>
                 <span style={{ fontSize: 12, color: 'var(--tuw-text-secondary, #5D6772)' }}>Total Spent</span>
@@ -273,7 +282,7 @@ export default function CustomersView({ list, stats, detail, selectedId, query }
               </div>
             </div>
 
-            {/* Contact & Address */}
+            {}
             <DrawerSection title="Contact & Shipping Details" titleGap={10}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13, color: 'var(--tuw-text-secondary, #5D6772)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -294,14 +303,14 @@ export default function CustomersView({ list, stats, detail, selectedId, query }
               </div>
             </DrawerSection>
 
-            {/* Purchase History — filled in when the orders module goes live (TL-BE-08) */}
+            {}
             <DrawerSection title={`Recent Order History (${selectedCustomer.orderCount})`} titleGap={10}>
               <div style={{ fontSize: 13, color: 'var(--tuw-text-secondary, #5D6772)', padding: '12px 0' }}>
                 {selectedCustomer.orderCount === 0 ? 'No orders yet.' : 'Order details appear here once the orders module is live.'}
               </div>
             </DrawerSection>
 
-            {/* Internal Staff Notes */}
+            {}
             <DrawerSection title="Internal Service Notes" titleGap={10}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
                 {notes.length === 0 && <div style={{ fontSize: 13, color: 'var(--tuw-text-secondary, #5D6772)' }}>{ready ? 'No notes yet.' : 'Loading…'}</div>}
@@ -339,7 +348,7 @@ export default function CustomersView({ list, stats, detail, selectedId, query }
         )}
       </Drawer>
 
-      {/* Add Customer Drawer */}
+      {}
       <Drawer
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
@@ -396,6 +405,6 @@ export default function CustomersView({ list, stats, detail, selectedId, query }
           />
         </form>
       </Drawer>
-    </DashboardShell>
+    </>
   );
 }

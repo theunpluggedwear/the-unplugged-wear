@@ -22,6 +22,8 @@ const nextConfig: NextConfig = {
       { source: '/returns-refunds', destination: '/policies/returns', permanent: true },
       { source: '/shipping-policy', destination: '/policies/shipping', permanent: true },
       { source: '/terms', destination: '/policies/terms', permanent: true },
+      // The wishlist is an account section now (saving needs an account).
+      { source: '/wishlist', destination: '/account/wishlist', permanent: true },
     ];
   },
 };

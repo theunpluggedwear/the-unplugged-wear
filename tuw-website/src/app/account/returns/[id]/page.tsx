@@ -79,7 +79,7 @@ export default function ReturnDetailPage({ params }: { params: Promise<{ id: str
         ) : request === null ? (
           <div className="py-16 text-center">
             <AlertCircle size={26} aria-hidden="true" className="mx-auto text-store-text-secondary" />
-            <h1 className="mt-4 font-heading text-2xl font-medium">We couldn’t find that request</h1>
+            <h1 className="tuw-h1 mt-4 text-store-charcoal">We couldn’t find that request</h1>
             <p className="mt-2 text-sm text-store-text-secondary">It may belong to another account, or the link is incomplete.</p>
             <div className="mt-6"><Button variant="outline" size="md" href="/account/returns">All my requests</Button></div>
           </div>
@@ -87,10 +87,10 @@ export default function ReturnDetailPage({ params }: { params: Promise<{ id: str
           <>
             <div className="mt-8 flex flex-wrap items-start justify-between gap-4 pb-6 border-b border-store-card-border">
               <div>
-                <h1 className="font-heading text-[clamp(1.75rem,2.5vw+1rem,2.5rem)] font-medium tracking-tight">{request.rmaNumber}</h1>
+                <h1 className="tuw-h1 text-store-charcoal">{request.rmaNumber}</h1>
                 <p className="mt-2 text-sm text-store-text-secondary">
                   {request.type === 'exchange' ? 'Exchange' : 'Defect replacement'} for order{' '}
-                  <Link href={`/account/orders/${request.orderNumber}`} className="text-store-charcoal underline underline-offset-4 decoration-store-gold">{request.orderNumber}</Link>
+                  <Link href={`/account/orders/${encodeURIComponent(request.orderNumber)}`} className="text-store-charcoal underline underline-offset-4 decoration-store-gold">{request.orderNumber}</Link>
                   {' '}· raised {formatShortDate(request.createdAt)}
                 </p>
               </div>
@@ -195,7 +195,7 @@ export default function ReturnDetailPage({ params }: { params: Promise<{ id: str
 
             <div className="mt-8 flex flex-wrap gap-3">
               <Button variant="outline" size="md" href="/account/returns" icon={<ArrowLeft size={16} />}>All my requests</Button>
-              <Button variant="ghost" size="md" href={`/account/orders/${request.orderNumber}`}>View the order</Button>
+              <Button variant="ghost" size="md" href={`/account/orders/${encodeURIComponent(request.orderNumber)}`}>View the order</Button>
             </div>
           </>
         )}

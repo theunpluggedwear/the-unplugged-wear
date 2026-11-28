@@ -10,8 +10,8 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   icon?: React.ReactNode;
 }
 
-// Single styling source shared by Button and LinkButton — a link wearing the
-// button skin can never drift from the button itself (design-system verbatim).
+
+
 export function getButtonStyle(
   variant: ButtonVariant = 'primary',
   size: ButtonSize = 'md',

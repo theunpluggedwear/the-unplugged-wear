@@ -1,43 +1,127 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import {
-  Search,
-  Bell,
-  Menu,
-  X,
-} from 'lucide-react';
-import { useAdminState } from '@/mocks/state';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
+import { Search, Bell, Menu, X, ChevronDown } from 'lucide-react';
+import { getCurrentStaffAction } from '@/server/session-actions';
 import { SearchModal } from '@/components/search';
-import { buildNotifications, useNotifications, useStaffAlerts, NotificationPanel } from '@/components/notifications';
+import { useNotifications, useStaffAlerts, NotificationPanel } from '@/components/notifications';
 import { usePopoverAnimation } from '@/hooks/usePopoverAnimation';
+import { cn } from '@/lib/cn';
+import { getActiveGroupForPath, visibleNavGroups, type AdminNavGroup } from '@/lib/admin-nav';
+import { navMenuReducer, initialNavMenu } from '@/lib/nav-menu-machine';
 
 interface HeaderProps {
-  pageTitle?: string;
   mobileMenuOpen: boolean;
   onToggleMobileMenu: () => void;
+  permissions: string[];
 }
 
-export default function Header({
-  pageTitle = 'Dashboard',
-  mobileMenuOpen,
-  onToggleMobileMenu,
-}: HeaderProps) {
-  const router = useRouter();
-  const {
-    activeRole,
-    simulatedError,
-    retryConnection,
-    supportTickets,
-    orders,
-  } = useAdminState();
+interface StaffInfo {
+  name: string;
+  email: string;
+  roles: string[];
+  permissions: string[];
+}
 
+export default function Header({ mobileMenuOpen, onToggleMobileMenu, permissions }: HeaderProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [staff, setStaff] = useState<StaffInfo | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const notifAnim = usePopoverAnimation(showNotifications, () => setShowNotifications(false));
+  const notifAnim = usePopoverAnimation(showNotifications, () => setShowNotifications(false), 150);
+  const navGroups = visibleNavGroups(permissions);
+  const [navMenu, dispatchNav] = React.useReducer(navMenuReducer, initialNavMenu);
+  const navRef = React.useRef<HTMLDivElement>(null);
+  const leaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressionTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressionRef = React.useRef<string | null>(navMenu.kind === 'closed' ? navMenu.suppressed : null);
+  const hoveredGroupRef = React.useRef<string | null>(null);
+  const navMenuKindRef = React.useRef(navMenu.kind);
+  suppressionRef.current = navMenu.kind === 'closed' ? navMenu.suppressed : null;
+  navMenuKindRef.current = navMenu.kind;
+  const navAnim = usePopoverAnimation(navMenu.kind === 'open', () => dispatchNav({ type: 'FINALIZE' }), 150);
+  const activeGroup = getActiveGroupForPath(pathname);
+  const renderedKey = navMenu.kind === 'closed' ? null : navMenu.key;
 
-  // Keyboard shortcut Ctrl+K / Cmd+K and Escape
+  const clearLeaveTimer = React.useCallback(() => {
+    if (leaveTimerRef.current !== null) {
+      clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
+  }, []);
+
+  const clearSuppressionTimer = React.useCallback(() => {
+    if (suppressionTimerRef.current !== null) {
+      clearTimeout(suppressionTimerRef.current);
+      suppressionTimerRef.current = null;
+    }
+  }, []);
+
+  const requestSuppressionReset = React.useCallback((reopenKey: string | null) => {
+    clearSuppressionTimer();
+    suppressionTimerRef.current = setTimeout(() => {
+      suppressionTimerRef.current = null;
+      dispatchNav({ type: 'RESET_SUPPRESSION' });
+      if (reopenKey && navMenuKindRef.current === 'closed') dispatchNav({ type: 'ENTER_GROUP', key: reopenKey });
+    }, 220);
+  }, [clearSuppressionTimer]);
+
+  const scheduleClose = React.useCallback(() => {
+    dispatchNav({ type: 'POINTER_LEAVE' });
+  }, []);
+
+  const handleGroupEnter = React.useCallback((groupKey: string) => {
+    hoveredGroupRef.current = groupKey;
+    clearLeaveTimer();
+    if (suppressionRef.current) {
+      requestSuppressionReset(groupKey);
+      return;
+    }
+    dispatchNav({ type: 'ENTER_GROUP', key: groupKey });
+  }, [clearLeaveTimer, requestSuppressionReset]);
+
+  useEffect(() => {
+    let live = true;
+    void getCurrentStaffAction({}).then((result) => {
+      if (live && result.ok) setStaff(result.data);
+    });
+    return () => { live = false; };
+  }, []);
+
+  useEffect(() => {
+    if (navMenu.kind !== 'open') return;
+    if (!navMenu.pendingClose) return;
+    const timer = setTimeout(() => dispatchNav({ type: 'CLOSE_REQUEST' }), 120);
+    return () => clearTimeout(timer);
+  }, [navMenu.kind, navMenu.kind === 'open' && navMenu.pendingClose]);
+
+  useEffect(() => {
+    clearLeaveTimer();
+    clearSuppressionTimer();
+    dispatchNav({ type: 'NAVIGATE' });
+  }, [pathname, clearLeaveTimer, clearSuppressionTimer]);
+
+  useEffect(() => {
+    return () => {
+      clearLeaveTimer();
+      clearSuppressionTimer();
+    };
+  }, [clearLeaveTimer, clearSuppressionTimer]);
+
+  useEffect(() => {
+    const close = (event: PointerEvent) => {
+      if (navRef.current?.contains(event.target as Node)) return;
+      clearLeaveTimer();
+      dispatchNav({ type: 'CLOSE_REQUEST' });
+    };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [clearLeaveTimer]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -45,85 +129,123 @@ export default function Header({
         setIsSearchOpen((prev) => !prev);
       }
       if (e.key === 'Escape') {
+        clearLeaveTimer();
         setIsSearchOpen(false);
+        dispatchNav({ type: 'ESCAPE' });
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [clearLeaveTimer]);
 
   const handleNavigate = (href: string) => {
     setIsSearchOpen(false);
     router.push(href);
   };
 
-  // Ops feed (N3): real inventory alerts plus demo order/support items.
   const alerts = useStaffAlerts(showNotifications);
-  const notificationItems = React.useMemo(
-    () => [...alerts.items, ...buildNotifications({ orders, supportTickets })],
-    [alerts.items, orders, supportTickets],
-  );
-  const notifications = useNotifications(notificationItems, alerts.remote);
+  const notifications = useNotifications(alerts.items, alerts.remote);
+  const role = staff?.roles.find((item) => item !== 'customer') ?? 'Staff';
+  const displayName = staff?.name ?? 'Staff';
+  const rendered: AdminNavGroup | undefined = navGroups.find((group) => group.key === renderedKey);
 
   return (
     <>
-      {/* Simulated Service Error Alert Banner when error scenario is selected */}
-      {simulatedError && (
-        <div
-          style={{
-            backgroundColor: '#C91818',
-            color: '#FFFFFF',
-            padding: '8px 24px',
-            fontSize: '13px',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '16px',
-            zIndex: 50,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '16px' }}>⚠️</span>
-            <span>{simulatedError}</span>
-          </div>
-          <button
-            type="button"
-            onClick={retryConnection}
-            style={{
-              backgroundColor: '#FFFFFF',
-              color: '#C91818',
-              border: 'none',
-              padding: '4px 12px',
-              borderRadius: '4px',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            Retry Connection Now
-          </button>
-        </div>
-      )}
-
-      {/* Main Top Header */}
       <header className="topBar">
         <div className="topBarLeft">
-          <button
-            type="button"
-            className="mobileMenuBtn"
-            onClick={onToggleMobileMenu}
-            aria-label="Toggle menu"
-          >
+          <button type="button" className="mobileMenuBtn" onClick={onToggleMobileMenu} aria-label="Toggle menu">
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
-          <h1 className="pageTitle">{pageTitle}</h1>
+          <Link href="/dashboard" className="topBrand" aria-label="TUW Admin home">
+            <Image src="/logos/tuw-stag-dark.png" alt="The Unplugged Wear" width={26} height={26} className="topBrandMark" priority />
+            <span className="topBrandText">TUW Admin</span>
+          </Link>
         </div>
 
-        {/* Actions & Profile */}
+        <div
+          className="topBarCenter"
+          ref={navRef}
+          onMouseLeave={scheduleClose}
+          onMouseEnter={() => {
+            clearLeaveTimer();
+            dispatchNav({ type: 'CANCEL_CLOSE' });
+            if (suppressionRef.current) requestSuppressionReset(hoveredGroupRef.current);
+          }}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            clearSuppressionTimer();
+            if (suppressionRef.current) dispatchNav({ type: 'RESET_SUPPRESSION' });
+          }}
+        >
+          <div className="topNavTriggers">
+            {navGroups.map((group) => {
+              const isOpen = (navMenu.kind === 'open' || navMenu.kind === 'closing') && navMenu.key === group.key;
+              const GroupIcon = group.icon;
+              return (
+                <button
+                  key={group.key}
+                  type="button"
+                  className={cn('topNavTrigger', (isOpen || activeGroup === group.key) && 'topNavTriggerActive')}
+                  aria-haspopup="true"
+                  aria-expanded={isOpen}
+                  aria-controls={`mega-${group.key}`}
+                  onMouseEnter={() => handleGroupEnter(group.key)}
+                  onFocus={() => handleGroupEnter(group.key)}
+                  onClick={() => {
+                    clearLeaveTimer();
+                    dispatchNav({ type: 'CLICK_TRIGGER', key: group.key });
+                  }}
+                >
+                  <GroupIcon size={16} />
+                  <span>{group.label}</span>
+                  <ChevronDown size={13} className={cn('topNavChevron', isOpen && 'topNavChevronOpen')} />
+                </button>
+              );
+            })}
+          </div>
+
+          {navAnim.visible && rendered ? (
+            <div
+              id={`mega-${rendered.key}`}
+              role="menu"
+              aria-label={`${rendered.label} menu`}
+              className={cn('megaMenu', navAnim.phase === 'closing' ? 'megaMenuClosing' : 'megaMenuOpening')}
+              onMouseEnter={clearLeaveTimer}
+            >
+              <div className="megaMenuHead">
+                <span className="megaMenuTitle">{rendered.label}</span>
+                <span className="megaMenuCount">{rendered.items.length} sections</span>
+              </div>
+              <div className="megaMenuGrid">
+                {rendered.items.map((item) => {
+                  const ItemIcon = item.icon;
+                  const active = item.match.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      role="menuitem"
+                      className={cn('megaMenuItem', active && 'tuw-3d-active')}
+                      onClick={() => {
+                        clearLeaveTimer();
+                        dispatchNav({ type: 'NAVIGATE' });
+                      }}
+                    >
+                      <span className="megaMenuItemIcon"><ItemIcon size={17} /></span>
+                      <span className="megaMenuItemText">
+                        <span className="megaMenuItemLabel">{item.label}</span>
+                        {item.badge ? <span className="megaMenuBadge">{item.badge.text}</span> : null}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
         <div className="topBarRight">
           <div className="actionIcons">
-            {/* Search Trigger Button beside Notification */}
             <button
               type="button"
               className="searchTriggerBtn"
@@ -134,7 +256,6 @@ export default function Header({
               <Search size={18} />
             </button>
 
-            {/* Notification Bell */}
             <div style={{ position: 'relative' }}>
               <button
                 type="button"
@@ -159,12 +280,10 @@ export default function Header({
                     className="fixed inset-0 z-40 cursor-default"
                   />
                   <div
-                    style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', width: '400px', maxWidth: 'calc(100vw - 32px)', zIndex: 50 }}
-                    className={
-                      notifAnim.phase === 'closing'
-                        ? 'animate-[popoverOut_0.15s_ease-in]'
-                        : 'animate-[popoverIn_0.18s_ease-out]'
-                    }
+                    className={cn(
+                      'notificationPopover',
+                      notifAnim.phase === 'closing' ? 'popoverClosing' : 'popoverOpening'
+                    )}
                   >
                     <NotificationPanel
                       repo={notifications}
@@ -179,8 +298,7 @@ export default function Header({
             </div>
           </div>
 
-          {/* User Portrait with Role Label */}
-          <div className="userProfile" title={`Logged in as ${activeRole}`}>
+          <div className="userProfile" title={`Logged in as ${displayName} (${role})`} aria-label={`Logged in as ${displayName} (${role})`}>
             <div className="avatarCodeWrapper">
               <svg
                 width="40"
@@ -189,41 +307,27 @@ export default function Header({
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
                 className="koboyoProfileSvg"
-                aria-label="Urvil Kargathala Profile"
+                aria-label={`${displayName} profile`}
               >
                 <defs>
                   <linearGradient id="koboyoAvatarGrad" x1="0" y1="0" x2="162" y2="163" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#7539FF" />
-                    <stop offset="100%" stopColor="#501EB8" />
+                    <stop offset="0%" stopColor="var(--tuw-action-primary)" />
+                    <stop offset="100%" stopColor="var(--tuw-action-primary)" />
                   </linearGradient>
                 </defs>
-                <circle cx="81" cy="81.5" r="80" fill="#F8F5FF" />
-                <path
-                  d="M65.6 8.6a74 74 0 0 0-55.7 53 82 82 0 0 0 0 38.7 72 72 0 0 0 39.6 48.2 72 72 0 0 0 79.3-10.5 77 77 0 0 0 17.7-92 74 74 0 0 0-45-36.5c-8.7-2.4-27.3-2.8-35.9-.9m34.2 6.5a62 62 0 0 1 29.7 17.4A58 58 0 0 1 146.1 60a85 85 0 0 1 .1 41 71 71 0 0 1-12.8 24.4l-4.7 5.9-3.4-7.2a46 46 0 0 0-30.3-25l-7-1.7 3.9-1.7A29 29 0 0 0 107 71a28 28 0 0 0-15.4-24.6 26.6 26.6 0 0 0-36.2 15.9 31 31 0 0 0 1.4 21.3c2.4 4.6 9 11 13.4 12.8l3 1.3-4.6.6c-13.4 1.9-31.1 16.9-34.1 29-.4 1.5-1.1 2.7-1.6 2.7-1.4 0-8.9-10-11.9-15.9a77 77 0 0 1-6.5-48.2c3-12.9 8.8-23.3 17.9-32.5a67 67 0 0 1 67.4-18.3m-13.3 35a25 25 0 0 1 14.4 15.6 21.6 21.6 0 0 1-11.5 24.9 20 20 0 0 1-26-6.8 22 22 0 0 1 2.4-28.1c6.1-6 12.7-7.8 20.7-5.6m9.6 54.9a41 41 0 0 1 25.6 24.9l1.7 5.3-2.9 2.5A75 75 0 0 1 85 150.5a77 77 0 0 1-32.3-6.3c-7.4-3.5-14.7-8.7-14.7-10.5 0-2.5 5.9-13.3 9.5-17.5a42 42 0 0 1 18-11.4 62 62 0 0 1 30.6.2"
-                  fill="url(#koboyoAvatarGrad)"
-                />
+                <circle cx="81" cy="81.5" r="80" fill="var(--tuw-bg-canvas)" />
+                <text x="81" y="96" textAnchor="middle" fontSize="52" fontWeight="600" fill="var(--tuw-action-primary)">
+                  {displayName.slice(0, 1).toUpperCase()}
+                </text>
               </svg>
-            </div>
-            <div className="userInfo">
-              <span className="userName">Urvil Kargathala</span>
-              <span className="userRole" style={{ color: 'var(--tuw-action-primary, #7539FF)', fontWeight: 600 }}>
-                {activeRole}
-              </span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Spotlight Search Modal (S5): island dialog, overlay untouched */}
       {isSearchOpen && (
-        <div
-          className="commandPaletteOverlay"
-          onClick={() => setIsSearchOpen(false)}
-        >
-          <SearchModal
-            onNavigate={handleNavigate}
-            onClose={() => setIsSearchOpen(false)}
-          />
+        <div className="commandPaletteOverlay" onClick={() => setIsSearchOpen(false)}>
+          <SearchModal onNavigate={handleNavigate} onClose={() => setIsSearchOpen(false)} />
         </div>
       )}
     </>

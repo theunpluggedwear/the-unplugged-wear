@@ -40,7 +40,7 @@ const FOOTER_COLUMNS: FooterColumn[] = [
       { label: 'T-Shirts', href: '/shop?category=tees' },
       { label: 'Joggers & Sweatpants', href: '/shop?category=pants' },
       { label: 'Capsule Collections', href: '/collections' },
-      { label: 'Saved Wishlist', href: '/wishlist' },
+      { label: 'Saved Wishlist', href: '/account/wishlist' },
     ],
   },
   {
@@ -73,6 +73,16 @@ export default function Footer() {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [resetNote, setResetNote] = useState<string | null>(null);
+
+  const resetDemoState = () => {
+    const keys = ['tuw_pin', 'tuw_intro_seen', 'tuw_website_v2_roadmap_checklist_v6'];
+    for (const key of Object.keys(window.localStorage)) {
+      if (keys.includes(key) || /checklist/i.test(key)) window.localStorage.removeItem(key);
+    }
+    setResetNote('Demo state cleared. Reloading…');
+    window.location.reload();
+  };
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -237,6 +247,16 @@ export default function Footer() {
               <p className="mt-6 text-xs text-white/60 font-sans">
                 © <CopyrightYear /> The Unplugged Wear. Mindful POD apparel. All rights reserved.
               </p>
+              <div className="mt-4 flex flex-col items-center gap-2">
+                <button
+                  type="button"
+                  onClick={resetDemoState}
+                  className="inline-flex items-center h-9 px-5 rounded-full border border-white/25 text-xs text-white/70 hover:text-white hover:border-white/60 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
+                >
+                  Reset demo state
+                </button>
+                {resetNote && <p role="status" className="text-xs text-white/60">{resetNote}</p>}
+              </div>
             </div>
           </div>
         </div>

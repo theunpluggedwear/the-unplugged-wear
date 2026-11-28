@@ -3,7 +3,6 @@ import SurfaceCard from '@/components/ui/SurfaceCard';
 import { Sparkline, type SparklineTone } from './Sparkline';
 import { TrendBadge } from './TrendBadge';
 
-// Class map - selectors live in src/app/globals.css (single app.css, home- prefix).
 const styles = new Proxy<Record<string, string>>({}, { get: (_t, p) => 'home-' + String(p) });
 
 interface MetricCardProps {
@@ -14,9 +13,9 @@ interface MetricCardProps {
   deltaTone?: 'up' | 'down';
   vsText?: string;
   sparkTone: SparklineTone;
+  sparkValues?: number[];
 }
 
-// KPI metric card: label, value + sparkline row, delta badge + comparison row.
 export function MetricCard({
   label,
   value,
@@ -25,6 +24,7 @@ export function MetricCard({
   deltaTone = 'up',
   vsText = 'vs yesterday',
   sparkTone,
+  sparkValues,
 }: MetricCardProps) {
   return (
     <SurfaceCard padding="20px 24px" gap="8px" hoverable className={styles.kpiCard}>
@@ -33,7 +33,7 @@ export function MetricCard({
         <span className={tabular ? `${styles.kpiValue} tuw-tabular-nums` : styles.kpiValue}>
           {value}
         </span>
-        <Sparkline tone={sparkTone} label={`${label} trend`} />
+        <Sparkline tone={sparkTone} label={`${label} trend`} values={sparkValues} />
       </div>
       <div className={styles.kpiBottomRow}>
         <TrendBadge value={delta} tone={deltaTone} />

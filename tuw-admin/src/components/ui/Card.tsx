@@ -25,7 +25,7 @@ export interface StatCardProps extends React.HTMLAttributes<HTMLDivElement> {
   subtitle?: string;
   trend?: string;
   trendType?: 'up' | 'down' | 'neutral';
-  /** Opt-in hover treatment (border tint + wash). Default false: no page changes unless enabled. */
+  
   hoverable?: boolean;
 }
 

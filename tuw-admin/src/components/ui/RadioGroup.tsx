@@ -20,10 +20,10 @@ export interface RadioGroupProps {
   style?: React.CSSProperties;
 }
 
-/**
- * RadioGroup component conforming to TUW Design System
- * Supports keyboard arrow selection, description subtext, disabled states, and responsive orientation.
- */
+
+
+
+
 export default function RadioGroup({
   name,
   options,

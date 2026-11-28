@@ -60,3 +60,13 @@ export async function markNotificationRead(userId: string, id: string): Promise<
 export async function markAllNotificationsRead(userId: string): Promise<void> {
   await getDb().execute(sql`UPDATE notifications SET read_at = now() WHERE user_id = ${userId} AND read_at IS NULL`);
 }
+
+export const NOTIFICATION_RETENTION_DAYS = 30;
+
+export async function pruneNotifications(days: number = NOTIFICATION_RETENTION_DAYS): Promise<number> {
+  const safeDays = Number.isFinite(days) ? Math.min(365, Math.max(1, Math.trunc(days))) : NOTIFICATION_RETENTION_DAYS;
+  const { rowCount } = await getDb().execute(sql`
+    DELETE FROM notifications
+    WHERE created_at < now() - (${safeDays}::int || ' days')::interval`);
+  return rowCount ?? 0;
+}

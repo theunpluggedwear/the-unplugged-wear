@@ -16,18 +16,18 @@ export interface DrawerProps {
   subtitle?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  /** Panel width. Per-content variance is deliberate: 480px media preview,
-   * 520px default, 540px page forms, 560px support threads. */
+  
+
   width?: string | number;
-  /** Elastic workspace: matrix (880px) + full-canvas modes with header
-   * controls. Off by default — all existing drawers behave byte-identically. */
+  
+
   expandable?: boolean;
-  /** Extra header row under the title (tabs, visibility controls). */
+  
   headerExtra?: React.ReactNode;
-  /** Drawer body field. 'surface' preserves existing drawers; 'canvas' gives
-   * white cards a quiet #F7F8F9 field in the product editor. */
+  
+
   bodyTone?: 'surface' | 'canvas';
-  /** Controlled workspace size. Omit for internal state (existing behavior). */
+  
   view?: DrawerView;
   onViewChange?: (view: DrawerView) => void;
 }
@@ -47,17 +47,17 @@ export default function Drawer({
   onViewChange,
 }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
-  // Exit plays through the shared popover contract (180ms drawer rhythm);
-  // render follows visibility so the slide-out completes before unmount.
+  
+  
   const anim = usePopoverAnimation(isOpen, undefined, 180);
-  // Shared, ref-counted body scroll lock: overlapping overlays keep scrolling
-  // locked until the last one closes, and the prior overflow is restored.
+  
+  
   useBodyScrollLock(isOpen);
-  // Elastic sizes: compact (width prop) → matrix 880 → full canvas.
-  // width:100% + maxWidth auto-clamps below 920px viewports.
-  // Controlled mode (view/onViewChange): caller owns the size; internal
-  // state stays as the uncontrolled fallback so existing drawers behave
-  // byte-identically.
+  
+  
+  
+  
+  
   const [expanded, setExpanded] = useState(false);
   const [fullScreen, setFullScreen] = useState(false);
   const effectiveView: DrawerView =
@@ -70,9 +70,9 @@ export default function Drawer({
     }
   };
 
-  // Focus trap: focus the panel on open, cycle Tab within it, and return
-  // focus to the invoker on close. Paint-free (programmatic focus never
-  // matches :focus-visible, so no ring appears).
+  
+  
+  
   const invokerRef = useRef<Element | null>(null);
   useEffect(() => {
     if (!anim.visible) return;

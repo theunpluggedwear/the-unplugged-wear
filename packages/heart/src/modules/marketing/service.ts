@@ -21,10 +21,16 @@ export interface PostSummary {
 
 export interface PostDetail extends PostSummary {
   subtitle: string | null;
+  categoryId: string | null;
+  authorId: string;
   coverMediaId: string | null;
+  ogMediaId: string | null;
   content: Record<string, unknown>[];
   authorRole: string | null;
   tags: { id: string; name: string; slug: string }[];
+  tagIds: string[];
+  isFeatured: boolean;
+  version: number;
   seoTitle: string | null;
   seoDescription: string | null;
   canonicalUrl: string | null;
@@ -66,6 +72,30 @@ function toSummary(r: Row): PostSummary {
     categoryName: r.category_name ? String(r.category_name) : null,
     authorName: String(r.author_name),
     coverImageUrl: r.cover_image_url ? String(r.cover_image_url) : null,
+  };
+}
+
+async function toDetail(r: Row, db = getDb()): Promise<PostDetail> {
+  const { rows: tags } = await db.execute<{ id: string; name: string; slug: string }>(sql`
+    SELECT t.id, t.name, t.slug FROM blog_tags t
+    JOIN blog_post_tags pt ON pt.tag_id = t.id WHERE pt.blog_id = ${r.id}::uuid`);
+  return {
+    ...toSummary(r),
+    subtitle: r.subtitle ? String(r.subtitle) : null,
+    categoryId: r.category_id ? String(r.category_id) : null,
+    authorId: String(r.author_id),
+    coverMediaId: r.cover_media_id ? String(r.cover_media_id) : null,
+    ogMediaId: r.og_media_id ? String(r.og_media_id) : null,
+    content: (r.content as Record<string, unknown>[]) ?? [],
+    authorRole: r.author_role ? String(r.author_role) : null,
+    tags,
+    tagIds: tags.map((t) => t.id),
+    isFeatured: Boolean(r.is_featured),
+    version: Number(r.version ?? 1),
+    seoTitle: r.seo_title ? String(r.seo_title) : null,
+    seoDescription: r.seo_description ? String(r.seo_description) : null,
+    canonicalUrl: r.canonical_url ? String(r.canonical_url) : null,
+    noindex: Boolean(r.noindex),
   };
 }
 
@@ -133,21 +163,19 @@ export async function getPostBySlug(slug: string, publishedOnly = true): Promise
       WHERE h.slug = ${slug} AND b.status = 'published'`);
     return { post: null, redirectTo: hist[0] ? (await db.execute<{ slug: string }>(sql`SELECT slug FROM blogs WHERE id = ${hist[0].blog_id}::uuid`)).rows[0]?.slug ?? null : null };
   }
-  const { rows: tags } = await db.execute<{ id: string; name: string; slug: string }>(sql`
-    SELECT t.id, t.name, t.slug FROM blog_tags t JOIN blog_post_tags pt ON pt.tag_id = t.id WHERE pt.blog_id = ${r.id}::uuid`);
-  const post: PostDetail = {
-    ...toSummary(r),
-    subtitle: r.subtitle ? String(r.subtitle) : null,
-    coverMediaId: r.cover_media_id ? String(r.cover_media_id) : null,
-    content: (r.content as Record<string, unknown>[]) ?? [],
-    authorRole: r.author_role ? String(r.author_role) : null,
-    tags,
-    seoTitle: r.seo_title ? String(r.seo_title) : null,
-    seoDescription: r.seo_description ? String(r.seo_description) : null,
-    canonicalUrl: r.canonical_url ? String(r.canonical_url) : null,
-    noindex: Boolean(r.noindex),
-  };
-  return { post, redirectTo: null };
+  return { post: await toDetail(r, db), redirectTo: null };
+}
+
+export async function getPostById(id: string): Promise<PostDetail | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const db = getDb();
+  const { rows } = await db.execute<Row>(sql`
+    SELECT b.*, bc.name AS category_name, ba.name AS author_name, ba.role_title AS author_role
+    FROM blogs b LEFT JOIN blog_categories bc ON bc.id = b.category_id
+    JOIN blog_authors ba ON ba.id = b.author_id
+    WHERE b.id = ${id}::uuid`);
+  const r = rows[0];
+  return r ? toDetail(r, db) : null;
 }
 
 export interface SavePostInput {
@@ -175,12 +203,12 @@ export async function savePost(input: SavePostInput, actorId: string): Promise<P
   if ((input.status === 'scheduled' || input.status === 'published') && !input.publishedAt) {
     throw new AppError('VALIDATION_FAILED', 'Choose a publish date for scheduled or published posts.');
   }
-  return withTransaction(async (tx) => {
+  await withTransaction(async (tx) => {
     const { rows: existing } = await tx.execute<{ id: string; slug: string; version: number }>(sql`
       SELECT id, slug, version FROM blogs WHERE id = ${input.id ? sql`${input.id}::uuid` : sql`NULL`} OR slug = ${input.slug} LIMIT 1`);
     const current = existing[0];
     if (input.id && current && current.id !== input.id) throw new AppError('CONFLICT', 'That id belongs to another post.');
-    const { rows: slugClash } = await tx.execute<{ id: string }>(sql`SELECT id FROM blog_slug_history WHERE slug = ${input.slug} ${current ? sql`AND blog_id <> ${current.id}::uuid` : sql``}`);
+    const { rows: slugClash } = await tx.execute<{ slug: string }>(sql`SELECT slug FROM blog_slug_history WHERE slug = ${input.slug} ${current ? sql`AND blog_id <> ${current.id}::uuid` : sql``}`);
     if (slugClash.length) throw new AppError('CONFLICT', 'That slug was used by another post.');
     if (current && current.slug !== input.slug && current.slug) {
       await tx.execute(sql`INSERT INTO blog_slug_history (slug, blog_id) VALUES (${current.slug}, ${current.id}::uuid) ON CONFLICT (slug) DO NOTHING`);
@@ -218,8 +246,10 @@ export async function savePost(input: SavePostInput, actorId: string): Promise<P
     const { rows: rev } = await tx.execute<{ n: number }>(sql`SELECT COALESCE(MAX(revision_no),0)::int AS n FROM blog_revisions WHERE blog_id=${id}::uuid`);
     await tx.execute(sql`INSERT INTO blog_revisions (id, blog_id, revision_no, title, snapshot, created_by)
       VALUES (${uuidv7()}, ${id}::uuid, ${rev[0]!.n + 1}, ${input.title}, ${JSON.stringify(input)}::jsonb, ${actorId}::uuid)`);
-    return (await getPostBySlug(input.slug, false)).post!;
+    return id;
   });
+  // Read after the transaction commits so the new row is visible to the pool.
+  return (await getPostBySlug(input.slug, false)).post!;
 }
 
 export async function listCategories(): Promise<{ id: string; name: string; slug: string }[]> {
@@ -237,8 +267,34 @@ export async function listTags(): Promise<{ id: string; name: string; slug: stri
   return rows;
 }
 
-export async function listRevisions(blogId: string): Promise<{ id: string; revisionNo: number; title: string; createdAt: string }[]> {
-  const { rows } = await getDb().execute<{ id: string; revision_no: number; title: string; created_at: string }>(sql`
-    SELECT id, revision_no, title, created_at FROM blog_revisions WHERE blog_id=${blogId}::uuid ORDER BY revision_no DESC`);
-  return rows.map((r) => ({ id: r.id, revisionNo: r.revision_no, title: r.title, createdAt: new Date(r.created_at).toISOString() }));
+export async function listRevisions(blogId: string): Promise<{ id: string; revisionNo: number; title: string; createdAt: string; contentText: string }[]> {
+  const { rows } = await getDb().execute<{ id: string; revision_no: number; title: string; created_at: string; snapshot: SavePostInput }>(sql`
+    SELECT id, revision_no, title, created_at, snapshot FROM blog_revisions WHERE blog_id=${blogId}::uuid ORDER BY revision_no DESC`);
+  return rows.map((r) => ({
+    id: r.id, revisionNo: r.revision_no, title: r.title,
+    createdAt: new Date(r.created_at).toISOString(),
+    contentText: textFromContent(r.snapshot?.content ?? []),
+  }));
+}
+
+export async function getRevisionSnapshot(blogId: string, revisionId: string): Promise<SavePostInput> {
+  const { rows } = await getDb().execute<{ snapshot: SavePostInput }>(sql`
+    SELECT snapshot FROM blog_revisions WHERE id=${revisionId}::uuid AND blog_id=${blogId}::uuid`);
+  if (!rows[0]) throw new AppError('NOT_FOUND', 'Revision not found.');
+  return rows[0].snapshot;
+}
+
+/** Restores a snapshot as a new draft version; the live published post is untouched. */
+export async function restoreRevision(blogId: string, revisionId: string, actorId: string): Promise<PostDetail> {
+  const current = await getPostById(blogId);
+  if (!current) throw new AppError('NOT_FOUND', 'Post not found.');
+  const snapshot = await getRevisionSnapshot(blogId, revisionId);
+  return savePost({
+    ...snapshot,
+    id: blogId,
+    slug: current.slug,
+    authorId: current.authorId,
+    status: 'draft',
+    publishedAt: null,
+  }, actorId);
 }

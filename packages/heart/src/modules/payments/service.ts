@@ -88,9 +88,13 @@ export async function paymentState(tx: Pick<Transaction, 'execute'>, orderId: st
 
 /** Marks the payment refunded once every rupee is back. Returns true when it is. */
 export async function settleIfFullyRefunded(tx: Transaction, orderId: string): Promise<boolean> {
-  const state = await paymentState(tx, orderId, false);
-  if (!state.paymentId || state.capturedPaise === 0 || state.refundedPaise < state.capturedPaise) return false;
-  await tx.execute(sql`UPDATE payments SET status = 'refunded', updated_at = now() WHERE id = ${state.paymentId} AND status <> 'refunded'`);
+  const { rows: [totals] } = await tx.execute<{ captured: string | null; refunded: string | null }>(sql`
+    SELECT (SELECT sum(amount) FROM payments WHERE order_id=${orderId}::uuid AND status IN ('captured','refunded')) AS captured,
+           (SELECT sum(amount) FROM refunds WHERE order_id=${orderId}::uuid AND status='completed') AS refunded`);
+  const captured = paise(totals?.captured ?? null);
+  const refunded = paise(totals?.refunded ?? null);
+  if (captured === 0 || refunded < captured) return false;
+  await tx.execute(sql`UPDATE payments SET status='refunded', updated_at=now() WHERE order_id=${orderId}::uuid AND status='captured'`);
   return true;
 }
 

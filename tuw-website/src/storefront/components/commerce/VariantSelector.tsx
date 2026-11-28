@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useReducer, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { ShoppingBag, Heart, Truck } from 'lucide-react';
-import { Product, ProductColor, ProductSize } from '@storefront/lib/types';
+import { Check, Minus, Plus, ShoppingBag } from 'lucide-react';
+import { CartItem, Product, ProductColor, ProductSize } from '@storefront/lib/types';
 import { useStore } from '@storefront/mocks/store';
 import Button from '@storefront/components/ui/Button';
 import { formatRupees } from '@storefront/lib/format';
@@ -12,15 +13,18 @@ import ColorSwatchSelector from './ColorSwatchSelector';
 import VariantPillSelector from './VariantPillSelector';
 import RadioOptionSelector from './RadioOptionSelector';
 import NotifyMe from './NotifyMe';
-import { useSiteSettings, rupeesLabel } from '@storefront/lib/site-settings';
 import { useLiveSizes } from '@storefront/lib/live-stock';
+import { purchaseReducer } from '@storefront/lib/purchase-machine';
+import { PersonalizationPanel } from '@storefront/plugins/personalization';
 import {
   sizePriceINR,
-  RETURN_WINDOW_DAYS,
-  isWearable,
+  priceLabel,
   productTypeOf,
   variantLabelOf,
 } from '@storefront/lib/product';
+
+/** The server's per-line ceiling (cart schema: qty max 100). */
+const MAX_LINE_QTY = 100;
 
 export interface VariantSelectorProps {
   product: Product;
@@ -28,6 +32,7 @@ export interface VariantSelectorProps {
   onColorChange?: (color: ProductColor) => void;
   selectedSize?: ProductSize | null;
   onSizeChange?: (size: ProductSize | null) => void;
+  personalizationEnabled?: boolean;
 }
 
 export default function VariantSelector({
@@ -36,16 +41,15 @@ export default function VariantSelector({
   onColorChange,
   selectedSize: controlledSize,
   onSizeChange,
+  personalizationEnabled = false,
 }: VariantSelectorProps) {
-  const { freeThresholdPaise } = useSiteSettings().shipping;
   const router = useRouter();
-  const { addToCart, isInWishlist, toggleWishlist, sizeCharts } = useStore();
+  const { addToCart, buyNow, sizeCharts } = useStore();
 
   const productType = productTypeOf(product);
   const variantLabel = variantLabelOf(product);
   // The chart staff linked to this product, if any.
   const sizeChart = sizeCharts.find((c) => c.id === product.sizeChartId) ?? null;
-  const wearable = isWearable(productType);
 
   // Stock arrives from the page's live read (see LiveStock) and replaces the
   // cached catalogue's sizes once it lands; until then the cached values show.
@@ -59,8 +63,9 @@ export default function VariantSelector({
     hasColors ? product.colors![0] : undefined
   );
   const [internalSize, setInternalSize] = useState<ProductSize | null>(
-    // A single sold-out option starts selected, so "notify me" is on show.
-    hasSizes ? sizes.find((s) => s.inStock) || (sizes.length === 1 ? sizes[0]! : null) : null
+    // Never guess a size for the shopper; a lone option starts selected
+    // (so a sold-out one shows "notify me" straight away).
+    sizes.length === 1 ? sizes[0]! : null
   );
 
   const selectedColor = controlledColor !== undefined ? controlledColor : internalColor;
@@ -80,11 +85,26 @@ export default function VariantSelector({
     return initial;
   });
 
-  const [quantity, setQuantity] = useState(1);
+  const [requestedQty, setRequestedQty] = useState(1);
+  const [personalizationActive, setPersonalizationActive] = useState(false);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [purchase, dispatchPurchase] = useReducer(purchaseReducer, { kind: 'idle' });
+  const buying = purchase.kind === 'buying';
+  const added = purchase.kind === 'added';
+  const addedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (addedTimer.current) clearTimeout(addedTimer.current); }, []);
+  const sizeGroupRef = useRef<HTMLDivElement>(null);
 
-  const isFavorite = isInWishlist(product.id);
+  // Quantity can never pass what the chosen size has in stock (or the bag's
+  // per-line limit). Derived, so a size change or a fresh stock read that
+  // lowers the ceiling corrects it without an effect.
+  const maxQty = Math.max(1, Math.min(selectedSize ? selectedSize.stockCount : MAX_LINE_QTY, MAX_LINE_QTY));
+  const quantity = Math.min(requestedQty, maxQty);
+  const atMax = quantity >= maxQty && selectedSize !== null;
+
+  const soldOut = hasSizes && (selectedSize ? !selectedSize.inStock : sizes.every((s) => !s.inStock));
+
 
   // Calculate cumulative price delta from selected radio options
   const radioDeltaINR = (product.radioGroups || []).reduce((acc, group) => {
@@ -121,20 +141,30 @@ export default function VariantSelector({
     }));
   };
 
-  const handleAddToCart = () => {
-    // Only enforce size validation if the product actually declares sizes
-    if (hasSizes) {
-      if (!selectedSize) {
-        setValidationError(`Please choose a ${variantLabel.toLowerCase()} to continue.`);
-        return;
+  /** Validate the choice; on failure say why and take the shopper to the size picker. */
+  const ready = (): boolean => {
+    if (!hasSizes) return true;
+    const problem = !selectedSize
+      ? `Please choose a ${variantLabel.toLowerCase()} to continue.`
+      : !selectedSize.inStock
+      ? `This ${variantLabel.toLowerCase()} is currently sold out.`
+      : null;
+    setValidationError(problem);
+    if (problem) {
+      const group = sizeGroupRef.current;
+      const box = group?.getBoundingClientRect();
+      if (group && box && (box.top < 80 || box.bottom > window.innerHeight)) {
+        group.scrollIntoView({
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+          block: 'center',
+        });
       }
-      if (!selectedSize.inStock) {
-        setValidationError(`This ${variantLabel.toLowerCase()} is currently sold out.`);
-        return;
-      }
+      group?.querySelector<HTMLButtonElement>('[role="radio"]')?.focus({ preventScroll: true });
     }
+    return !problem;
+  };
 
-    setValidationError(null);
+  const lineItem = (): Omit<CartItem, 'id'> => {
     const activeImage =
       (selectedColor && product.images.find((img) => img.color === selectedColor.value)?.url) ||
       product.images[0]?.url ||
@@ -153,7 +183,7 @@ export default function VariantSelector({
       };
     });
 
-    addToCart({
+    return {
       productId: product.id,
       title: product.title,
       color: selectedColor ? selectedColor.name : 'Standard',
@@ -163,20 +193,52 @@ export default function VariantSelector({
       quantity,
       image: activeImage,
       selectedRadioOptions: chosenRadioOptions.length > 0 ? chosenRadioOptions : undefined,
-    });
+    };
   };
 
-  const handleBuyNow = () => {
-    if (hasSizes && !selectedSize) {
-      setValidationError(`Please choose a ${variantLabel.toLowerCase()} to continue.`);
-      return;
-    }
-    if (hasSizes && selectedSize && !selectedSize.inStock) {
-      setValidationError(`This ${variantLabel.toLowerCase()} is currently sold out.`);
-      return;
-    }
-    handleAddToCart();
-    router.push('/checkout');
+  const handleAddToCart = () => {
+    if (!ready()) return;
+    addToCart(lineItem());
+    dispatchPurchase({ type: 'ADD' });
+    if (addedTimer.current) clearTimeout(addedTimer.current);
+    addedTimer.current = setTimeout(() => dispatchPurchase({ type: 'RESET' }), 1800);
+  };
+
+  /** Take the shopper to the size buttons without an error (phone bar). */
+  const goToSizes = () => {
+    const group = sizeGroupRef.current ?? document.getElementById('purchase-actions');
+    group?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'center',
+    });
+    group?.querySelector<HTMLButtonElement>('[role="radio"]')?.focus({ preventScroll: true });
+  };
+
+  // Phone buy bar: appears once the main buttons scroll out of view.
+  const purchaseRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [showBar, setShowBar] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    const target = purchaseRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setShowBar(!entry!.isIntersecting && entry!.boundingClientRect.bottom < 0);
+    });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
+  const needsSize = hasSizes && !selectedSize;
+  const barPrice = selectedSize || !hasSizes ? formatRupees(effectiveUnitPriceINR) : priceLabel({ ...product, sizes });
+
+  // Buy now goes straight to checkout with exactly this item: no drawer, and
+  // an identical bag line is set to this quantity rather than added to again.
+  const handleBuyNow = async () => {
+    if (buying || !ready()) return;
+    dispatchPurchase({ type: 'BUY' });
+    const ok = await buyNow(lineItem()).catch(() => false);
+    if (ok) router.push('/checkout');
+    else dispatchPurchase({ type: 'RESET' }); // the bag already showed why
   };
 
 
@@ -194,6 +256,7 @@ export default function VariantSelector({
 
       {/* 2. Dynamic Variant Pill Selector (Omitted if no sizes defined) */}
       {hasSizes && (
+        <div ref={sizeGroupRef} className="scroll-mt-28">
         <VariantPillSelector
           sizes={sizes}
           selectedSize={selectedSize}
@@ -203,6 +266,7 @@ export default function VariantSelector({
           sizeGuideLabel="Size guide"
           validationError={validationError}
         />
+        </div>
       )}
 
       {hasSizes && selectedSize && !selectedSize.inStock && product.productId && (
@@ -228,99 +292,102 @@ export default function VariantSelector({
         </div>
       )}
 
-      {/* 4. Quantity & Purchase Actions */}
-      <div id="purchase-actions" className="space-y-3 pt-2 scroll-mt-28">
-        <div className="flex gap-2 sm:gap-3">
-          {/* Quantity Selector */}
-          <div className="flex items-center border border-store-card-border rounded-full bg-store-surface h-14 px-3 shrink-0" role="group" aria-label="Quantity">
+      {personalizationEnabled && product.monogram && product.productKind !== 'gift_card' ? (
+        <PersonalizationPanel
+          productId={product.productId ?? product.id}
+          productName={product.title}
+          maxChars={product.monogram.maxChars}
+          printAreas={product.printAreas}
+          color={selectedColor?.name}
+          size={selectedSize?.size}
+          priceINR={effectiveUnitPriceINR}
+          image={product.images[0]?.url ?? ''}
+          disabled={soldOut}
+          onActiveChange={setPersonalizationActive}
+          onAdded={() => dispatchPurchase({ type: 'ADD' })}
+        />
+      ) : null}
+
+      {/* 4. Quantity, then the two buy buttons stacked full width */}
+      {!soldOut && (
+        <div className="flex items-center justify-between gap-4">
+          <span id="pdp-qty-label" className="text-xs font-semibold uppercase tracking-wider text-store-text-secondary">
+            Quantity
+          </span>
+          <div className="inline-flex items-center h-10 border border-store-card-border bg-store-surface" role="group" aria-labelledby="pdp-qty-label">
             <button
               type="button"
-              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+              onClick={() => setRequestedQty(Math.max(1, quantity - 1))}
+              disabled={quantity <= 1}
               aria-label="Decrease quantity"
-              className="w-8 h-8 flex items-center justify-center text-store-text-secondary hover:text-store-text-primary font-bold text-base cursor-pointer"
+              className="w-10 h-full flex items-center justify-center text-store-charcoal hover:bg-store-cream cursor-pointer disabled:text-store-text-secondary disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-store-gold"
             >
-              -
+              <Minus size={14} aria-hidden="true" />
             </button>
-            <span className="w-8 text-center text-sm font-bold text-store-text-primary">
+            <span className="w-10 text-center text-sm font-medium text-store-charcoal tuw-tabular-nums" aria-live="polite" aria-label={`Quantity ${quantity}`}>
               {quantity}
             </span>
             <button
               type="button"
-              onClick={() =>
-                setQuantity(
-                  selectedSize ? Math.min(selectedSize.stockCount, quantity + 1) : quantity + 1
-                )
-              }
+              onClick={() => setRequestedQty(Math.min(maxQty, quantity + 1))}
+              disabled={atMax}
               aria-label="Increase quantity"
-              className="w-8 h-8 flex items-center justify-center text-store-text-secondary hover:text-store-text-primary font-bold text-base cursor-pointer"
+              className="w-10 h-full flex items-center justify-center text-store-charcoal hover:bg-store-cream cursor-pointer disabled:text-store-text-secondary disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-store-gold"
             >
-              +
+              <Plus size={14} aria-hidden="true" />
             </button>
           </div>
-
-          {/* Add to Bag Button */}
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            className="min-w-0 flex-1 h-14 px-4 sm:px-6 gap-2 rounded-full bg-[#111111] text-white hover:bg-black transition-all flex items-center justify-between font-medium text-xs uppercase tracking-wider shadow-sm cursor-pointer active:scale-98 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold focus-visible:ring-offset-2"
-          >
-            <span className="flex items-center gap-2">
-              <ShoppingBag size={18} aria-hidden="true" className="hidden sm:block" />
-              <span>Add to bag</span>
-            </span>
-            <span className="text-sm tracking-normal tuw-tabular-nums">
-              {formatRupees(effectiveUnitPriceINR * quantity)}
-            </span>
-          </button>
-
-          {/* Wishlist Button */}
-          <button
-            type="button"
-            onClick={() => toggleWishlist(product.id)}
-            aria-label={isFavorite ? 'Remove from wishlist' : 'Save to wishlist'}
-            aria-pressed={isFavorite}
-            title={isFavorite ? 'Saved to your wishlist' : 'Save to wishlist'}
-            className="w-14 h-14 rounded-full border border-store-card-border bg-store-surface flex items-center justify-center text-store-charcoal hover:bg-store-cream transition-colors shrink-0 shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
-          >
-            <Heart
-              size={20}
-              className={isFavorite ? 'fill-store-gold text-store-gold' : 'text-store-charcoal'}
-            />
-          </button>
         </div>
+      )}
 
-        {/* Express Checkout */}
-        <Button
-          variant="secondary"
-          size="lg"
-          fullWidth
-          onClick={handleBuyNow}
-        >
-          Buy now
-        </Button>
-        {isFavorite && (
-          <p className="text-xs text-store-text-secondary" aria-live="polite">
-            Saved to your wishlist.
+      {!personalizationActive && (
+      <div id="purchase-actions" ref={purchaseRef} className="space-y-3 scroll-mt-28">
+        {atMax && maxQty > 1 && (
+          <p className="text-xs text-store-text-secondary text-right" role="status">
+            {maxQty < MAX_LINE_QTY
+              ? `Only ${maxQty} available in ${selectedSize?.size}.`
+              : `You can add up to ${MAX_LINE_QTY} at a time.`}
           </p>
         )}
-      </div>
 
-      {/* What happens after you order (no unverified material claims) */}
-      <div className="p-4 bg-store-cream border border-store-card-border space-y-2 text-sm">
-        <p className="flex items-center gap-2 font-medium text-store-charcoal">
-          <Truck size={16} aria-hidden="true" />
-          Printed for you after you order
-        </p>
-        <ul className="space-y-1 text-store-text-secondary list-disc list-inside">
-          <li>Printed in 2–3 business days, then shipped across India</li>
-          <li>Free delivery on orders over {rupeesLabel(freeThresholdPaise)}</li>
-          <li>
-            {wearable
-              ? `${RETURN_WINDOW_DAYS}-day exchanges on unworn pieces with tags`
-              : 'Replacement if it arrives damaged or misprinted (draft policy)'}
-          </li>
-        </ul>
+        {soldOut ? (
+          // Sold out: nothing to buy; the notify-me form above is the next step.
+          <button
+            type="button"
+            disabled
+            className="w-full h-14 px-6 rounded-full border border-store-card-border bg-store-canvas text-store-text-secondary font-medium text-xs uppercase tracking-wider cursor-not-allowed"
+          >
+            {selectedSize ? `Sold out in ${selectedSize.size}` : 'Sold out'}
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className="w-full h-14 px-6 rounded-full bg-store-cta text-white hover:bg-store-cta-hover transition-colors inline-flex items-center justify-center gap-2.5 font-medium text-xs uppercase tracking-wider shadow-sm cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold focus-visible:ring-offset-2"
+            >
+              {added ? <Check size={18} aria-hidden="true" /> : <ShoppingBag size={18} aria-hidden="true" />}
+              <span aria-live="polite">{added ? 'Added to bag' : 'Add to bag'}</span>
+              {!added && (
+                <>
+                  <span aria-hidden="true" className="opacity-50">·</span>
+                  <span className="text-sm tracking-normal tuw-tabular-nums">{formatRupees(effectiveUnitPriceINR * quantity)}</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void handleBuyNow()}
+              disabled={buying}
+              className="w-full h-14 px-6 rounded-full border border-store-charcoal bg-transparent text-store-charcoal hover:bg-store-charcoal hover:text-white transition-colors font-medium text-xs uppercase tracking-wider cursor-pointer disabled:opacity-60 disabled:cursor-wait focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold focus-visible:ring-offset-2"
+            >
+              {buying ? 'Going to checkout…' : 'Buy now'}
+            </button>
+          </>
+        )}
       </div>
+      )}
 
       {hasSizes && sizeChart && (
         <SizeGuideModal
@@ -331,6 +398,57 @@ export default function VariantSelector({
           sizes={sizes.map((s) => s.size)}
         />
       )}
+
+      {/* Phone buy bar. Portalled to <body> so no animated ancestor can pin
+          it to the page instead of the screen. Adds straight to the bag once
+          a size is chosen; otherwise it takes the shopper to the sizes. */}
+      {mounted &&
+        createPortal(
+          <div
+            className={`lg:hidden fixed inset-x-0 bottom-0 z-40 bg-store-surface border-t border-store-card-border px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center gap-3 transition-transform duration-300 motion-reduce:transition-none ${
+              showBar ? 'translate-y-0' : 'translate-y-full'
+            }`}
+            inert={!showBar}
+            aria-label="Buy this piece"
+            role="region"
+          >
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-store-charcoal truncate">{product.title}</p>
+              <p className="text-sm text-store-text-secondary tuw-tabular-nums truncate">
+                {barPrice}
+                {selectedColor && hasColors ? ` · ${selectedColor.name}` : ''}
+                {selectedSize && sizes.length > 1 ? ` · ${selectedSize.size}` : ''}
+              </p>
+            </div>
+            {soldOut ? (
+              <button
+                type="button"
+                onClick={goToSizes}
+                className="h-11 px-5 rounded-full border border-store-charcoal text-store-charcoal text-xs font-medium uppercase tracking-wider cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
+              >
+                Sold out · Notify me
+              </button>
+            ) : needsSize ? (
+              <button
+                type="button"
+                onClick={goToSizes}
+                className="h-11 px-5 rounded-full bg-store-cta text-white text-xs font-medium uppercase tracking-wider cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
+              >
+                Choose {variantLabel.toLowerCase()}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                className="h-11 px-5 rounded-full bg-store-cta text-white text-xs font-medium uppercase tracking-wider cursor-pointer inline-flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-store-gold"
+              >
+                {added ? <Check size={14} aria-hidden="true" /> : <ShoppingBag size={14} aria-hidden="true" />}
+                {added ? 'Added' : 'Add to bag'}
+              </button>
+            )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

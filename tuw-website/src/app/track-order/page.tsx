@@ -62,7 +62,7 @@ function TrackOrderContent() {
       />
 
       <div className="my-6">
-        <h1 className="text-[clamp(1.75rem,3vw+0.5rem,2.25rem)] font-extrabold tracking-tight text-[#1A1A1A]">
+        <h1 className="tuw-h1 text-store-charcoal">
           Track Your Order
         </h1>
         <p className="text-sm text-[#666] mt-1">
@@ -96,7 +96,7 @@ function TrackOrderContent() {
           </Button>
         </form>
         <p className="mt-3 text-xs text-[#8A8A8A]">
-          Have an account? <a href="/account/orders" className="underline underline-offset-2 text-[#1A1A1A]">See all your orders</a>.
+          Have an account? <a href="/account/orders" className="underline underline-offset-2 text-store-charcoal">See all your orders</a>.
         </p>
       </div>
 
@@ -107,7 +107,7 @@ function TrackOrderContent() {
           <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-[#E2DDCF]">
             <div>
               <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold text-[#1A1A1A]">{order.orderNumber}</h2>
+                <h2 className="tuw-h3 text-xl text-store-charcoal">{order.orderNumber}</h2>
                 <Badge
                   variant={
                     order.status === 'Delivered'
@@ -153,7 +153,7 @@ function TrackOrderContent() {
                   </div>
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-[#1A1A1A]">{event.status}</span>
+                      <span className="text-sm font-bold text-store-charcoal">{event.status}</span>
                       <span className="text-xs text-[#8A8A8A]">
                         {event.date} at {event.time}
                       </span>
@@ -178,7 +178,7 @@ function TrackOrderContent() {
                     <ImageWithFallback src={item.image} alt={item.title} fallbackText="" className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-semibold text-[#1A1A1A]">{item.title}</h4>
+                    <h4 className="font-semibold text-store-charcoal">{item.title}</h4>
                     <span className="text-[#8A8A8A]">
                       {item.color} • Size {item.size} • Qty {item.quantity}
                     </span>
@@ -193,7 +193,7 @@ function TrackOrderContent() {
           <div className="w-14 h-14 rounded-full bg-[#FEF2F2] text-[#EF4444] flex items-center justify-center mx-auto mb-4">
             <AlertCircle size={28} />
           </div>
-          <h2 className="text-lg font-bold text-[#1A1A1A]">{error}</h2>
+          <h2 className="tuw-h3 text-store-charcoal">{error}</h2>
           <p className="text-xs text-[#666] max-w-sm mx-auto mt-2 leading-relaxed">
             Check the order number on your confirmation and use the same email you checked out with.
           </p>

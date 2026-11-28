@@ -254,7 +254,9 @@ INSERT INTO store_settings (key, value) VALUES
   ('invoice.seller_address',     to_jsonb('17-Sanskruti Park Row House, Behind Subhash Garden, Near Doctor''s Park Society, Jahangirpura, Surat, Gujarat 395005, India'::text)),
   ('invoice.seller_state_code',  to_jsonb('24'::text)),
   ('invoice.seller_gstin',       'null'::jsonb),
-  ('notifications.order_email',  to_jsonb('orders@theunpluggedwear.com'::text))
+  ('notifications.order_email',  to_jsonb('orders@theunpluggedwear.com'::text)),
+  ('fulfillment.auto_submit',    to_jsonb(true)),
+  ('features.personalization',   to_jsonb(false))
 ON CONFLICT (key) DO NOTHING;
 
 -- ------------------------------------------ 8. discount_codes (3 rows)

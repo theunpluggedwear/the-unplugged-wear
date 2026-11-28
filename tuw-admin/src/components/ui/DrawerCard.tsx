@@ -9,25 +9,25 @@ export type DrawerCardTone = 'neutral' | 'selected' | 'warning';
 
 export interface DrawerCardProps
   extends Omit<SurfaceCardProps, 'children' | 'title' | 'padding' | 'gap' | 'onToggle'> {
-  /** Numbered card heading, e.g. "1. Basic Information". */
+  
   title: React.ReactNode;
-  /** Short explanation of what belongs in this card. */
+  
   description?: React.ReactNode;
-  /** Optional status/count shown opposite the heading. */
+  
   badge?: React.ReactNode;
-  /** Optional action shown opposite the heading. */
+  
   action?: React.ReactNode;
-  /** Semantic header emphasis. Neutral is the default; use colour only when meaningful. */
+  
   tone?: DrawerCardTone;
-  /** Vertical rhythm between fields inside the card body. */
+  
   bodyGap?: number;
-  /** Makes the header a disclosure button and lets the body collapse. */
+  
   collapsible?: boolean;
-  /** Initial open state for an uncontrolled collapsible card. Default false. */
+  
   defaultOpen?: boolean;
-  /** Controlled open state. When provided, onToggle is required to change it. */
+  
   isOpen?: boolean;
-  /** Notified when a collapsible header is activated. */
+  
   onToggle?: (isOpen: boolean) => void;
   children: React.ReactNode;
 }
@@ -63,10 +63,10 @@ const dotStyle: React.CSSProperties = {
   marginTop: 9,
 };
 
-// Product-editor card stack (PEDIT v2): a white surface on the drawer canvas,
-// with a full-bleed header divider while expanded. The header owns the
-// title/description and optional badge/action; the body owns field rhythm. No
-// nested cards.
+
+
+
+
 export default function DrawerCard({
   title,
   description,
@@ -93,8 +93,8 @@ export default function DrawerCard({
   const wasOpen = useRef(open);
 
   useEffect(() => {
-    // Return focus to the header only when the card closes; opening keeps the
-    // user on the toggle so they can tab into the revealed fields.
+    
+    
     if (wasOpen.current && !open) toggleRef.current?.focus();
     wasOpen.current = open;
   }, [open]);
@@ -128,10 +128,10 @@ export default function DrawerCard({
           padding: 16,
           backgroundColor: 'var(--tuw-bg-surface, #FFFFFF)',
           animation: collapsible && open ? 'popoverIn 0.18s ease-out both' : undefined,
-          // Card-scoped field-label context: Input, FormSelect, SearchableSelect
-          // and FormTextarea inherit 14/600 without per-call props. The 24px
-          // row keeps a hinted field aligned with its paired field. Outside
-          // a DrawerCard each primitive keeps its existing legacy fallback.
+          
+          
+          
+          
           '--tuw-field-label-size': 'var(--tuw-type-label-control-size, 14px)',
           '--tuw-field-label-weight': '600',
           '--tuw-field-label-row-height': '24px',

@@ -1,13 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 // Products now come from the database (TL-BE-05). The import, pricing and
 // read-model rules are tested in packages/heart (catalog.int.test.ts,
 // planner.test.ts); this file guards what the storefront still owns.
 
-const root = new URL('..', import.meta.url).pathname;
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const curated = JSON.parse(readFileSync(join(root, '../db/seed/catalog/curated-products.json'), 'utf8'));
 const listing = JSON.parse(readFileSync(join(root, 'data/qikink-listing.json'), 'utf8'));
 
